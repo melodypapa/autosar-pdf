@@ -4,18 +4,21 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+    requirements = [
+        line.strip() for line in fh if line.strip() and not line.startswith("#")
+    ]
 
 setup(
-    name="pdf2txt",
-    version="0.1.0",
+    name="autosar-pdf2txt",
+    version="0.2.0",
     author="Melodypapa",
     author_email="melodypapa@outlook.com",
-    description="A Python package to convert PDF files to text format",
+    description="A Python package to extract AUTOSAR model from PDF files to markdown",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/pdf2txt",
-    packages=find_packages(),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -32,7 +35,8 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "pdf2txt=pdf2txt.cli:main",
+            "pdf2txt=pdf2txt.cli.pdf2txt_cli:main",
+            "autosar-extract=pdf2txt.cli.autosar_cli:main",
         ],
     },
 )

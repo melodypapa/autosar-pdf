@@ -1,0 +1,432 @@
+AUTOSAR Package and Class Summary
+==================================================
+
+Total Packages: 57
+Total Classes: 253
+
+--------------------------------------------------
+
+AUTOSARTemplates::AutosarTopLevelStructure
+  Classes (1):
+    - AUTOSAR
+
+AUTOSARTemplates::BswModuleTemplate::BswBehavior
+  Classes (37):
+    - BswAsynchronousServerCallPoint
+    - BswAsynchronousServerCallResultPoint
+    - BswAsynchronousServerCallReturnsEvent
+    - BswBackgroundEvent
+    - BswDataReceivedEvent
+    - BswDataReceptionPolicy
+    - BswDirectCallPoint
+    - BswExclusiveAreaPolicy
+    - BswExternalTriggerOccurredEvent
+    - BswImplementation
+    - BswInternalBehavior
+    - BswInternalTriggerOccurredEvent
+    - BswInternalTriggeringPoint
+    - BswInterruptEntity
+    - BswInterruptEvent
+    - BswModeManagerErrorEvent
+    - BswModeReceiverPolicy
+    - BswModeSenderPolicy
+    - BswModeSwitchAckRequest
+    - BswModeSwitchEvent
+    - BswModeSwitchedAckEvent
+    - BswModuleCallPoint
+    - BswModuleEntity
+    - BswOsTaskExecutionEvent
+    - BswQueuedDataReceptionPolicy
+    - BswSchedulableEntity
+    - BswScheduleEvent
+    - BswSynchronousServerCallPoint
+    - BswTimingEvent
+    - BswTriggerDirectImplementation
+    - BswVariableAccess
+    - ExclusiveArea
+    - ExecutableEntity
+    - ImplementationProps
+    - ParameterDataPrototype
+    - RoleBasedBswModuleEntryAssignment
+    - RoleBasedDataAssignment
+
+AUTOSARTemplates::BswModuleTemplate::BswImplementation
+  Classes (1):
+    - Implementation
+
+AUTOSARTemplates::BswModuleTemplate::BswInterfaces
+  Classes (6):
+    - AccessCountSet
+    - BswEntryRelationship
+    - BswEntryRelationshipSet
+    - BswModuleClientServerEntry
+    - BswModuleDependency
+    - BswModuleEntry
+
+AUTOSARTemplates::BswModuleTemplate::BswOverview
+  Classes (2):
+    - BswModuleDescription
+    - BswModuleEntry
+
+AUTOSARTemplates::CommonStructure::Constants
+  Classes (12):
+    - ApplicationRuleBasedValueSpecification
+    - ArgumentDataPrototype
+    - ArrayValueSpecification
+    - AsynchronousServerCallResultPoint
+    - DataPrototype
+    - NumericalOrText
+    - NumericalValueSpecification
+    - ObdInfoServiceNeeds
+    - Referrable
+    - RuleBasedValueCont
+    - RuleBasedValueSpecification
+    - RunnableEntity
+
+AUTOSARTemplates::CommonStructure::FlatMap
+  Classes (5):
+    - AliasNameAssignment
+    - FlatInstanceDescriptor
+    - FlatMap
+    - FunctionInhibitionAvailabilityNeeds
+    - McDataInstance
+
+AUTOSARTemplates::CommonStructure::Implementation
+  Classes (7):
+    - AutosarEngineeringObject
+    - BswEvent
+    - BuildActionManifest
+    - Code
+    - DependencyOnArtifact
+    - Implementation
+    - Linker
+
+AUTOSARTemplates::CommonStructure::ImplementationDataTypes
+  Classes (3):
+    - ImplementationDataType
+    - ImplementationDataTypeElement
+    - InternalTriggeringPoint
+
+AUTOSARTemplates::CommonStructure::InternalBehavior
+  Classes (8):
+    - BswCalledEntity
+    - BswExclusiveAreaPolicy
+    - BswInternalBehavior
+    - BswModuleEntity
+    - BswSchedulerNamePrefix
+    - ExclusiveAreaNestingOrder
+    - ExternalTriggeringPoint
+    - InternalBehavior
+
+AUTOSARTemplates::CommonStructure::McGroups
+  Classes (2):
+    - McDataAccessDetails
+    - McGroup
+
+AUTOSARTemplates::CommonStructure::MeasurementCalibrationSupport
+  Classes (8):
+    - AliasNameSet
+    - ImplementationElementInParameterInstanceRef
+    - McDataInstance
+    - McFunction
+    - McParameterElementGroup
+    - McSwEmulationMethodSupport
+    - RoleBasedPortAssignment
+    - RptSupportData
+
+AUTOSARTemplates::CommonStructure::MeasurementCalibrationSupport::RptSupport
+  Classes (9):
+    - McGroup
+    - RptComponent
+    - RptExecutableEntity
+    - RptExecutableEntityEvent
+    - RptExecutableEntityProperties
+    - RptImplPolicy
+    - RptServicePoint
+    - RptSwPrototypingAccess
+    - ServiceDependency
+
+AUTOSARTemplates::CommonStructure::ModeDeclaration
+  Classes (7):
+    - BswOperationInvokedEvent
+    - ModeDeclaration
+    - ModeDeclarationGroup
+    - ModeErrorBehavior
+    - ModeRequestTypeMap
+    - ModeTransition
+    - Trigger
+
+AUTOSARTemplates::CommonStructure::ResourceConsumption
+  Classes (4):
+    - AnalyzedExecutionTime
+    - MemorySection
+    - MemorySectionLocation
+    - ResourceConsumption
+
+AUTOSARTemplates::CommonStructure::ResourceConsumption::ExecutionTime
+  Classes (7):
+    - ExecutionTime
+    - HardwareConfiguration
+    - McSupportData
+    - MultidimensionalTime
+    - RoughEstimateOfExecutionTime
+    - SimulatedExecutionTime
+    - SoftwareContext
+
+AUTOSARTemplates::CommonStructure::ResourceConsumption::HeapUsage
+  Classes (4):
+    - ExecutionTime
+    - MeasuredHeapUsage
+    - RoughEstimateHeapUsage
+    - WorstCaseHeapUsage
+
+AUTOSARTemplates::CommonStructure::ResourceConsumption::MemorySectionUsage
+  Classes (2):
+    - MemorySection
+    - StackUsage
+
+AUTOSARTemplates::CommonStructure::ResourceConsumption::StackUsage
+  Classes (4):
+    - HeapUsage
+    - MeasuredStackUsage
+    - RoughEstimateStackUsage
+    - WorstCaseStackUsage
+
+AUTOSARTemplates::CommonStructure::ServiceNeeds
+  Classes (38):
+    - ARElement
+    - BswServiceDependency
+    - ComMgrUserNeeds
+    - CryptoServiceNeeds
+    - DevelopmentError
+    - DiagEventDebounceAlgorithm
+    - DiagEventDebounceCounterBased
+    - DiagEventDebounceMonitorInternal
+    - DiagEventDebounceTimeBased
+    - DiagnosticCapabilityElement
+    - DiagnosticCommunicationManagerNeeds
+    - DiagnosticEventInfoNeeds
+    - DiagnosticEventNeeds
+    - DiagnosticIoControlNeeds
+    - DiagnosticRoutineNeeds
+    - DiagnosticUploadDownloadNeeds
+    - DiagnosticValueNeeds
+    - DiagnosticsCommunicationSecurityNeeds
+    - DltUserNeeds
+    - DoIpServiceNeeds
+    - EcuAbstractionSwComponentType
+    - EcuStateMgrUserNeeds
+    - ErrorTracerNeeds
+    - FunctionInhibitionNeeds
+    - GlobalSupervisionNeeds
+    - HardwareTestNeeds
+    - Identifiable
+    - NvBlockNeeds
+    - ObdPidServiceNeeds
+    - OperationInvokedEvent
+    - RoleBasedDataAssignment
+    - RoleBasedDataTypeAssignment
+    - RuntimeError
+    - ServiceNeeds
+    - SupervisedEntityCheckpointNeeds
+    - SupervisedEntityNeeds
+    - SyncTimeBaseMgrUserNeeds
+    - TracedFailure
+
+AUTOSARTemplates::CommonStructure::SignalServiceTranslation
+  Classes (0):
+
+AUTOSARTemplates::CommonStructure::StandardizationTemplate::AbstractBlueprintStructure
+  Classes (1):
+    - AutosarDataPrototype
+
+AUTOSARTemplates::CommonStructure::SwcBswMapping
+  Classes (4):
+    - BswDistinguishedPartition
+    - SwcBswRunnableMapping
+    - SwcBswSynchronizedModeGroupPrototype
+    - SwcBswSynchronizedTrigger
+
+AUTOSARTemplates::CommonStructure::TriggerDeclaration
+  Classes (2):
+    - BswModuleDependency
+    - Trigger
+
+AUTOSARTemplates::ECUCDescriptionTemplate
+  Classes (2):
+    - EcucModuleConfigurationValues
+    - EcucModuleDef
+
+AUTOSARTemplates::ECUCParameterDefTemplate
+  Classes (2):
+    - EcucModuleDef
+    - ExecutableEntityActivationReason
+
+AUTOSARTemplates::GenericStructure::BuildActionManifest
+  Classes (2):
+    - BuildActionManifest
+    - ResourceConsumption
+
+AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::ARPackage
+  Classes (2):
+    - ARPackage
+    - AUTOSAR
+
+AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::EngineeringObject
+  Classes (2):
+    - Compiler
+    - EngineeringObject
+
+AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::Identifiable
+  Classes (4):
+    - DiagnosticComponentNeeds
+    - Identifiable
+    - ImplementationDataType
+    - RoleBasedMcDataAssignment
+
+AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::MultidimensionalTime
+  Classes (2):
+    - MeasuredExecutionTime
+    - MultidimensionalTime
+
+AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::PrimitiveTypes
+  Classes (3):
+    - ModeDeclarationGroupPrototype
+    - SwAddrMethod
+    - SwBaseType
+
+AUTOSARTemplates::GenericStructure::VariantHandling
+  Classes (2):
+    - ApplicationDataType
+    - ClientServerInterface
+
+AUTOSARTemplates::SWComponentTemplate::Components
+  Classes (7):
+    - AtomicSwComponentType
+    - AtpBlueprint
+    - CompuMethod
+    - EcucModuleConfigurationValues
+    - ParameterAccess
+    - RTEEvent
+    - SignalServiceTranslationProps
+
+AUTOSARTemplates::SWComponentTemplate::Datatype::DataPrototypes
+  Classes (4):
+    - AutosarDataType
+    - DataTypeMappingSet
+    - SwcBswMapping
+    - VariableDataPrototype
+
+AUTOSARTemplates::SWComponentTemplate::Datatype::Datatypes
+  Classes (3):
+    - ApplicationRuleBasedValueSpecification
+    - AutosarParameterRef
+    - Describable
+
+AUTOSARTemplates::SWComponentTemplate::NvBlockComponent
+  Classes (0):
+
+AUTOSARTemplates::SWComponentTemplate::PortInterface
+  Classes (5):
+    - ArrayValueSpecification
+    - ClientServerInterface
+    - ClientServerOperation
+    - ComplexDeviceDriverSwComponentType
+    - ServerCallPoint
+
+AUTOSARTemplates::SWComponentTemplate::RPTScenario
+  Classes (2):
+    - RecordValueSpecification
+    - RptExecutionContext
+
+AUTOSARTemplates::SWComponentTemplate::SoftwareComponentDocumentation
+  Classes (1):
+    - SwComponentDocumentation
+
+AUTOSARTemplates::SWComponentTemplate::SwcImplementation
+  Classes (2):
+    - SwcImplementation
+    - SwcInternalBehavior
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior
+  Classes (4):
+    - RunnableEntity
+    - SenderReceiverInterface
+    - SwcInternalBehavior
+    - System
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::AccessCount
+  Classes (3):
+    - AbstractAccessPoint
+    - AccessCount
+    - InternalBehavior
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::DataElements
+  Classes (4):
+    - AutosarParameterRef
+    - AutosarVariableRef
+    - ParameterAccess
+    - PortDefinedArgumentValue
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::ModeDeclarationGroup
+  Classes (2):
+    - ModeSwitchPoint
+    - NumericalOrText
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::PortAPIOptions
+  Classes (1):
+    - PortPrototype
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::RTEEvents
+  Classes (2):
+    - PRPortPrototype
+    - RapidPrototypingScenario
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::ServerCall
+  Classes (2):
+    - AtomicSwComponentType
+    - ServiceSwComponentType
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::ServiceMapping
+  Classes (1):
+    - ServiceNeeds
+
+AUTOSARTemplates::SWComponentTemplate::SwcInternalBehavior::Trigger
+  Classes (3):
+    - ExternalTriggeringPoint
+    - FlatInstanceDescriptor
+    - ModeAccessPoint
+
+AUTOSARTemplates::SystemTemplate
+  Classes (1):
+    - System
+
+MSR::AsamHdo::BaseTypes
+  Classes (0):
+
+MSR::AsamHdo::ComputationMethod
+  Classes (1):
+    - ConstantSpecification
+
+MSR::DataDictionary::AuxillaryObjects
+  Classes (2):
+    - SectionNamePrefix
+    - SwAddrMethod
+
+MSR::DataDictionary::DataDefProperties
+  Classes (5):
+    - SwComponentDocumentation
+    - SwSystemconst
+    - SwTextProps
+    - SwcImplementation
+    - VariableAccess
+
+MSR::DataDictionary::ServiceProcessTask
+  Classes (2):
+    - SwPointerTargetProps
+    - SwServiceArg
+
+MSR::DataDictionary::SystemConstant
+  Classes (1):
+    - SwTextProps
+

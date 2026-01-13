@@ -25,7 +25,7 @@ class PackageHierarchyBuilder:
             dict: Nested tree structure with '__classes__' key at leaf nodes
 
         Example:
-            >>> from pdf2txt.extractor.models import Package, Class
+            >>> from autosar_pdf2txt.extractor.models import Package, Class
             >>> packages = [
             ...     Package('AUTOSARTemplates::BswModuleTemplate', [Class('ClassA'), Class('ClassB')]),
             ...     Package('AUTOSARTemplates::CommonStructure', [Class('ClassC')])
@@ -57,7 +57,7 @@ class PackageHierarchyBuilder:
             Dict[str, List[Class]]: Dictionary mapping package names to Class objects
 
         Example:
-            >>> from pdf2txt.extractor.models import Package, Class
+            >>> from autosar_pdf2txt.extractor.models import Package, Class
             >>> packages = [Package('Pkg1', [Class('A')])]
             >>> builder = PackageHierarchyBuilder()
             >>> result = builder.build_dict(packages)

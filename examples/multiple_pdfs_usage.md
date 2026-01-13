@@ -9,7 +9,7 @@ This example demonstrates how to extract package and class information from mult
 #### Extract from multiple PDF files (merged output)
 
 ```python
-from pdf2txt.extractor import extract_from_multiple_pdfs
+from autosar_pdf2txt.extractor import extract_from_multiple_pdfs
 
 # List of PDF files
 pdf_files = [
@@ -34,7 +34,7 @@ print(f"Total Classes: {results['total_classes']}")
 #### Extract from multiple PDF files (separate outputs)
 
 ```python
-from pdf2txt.extractor import extract_from_multiple_pdfs
+from autosar_pdf2txt.extractor import extract_from_multiple_pdfs
 
 pdf_files = [
     "path/to/autosar_part1.pdf",
@@ -58,7 +58,7 @@ for pdf_file, stats in results.items():
 #### Extract from a directory containing PDFs
 
 ```python
-from pdf2txt.extractor import extract_from_multiple_pdfs
+from autosar_pdf2txt.extractor import extract_from_multiple_pdfs
 
 # Extract all PDF files from a directory
 results = extract_from_multiple_pdfs(

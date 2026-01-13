@@ -12,7 +12,7 @@ The library provides two main data models:
 ## Class Model
 
 ```python
-from pdf2txt.extractor.models import Class
+from autosar_pdf2txt.extractor.models import Class
 
 # Create a concrete class
 concrete_class = Class(name="ConcreteClass", abstract=False)
@@ -29,7 +29,7 @@ print(f"Class: {default_class.name}, Abstract: {default_class.abstract}")
 ## Package Model
 
 ```python
-from pdf2txt.extractor.models import Package, Class
+from autosar_pdf2txt.extractor.models import Package, Class
 
 # Create classes
 classes = [
@@ -55,8 +55,8 @@ for cls in pkg.classes:
 ## Extracting from PDF with Models
 
 ```python
-from pdf2txt.extractor import extract_package_and_class_info
-from pdf2txt.core.converter import convert_pdf_to_text
+from autosar_pdf2txt.extractor import extract_package_and_class_info
+from autosar_pdf2txt.core.converter import convert_pdf_to_text
 
 # Extract text from PDF
 text = convert_pdf_to_text("autosar.pdf", method="pdfplumber")
@@ -78,8 +78,8 @@ for pkg in packages:
 ## Filtering Packages and Classes
 
 ```python
-from pdf2txt.extractor import extract_package_and_class_info
-from pdf2txt.core.converter import convert_pdf_to_text
+from autosar_pdf2txt.extractor import extract_package_and_class_info
+from autosar_pdf2txt.core.converter import convert_pdf_to_text
 
 # Extract packages
 text = convert_pdf_to_text("autosar.pdf", method="pdfplumber")
@@ -104,11 +104,11 @@ print(f"Found {len(all_abstract_classes)} abstract classes")
 ## Converting to Hierarchy
 
 ```python
-from pdf2txt.extractor import (
+from autosar_pdf2txt.extractor import (
     extract_package_and_class_info,
     build_package_hierarchy,
 )
-from pdf2txt.core.converter import convert_pdf_to_text
+from autosar_pdf2txt.core.converter import convert_pdf_to_text
 
 # Extract packages
 text = convert_pdf_to_text("autosar.pdf", method="pdfplumber")
@@ -125,7 +125,7 @@ tree = build_package_hierarchy(packages)
 ## Working with Multiple PDFs
 
 ```python
-from pdf2txt.extractor import extract_from_multiple_pdfs
+from autosar_pdf2txt.extractor import extract_from_multiple_pdfs
 
 # Extract from multiple PDFs
 pdf_files = ["autosar_part1.pdf", "autosar_part2.pdf"]
@@ -145,13 +145,13 @@ print(f"Total classes: {results['total_classes']}")
 ## Writing Output
 
 ```python
-from pdf2txt.extractor import (
+from autosar_pdf2txt.extractor import (
     extract_package_and_class_info,
     build_package_hierarchy,
     write_markdown_hierarchy,
     write_text_summary,
 )
-from pdf2txt.core.converter import convert_pdf_to_text
+from autosar_pdf2txt.core.converter import convert_pdf_to_text
 
 # Extract packages
 text = convert_pdf_to_text("autosar.pdf", method="pdfplumber")

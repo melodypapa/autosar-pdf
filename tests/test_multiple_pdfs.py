@@ -4,7 +4,7 @@
 
 import pytest
 from pathlib import Path
-from pdf2txt.extractor import extract_from_multiple_pdfs
+from autosar_pdf2txt.extractor import extract_from_multiple_pdfs
 
 
 def test_extract_from_multiple_pdfs_integration():

@@ -31,7 +31,7 @@ ruff check src/pdf2txt/ && ruff format src/pdf2txt/    # Lint + format
 
 ### Imports
 - Standard library → third-party → local imports with blank line separators
-- Use absolute imports: `from pdf2txt.core.converter import convert_pdf_to_text`
+- Use absolute imports: `from autosar_pdf2txt.core.converter import convert_pdf_to_text`
 - Import only what's needed; avoid `from module import *`
 
 ### Formatting

@@ -2,7 +2,7 @@
 测试 Package 和 Class 模型
 """
 
-from pdf2txt.extractor.models import Package, Class
+from autosar_pdf2txt.extractor.models import Package, Class
 
 
 def test_class_creation():

@@ -3,7 +3,7 @@
 """
 
 import pytest
-from pdf2txt.core import (
+from autosar_pdf2txt.core import (
     convert_pdf_to_text,
     convert_pdf_to_text_advanced,
     convert_to_markdown,
@@ -12,12 +12,12 @@ from pdf2txt.core import (
     convert_table_to_markdown,
     convert_pdf_with_tables,
 )
-from pdf2txt.utils import (
+from autosar_pdf2txt.utils import (
     validate_pdf_path,
     sanitize_filename,
     format_file_size,
 )
-from pdf2txt import __version__
+from autosar_pdf2txt import __version__
 
 
 def test_version():

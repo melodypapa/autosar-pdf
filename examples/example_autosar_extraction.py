@@ -8,14 +8,14 @@ documents.
 """
 
 from pathlib import Path
-from pdf2txt.extractor import (
+from autosar_pdf2txt.extractor import (
     extract_package_and_class_info,
     build_package_hierarchy,
     write_markdown_hierarchy,
     write_text_summary,
     extract_from_pdf,
 )
-from pdf2txt.core import convert_pdf_to_text
+from autosar_pdf2txt.core import convert_pdf_to_text
 
 
 def example_1_basic_extraction():

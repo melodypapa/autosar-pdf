@@ -2,7 +2,7 @@
 测试 Parser 和 Model 的集成
 """
 
-from pdf2txt.extractor.parser import extract_package_and_class_info
+from autosar_pdf2txt.extractor.parser import extract_package_and_class_info
 
 
 def test_extract_with_abstract_classes():

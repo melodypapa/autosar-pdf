@@ -137,7 +137,7 @@ pdf2txt input.pdf --skip-header 3 --skip-footer 2 -p "0-5"
 
 #### 作为 Python 库使用
 ```python
-from pdf2txt import convert_pdf_to_text
+from autosar_pdf2txt import convert_pdf_to_text
 
 # 转换PDF内容为文本
 text = convert_pdf_to_text("input.pdf")
@@ -154,7 +154,7 @@ text = convert_pdf_to_text(
 )
 
 # 高级转换（指定页面范围）
-from pdf2txt.core import convert_pdf_to_text_advanced
+from autosar_pdf2txt.core import convert_pdf_to_text_advanced
 
 result = convert_pdf_to_text_advanced(
     "input.pdf", 
@@ -212,7 +212,7 @@ pytest tests/ -v
 
 ### API 导出
 ```python
-from pdf2txt import (
+from autosar_pdf2txt import (
     convert_pdf_to_text,
     convert_pdf_to_text_advanced,
     validate_pdf_path,

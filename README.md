@@ -107,7 +107,7 @@ autosar-extract autosar_spec.pdf --title "My AUTOSAR Reference" -o custom.md
 ### Python API 使用
 
 ```python
-from pdf2txt import convert_pdf_to_text
+from autosar_pdf2txt import convert_pdf_to_text
 
 # 转换 PDF 为文本
 text = convert_pdf_to_text("input.pdf")
@@ -117,7 +117,7 @@ print(text)
 text = convert_pdf_to_text("input.pdf", method="pdfplumber")
 
 # 高级转换（指定页面范围）
-from pdf2txt.core import convert_pdf_to_text_advanced
+from autosar_pdf2txt.core import convert_pdf_to_text_advanced
 
 result = convert_pdf_to_text_advanced(
     "input.pdf", 
@@ -126,18 +126,18 @@ result = convert_pdf_to_text_advanced(
 )
 
 # 转换为 Markdown 格式
-from pdf2txt import convert_to_markdown
+from autosar_pdf2txt import convert_to_markdown
 
 text = convert_pdf_to_text("input.pdf", skip_header_lines=3, skip_footer_lines=2)
 markdown_text = convert_to_markdown(text, preserve_structure=True)
 
 # 清理特殊字符
-from pdf2txt import clean_special_characters
+from autosar_pdf2txt import clean_special_characters
 
 cleaned_text = clean_special_characters(text)
 
 # 提取表格
-from pdf2txt import extract_tables_from_pdf, convert_table_to_markdown, convert_pdf_with_tables
+from autosar_pdf2txt import extract_tables_from_pdf, convert_table_to_markdown, convert_pdf_with_tables
 
 # 提取所有表格
 tables = extract_tables_from_pdf("input.pdf")
@@ -153,7 +153,7 @@ result = convert_pdf_with_tables(
 )
 
 # 提取 AUTOSAR 包和类信息
-from pdf2txt import extract_from_pdf
+from autosar_pdf2txt import extract_from_pdf
 
 stats = extract_from_pdf(
     pdf_path="autosar_spec.pdf",
@@ -164,7 +164,7 @@ stats = extract_from_pdf(
 print(f"Extracted {stats['total_classes']} classes from {stats['total_packages']} packages")
 
 # 手动提取和处理
-from pdf2txt import extract_package_and_class_info, build_package_hierarchy, write_markdown_hierarchy
+from autosar_pdf2txt import extract_package_and_class_info, build_package_hierarchy, write_markdown_hierarchy
 
 text = convert_pdf_to_text("autosar_spec.pdf")
 packages = extract_package_and_class_info(text)

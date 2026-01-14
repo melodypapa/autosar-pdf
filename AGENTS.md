@@ -1,4 +1,4 @@
-# pdf2txt - Agent Guidelines
+# autosar-pdf2txt - Agent Guidelines
 
 ## Essential Commands
 
@@ -14,31 +14,33 @@ pytest tests/                                    # Run all tests
 pytest tests/test_converter.py                 # Single test file
 pytest tests/test_converter.py::test_func      # Specific test function
 pytest tests/ -v                                # Verbose output
-pytest tests/test_converter.py::test_func --cov=pdf2txt  # With coverage
+pytest tests/test_converter.py::test_func --cov=autosar_pdf2txt  # With coverage
 cd tests && python report.py                   # Full coverage report
 ```
 
 ### Linting & Type Checking
 ```bash
-ruff check src/pdf2txt/ tests/                # Lint
-ruff check --fix src/pdf2txt/ tests/          # Auto-fix
-mypy src/pdf2txt/                              # Type check
-ruff format src/pdf2txt/                       # Format
-ruff check src/pdf2txt/ && ruff format src/pdf2txt/    # Lint + format
+ruff check src/autosar_pdf2txt/ tests/                # Lint
+ruff check --fix src/autosar_pdf2txt/ tests/          # Auto-fix
+mypy src/autosar_pdf2txt/                              # Type check
+ruff format src/autosar_pdf2txt/                       # Format
+ruff check src/autosar_pdf2txt/ && ruff format src/autosar_pdf2txt/    # Lint + format
 ```
 
 ## Code Style Guidelines
 
 ### Imports
 - Standard library → third-party → local imports with blank line separators
-- Use absolute imports: `from autosar_pdf2txt.core.converter import convert_pdf_to_text`
+- For local imports within package: use relative imports (`from ..core import ...`)
+- For external usage: use absolute imports (`from autosar_pdf2txt.core import ...`)
 - Import only what's needed; avoid `from module import *`
 
 ### Formatting
 - 4 spaces indentation (no tabs)
 - Max line length: 100-120 characters
 - Double quotes for strings, single only when string contains double quotes
-- **No comments** (code should be self-documenting)
+- Use comments sparingly; prefer self-documenting code
+- Module docstrings describe purpose at top of file
 
 ### Type Hints
 - Use type hints for all params/returns
@@ -91,11 +93,11 @@ except FileNotFoundError:
 - All exported functions must have docstrings
 
 ### File Structure
-- `pdf2txt/__init__.py`: Package exports, `__all__` for public API
-- `pdf2txt/cli/`: Command-line interfaces (`pdf2txt_cli.py`, `autosar_cli.py`)
-- `pdf2txt/core/`: Core conversion (`converter.py`, `cleaner.py`, `markdown.py`, `table.py`, `integration.py`)
-- `pdf2txt/extractor/`: AUTOSAR parsing (`parser.py`, `hierarchy.py`, `writer.py`, `integration.py`, `models.py`)
-- `pdf2txt/utils.py`: General utilities (validation, formatting)
+- `src/autosar_pdf2txt/__init__.py`: Package exports, `__all__` for public API
+- `src/autosar_pdf2txt/cli/`: Command-line interfaces (`pdf2txt_cli.py`, `autosar_cli.py`)
+- `src/autosar_pdf2txt/core/`: Core conversion (`converter.py`, `cleaner.py`, `markdown.py`, `table.py`, `integration.py`)
+- `src/autosar_pdf2txt/extractor/`: AUTOSAR parsing (`parser.py`, `hierarchy.py`, `writer.py`, `integration.py`, `models.py`)
+- `src/autosar_pdf2txt/utils.py`: General utilities (validation, formatting)
 - `tests/`: pytest files named `test_*.py`
 
 ### Testing
@@ -114,7 +116,9 @@ def test_convert_pdf_to_text():
 - Use type hints; avoid Python 3.8+ features unless necessary
 
 ## Additional Notes
+- Package name: `autosar_pdf2txt` (import: `import autosar_pdf2txt`)
 - PDF backends: pypdf (default) and pdfplumber (better for tables)
+- PyMuPDF (fitz) optional dependency for `get_pdf_info()` function
 - Page ranges are 0-indexed internally
 - CLI commands: `pdf2txt` and `autosar-extract`
 - When adding features, implement both CLI and Python API paths

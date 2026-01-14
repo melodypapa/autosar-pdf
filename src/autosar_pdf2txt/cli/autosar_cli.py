@@ -105,16 +105,20 @@ def main():
         sys.exit(1)
 
 
-def validate_and_run_extraction(args):
+def validate_inputs(inputs):
     """
-    Validate inputs and execute extraction
+    Validate input paths.
 
     Args:
-        args: Parsed command-line arguments
-    """
-    inputs = args.inputs
+        inputs (list): List of input paths from command line
 
-    # Check if any input is a directory
+    Returns:
+        tuple: (is_dir_input: bool, pdf_paths: str or list)
+
+    Raises:
+        ValueError: If inputs are invalid
+        FileNotFoundError: If input path doesn't exist
+    """
     is_dir_input = any(Path(inp).is_dir() for inp in inputs)
 
     if is_dir_input:
@@ -124,7 +128,6 @@ def validate_and_run_extraction(args):
     else:
         pdf_paths = inputs
 
-    # Validate all inputs
     for inp in inputs:
         input_path = Path(inp)
         if not input_path.exists():
@@ -132,127 +135,223 @@ def validate_and_run_extraction(args):
         if input_path.suffix.lower() != ".pdf" and not input_path.is_dir():
             raise ValueError(f"Input must be a PDF or directory: {input_path}")
 
-    # Determine output path
+    return is_dir_input, pdf_paths
+
+
+def determine_output_path(inputs, args, is_dir_input):
+    """
+    Determine output file path based on inputs and arguments.
+
+    Args:
+        inputs (list): List of input paths
+        args: Parsed command-line arguments
+        is_dir_input (bool): Whether input is a directory
+
+    Returns:
+        Path: Output file path
+    """
     if args.output:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-    else:
-        if is_dir_input or (len(inputs) > 1 and args.merge):
-            input_name = Path(inputs[0]).name if inputs else "output"
-            ext = ".md" if args.format in ["markdown", "md"] else "_summary.txt"
-            output_path = Path(input_name).with_suffix(ext)
-        elif len(inputs) == 1:
-            ext = ".md" if args.format in ["markdown", "md"] else "_summary.txt"
-            output_path = Path(inputs[0]).with_suffix(ext)
-        else:
-            ext = ".md" if args.format in ["markdown", "md"] else "_summary.txt"
-            output_path = Path("merged" + ext)
+        return output_path
 
-    # Determine format
-    format_type = "markdown" if args.format in ["markdown", "md"] else "text"
+    ext = ".md" if args.format in ["markdown", "md"] else "_summary.txt"
+
+    if is_dir_input or (len(inputs) > 1 and args.merge):
+        input_name = Path(inputs[0]).name if inputs else "output"
+        return Path(input_name).with_suffix(ext)
+    elif len(inputs) == 1:
+        return Path(inputs[0]).with_suffix(ext)
+    else:
+        return Path("merged" + ext)
+
+
+def print_extraction_info(inputs, pdf_paths, output_path, format_type, args):
+    """
+    Print extraction information in verbose mode.
+
+    Args:
+        inputs (list): List of input paths
+        pdf_paths: PDF paths (single path or list)
+        output_path (Path): Output file path
+        format_type (str): Output format type
+        args: Parsed command-line arguments
+    """
+    if not args.verbose:
+        return
+
+    print("=" * 70)
+    print("AUTOSAR Package and Class Extraction")
+    print("=" * 70)
+
+    is_dir_input = any(Path(inp).is_dir() for inp in inputs)
+
+    if is_dir_input:
+        print(f"\nInput directory: {pdf_paths}")
+    elif len(inputs) > 1:
+        print(f"\nInput files: {len(inputs)} PDFs")
+    else:
+        print(f"\nInput file:    {inputs[0]}")
+
+    print(f"Output file:   {output_path}")
+    print(f"Output format: {format_type}")
+    print(f"Extraction method: {args.method}")
+
+    if args.merge:
+        print("Merge mode:    enabled")
+    if args.package_prefix:
+        print(f"Package filter: {args.package_prefix}")
+    print()
+
+
+def apply_package_filters(packages, args):
+    """
+    Apply package filters to extracted packages.
+
+    Args:
+        packages (list): List of Package objects
+        args: Parsed command-line arguments
+
+    Returns:
+        list: Filtered list of Package objects
+    """
+    if args.package_prefix:
+        filtered_packages = [
+            pkg for pkg in packages if pkg.name.startswith(args.package_prefix)
+        ]
+        if args.verbose:
+            print(
+                f"  Filtered from {len(packages)} to {len(filtered_packages)} packages"
+            )
+        packages = filtered_packages
+
+    if args.exclude_empty:
+        filtered_packages = [pkg for pkg in packages if pkg.total_classes > 0]
+        if args.verbose:
+            print(
+                f"  Removed {len(packages) - len(filtered_packages)} empty packages"
+            )
+        packages = filtered_packages
+
+    return packages
+
+
+def extract_from_single_pdf(pdf_path, args):
+    """
+    Extract packages and classes from a single PDF file.
+
+    Args:
+        pdf_path (str): Path to PDF file
+        args: Parsed command-line arguments
+
+    Returns:
+        list: List of Package objects
+    """
+    from ..core.converter import convert_pdf_to_text
 
     if args.verbose:
-        print("=" * 70)
-        print("AUTOSAR Package and Class Extraction")
-        print("=" * 70)
-        if is_dir_input:
-            print(f"\nInput directory: {pdf_paths}")
-        elif len(inputs) > 1:
-            print(f"\nInput files: {len(inputs)} PDFs")
-        else:
-            print(f"\nInput file:    {inputs[0]}")
-        print(f"Output file:   {output_path}")
-        print(f"Output format: {format_type}")
-        print(f"Extraction method: {args.method}")
-        if args.merge:
-            print("Merge mode:    enabled")
-        if args.package_prefix:
-            print(f"Package filter: {args.package_prefix}")
-        print()
+        print("Step 1: Extracting text from PDF...")
 
-    # Perform extraction
-    from ..core.converter import convert_pdf_to_text
+    text = convert_pdf_to_text(str(pdf_path), method=args.method)
+
+    if args.verbose:
+        print("Step 2: Extracting package and class information...")
+
+    packages = extract_package_and_class_info(text)
+    packages = apply_package_filters(packages, args)
+
+    return packages
+
+
+def write_single_pdf_output(packages, output_path, format_type, args):
+    """
+    Write extraction results for a single PDF to output file.
+
+    Args:
+        packages (list): List of Package objects
+        output_path (Path): Output file path
+        format_type (str): Output format type
+        args: Parsed command-line arguments
+    """
+    if args.verbose:
+        print("\nStep 3: Writing output file...")
+
+    if format_type == "markdown":
+        tree = build_package_hierarchy(packages)
+        write_markdown_hierarchy(tree, str(output_path), title=args.title)
+    else:
+        write_text_summary(packages, str(output_path))
+
+
+def handle_multiple_pdfs_extraction(pdf_paths, output_path, format_type, args):
+    """
+    Handle extraction from multiple PDF files.
+
+    Args:
+        pdf_paths: PDF paths (directory path or list of paths)
+        output_path (Path): Output file path
+        format_type (str): Output format type
+        args: Parsed command-line arguments
+    """
     from ..extractor import extract_from_multiple_pdfs
 
-    if len(inputs) == 1 and Path(inputs[0]).suffix.lower() == ".pdf" and not args.merge:
+    if args.verbose:
+        print("Extracting from multiple PDFs...")
+
+    results = extract_from_multiple_pdfs(
+        pdf_paths=pdf_paths,
+        output_path=str(output_path),
+        format=format_type,
+        method=args.method,
+        merge_output=args.merge,
+    )
+
+    if args.merge:
         if args.verbose:
-            print("Step 1: Extracting text from PDF...")
-
-        text = convert_pdf_to_text(str(inputs[0]), method=args.method)
-
-        if args.verbose:
-            print("Step 2: Extracting package and class information...")
-
-        packages = extract_package_and_class_info(text)
-
-        # Apply package filter if specified
-        if args.package_prefix:
-            filtered_packages = [
-                pkg for pkg in packages if pkg.name.startswith(args.package_prefix)
-            ]
-            if args.verbose:
-                print(
-                    f"  Filtered from {len(packages)} to {len(filtered_packages)} packages"
-                )
-            packages = filtered_packages
-
-        # Apply empty package filter if specified
-        if args.exclude_empty:
-            filtered_packages = [pkg for pkg in packages if pkg.total_classes > 0]
-            if args.verbose:
-                print(
-                    f"  Removed {len(packages) - len(filtered_packages)} empty packages"
-                )
-            packages = filtered_packages
-
-        # Calculate statistics
-        total_packages = len(packages)
-        total_classes = sum(pkg.total_classes for pkg in packages)
-
-        # Display statistics
-        print_statistics(packages, total_packages, total_classes, args.verbose)
-
-        # If stats-only, return early
-        if args.stats_only:
-            return
-
-        # Write output
-        if args.verbose:
-            print("\nStep 3: Writing output file...")
-
-        if format_type == "markdown":
-            tree = build_package_hierarchy(packages)
-            write_markdown_hierarchy(tree, str(output_path), title=args.title)
-        else:
-            write_text_summary(packages, str(output_path))
-
+            print("Merged extraction completed")
         print(f"\n[OK] Output written to: {output_path}")
     else:
         if args.verbose:
-            print("Extracting from multiple PDFs...")
+            print("\nExtraction completed for all files")
+        print("\n" + "=" * 70)
+        print("Summary by File")
+        print("=" * 70)
+        for pdf_file, stats in results.items():
+            print(f"\n{Path(pdf_file).name}:")
+            print(f"  Packages: {stats['total_packages']}")
+            print(f"  Classes:   {stats['total_classes']}")
 
-        results = extract_from_multiple_pdfs(
-            pdf_paths=pdf_paths,
-            output_path=str(output_path),
-            format=format_type,
-            method=args.method,
-            merge_output=args.merge,
-        )
 
-        if args.merge:
-            if args.verbose:
-                print("Merged extraction completed")
-            print(f"\n[OK] Output written to: {output_path}")
-        else:
-            if args.verbose:
-                print("\nExtraction completed for all files")
-            print("\n" + "=" * 70)
-            print("Summary by File")
-            print("=" * 70)
-            for pdf_file, stats in results.items():
-                print(f"\n{Path(pdf_file).name}:")
-                print(f"  Packages: {stats['total_packages']}")
-                print(f"  Classes:   {stats['total_classes']}")
+def validate_and_run_extraction(args):
+    """
+    Validate inputs and execute extraction.
+
+    Args:
+        args: Parsed command-line arguments
+    """
+    inputs = args.inputs
+
+    is_dir_input, pdf_paths = validate_inputs(inputs)
+    output_path = determine_output_path(inputs, args, is_dir_input)
+    format_type = "markdown" if args.format in ["markdown", "md"] else "text"
+
+    print_extraction_info(inputs, pdf_paths, output_path, format_type, args)
+
+    if len(inputs) == 1 and Path(inputs[0]).suffix.lower() == ".pdf" and not args.merge:
+        packages = extract_from_single_pdf(inputs[0], args)
+
+        total_packages = len(packages)
+        total_classes = sum(pkg.total_classes for pkg in packages)
+
+        print_statistics(packages, total_packages, total_classes, args.verbose)
+
+        if args.stats_only:
+            return
+
+        write_single_pdf_output(packages, output_path, format_type, args)
+        print(f"\n[OK] Output written to: {output_path}")
+    else:
+        handle_multiple_pdfs_extraction(pdf_paths, output_path, format_type, args)
 
 
 def print_statistics(packages, total_packages, total_classes, verbose=False):

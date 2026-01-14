@@ -23,12 +23,13 @@ class PdfConverter:
     either pypdf or pdfplumber as the backend.
     """
 
-    def __init__(self, method: str = "pypdf2"):
+    def __init__(self, method: str = "pypdf2", progress_callback=None):
         """
         Initialize PDF converter.
 
         Args:
             method (str): Backend method to use ("pypdf2" or "pdfplumber", default: "pypdf2")
+            progress_callback: Optional callback function for progress updates
 
         Raises:
             ValueError: If method is not supported
@@ -38,6 +39,7 @@ class PdfConverter:
                 f"Unsupported method: {method}. Use 'pypdf2' or 'pdfplumber'."
             )
         self.method = method
+        self.progress_callback = progress_callback
 
     def _extract_page_text_pypdf2(
         self,
@@ -121,16 +123,24 @@ class PdfConverter:
         if self.method == "pypdf2":
             with open(pdf_path, "rb") as file:
                 pdf_reader = pypdf.PdfReader(file)
-                for page in pdf_reader.pages:
+                total_pages = len(pdf_reader.pages)
+
+                for idx, page in enumerate(pdf_reader.pages):
                     text += self._extract_page_text_pypdf2(
                         page, skip_header_lines, skip_footer_lines
                     )
+                    if self.progress_callback:
+                        self.progress_callback(idx, total_pages)
         elif self.method == "pdfplumber":
             with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:  # type: ignore
+                total_pages = len(pdf.pages)
+
+                for idx, page in enumerate(pdf.pages):  # type: ignore
                     text += self._extract_page_text_pdfplumber(
                         page, skip_header_lines, skip_footer_lines
                     )
+                    if self.progress_callback:
+                        self.progress_callback(idx, total_pages)
 
         return text
 
@@ -212,6 +222,7 @@ def convert_pdf_to_text(
     method: str = "pypdf2",
     skip_header_lines: int = 0,
     skip_footer_lines: int = 0,
+    progress_callback=None,
 ) -> str:
     """
     Convert PDF to text using specified method (backward compatibility function).
@@ -221,11 +232,12 @@ def convert_pdf_to_text(
         method (str): Method to use for conversion ("pypdf2" or "pdfplumber")
         skip_header_lines (int): Number of lines to skip at beginning
         skip_footer_lines (int): Number of lines to skip at end
+        progress_callback: Optional callback function for progress updates
 
     Returns:
         str: Extracted text from the PDF
     """
-    converter = PdfConverter(method=method)
+    converter = PdfConverter(method=method, progress_callback=progress_callback)
     return converter.convert(pdf_path, skip_header_lines, skip_footer_lines)
 
 

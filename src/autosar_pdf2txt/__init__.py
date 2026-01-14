@@ -19,7 +19,14 @@ from .core.cleaner import TextCleaner
 from .core.table import TableExtractor, TableConverter
 from .core.markdown import MarkdownConverter
 from .core.integration import PdfConverterWithTables
-from .utils import validate_pdf_path, sanitize_filename, get_pdf_info
+from .utils import (
+    FileUtils,
+    validate_pdf_path,
+    sanitize_filename,
+    get_pdf_info,
+    format_file_size,
+    create_output_directory,
+)
 from .extractor import (
     extract_package_and_class_info,
     build_package_hierarchy,
@@ -48,11 +55,14 @@ __all__ = [
     "validate_pdf_path",
     "sanitize_filename",
     "get_pdf_info",
+    "format_file_size",
+    "create_output_directory",
     "extract_package_and_class_info",
     "build_package_hierarchy",
     "write_markdown_hierarchy",
     "write_text_summary",
     "extract_from_pdf",
+    "FileUtils",
     "PdfConverter",
     "TextCleaner",
     "TableExtractor",

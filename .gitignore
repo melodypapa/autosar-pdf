@@ -128,13 +128,3 @@ Desktop.ini
 
 # Output files (project-specific)
 *.txt
-!requirements.txt
-!setup.py
-!README.md
-*.md
-!AGENTS.md
-!IFLOW.md
-!README.md
-!CONTRIBUTING.md
-!LICENSE
-

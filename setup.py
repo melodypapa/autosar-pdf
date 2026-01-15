@@ -35,7 +35,6 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "pdf2txt=autosar_pdf2txt.cli.pdf2txt_cli:main",
             "autosar-extract=autosar_pdf2txt.cli.autosar_cli:main",
         ],
     },

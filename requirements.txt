@@ -1,4 +1,0 @@
-# PDF backends (at least one required, all optional)
-pdfplumber>=0.10.0  # Preferred backend
-pymupdf>=1.23.0      # Alternative: fitz/PyMuPDF
-pypdf>=3.0.0         # Fallback backend

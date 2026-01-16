@@ -20,11 +20,17 @@ pip install autosar-pdf2txt
 ### Command Line
 
 ```bash
-# Extract from PDF and print to stdout
+# Extract from single PDF and print to stdout
 autosar-extract path/to/file.pdf
+
+# Extract from multiple PDFs
+autosar-extract path/to/file1.pdf path/to/file2.pdf path/to/file3.pdf
 
 # Extract and save to file
 autosar-extract path/to/file.pdf -o output.md
+
+# Extract from multiple PDFs with deduplication disabled
+autosar-extract *.pdf --no-deduplicate -o output.md
 ```
 
 ### Python API
@@ -32,13 +38,20 @@ autosar-extract path/to/file.pdf -o output.md
 ```python
 from autosar_pdf2txt import PdfParser, MarkdownWriter
 
-# Parse PDF file
+# Parse single PDF file
 parser = PdfParser()
 packages = parser.parse_pdf("path/to/file.pdf")
 
+# Parse multiple PDF files
+parser = PdfParser()
+all_packages = []
+for pdf_path in ["path/to/file1.pdf", "path/to/file2.pdf"]:
+    packages = parser.parse_pdf(pdf_path)
+    all_packages.extend(packages)
+
 # Write to markdown
 writer = MarkdownWriter()
-markdown = writer.write_packages(packages)
+markdown = writer.write_packages(all_packages)
 print(markdown)
 ```
 

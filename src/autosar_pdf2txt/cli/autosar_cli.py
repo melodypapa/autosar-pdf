@@ -17,9 +17,10 @@ def main() -> int:
         description="Extract AUTOSAR package and class hierarchies from PDF files."
     )
     parser.add_argument(
-        "pdf_file",
+        "pdf_files",
         type=str,
-        help="Path to the PDF file to parse",
+        nargs="+",
+        help="Path(s) to the PDF file(s) to parse",
     )
     parser.add_argument(
         "-o",
@@ -35,27 +36,34 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # Validate input file
-    pdf_path = Path(args.pdf_file)
-    if not pdf_path.exists():
-        print(f"Error: PDF file not found: {args.pdf_file}", file=sys.stderr)
-        return 1
-
-    if not pdf_path.is_file():
-        print(f"Error: Not a file: {args.pdf_file}", file=sys.stderr)
-        return 1
+    # Validate input files
+    pdf_paths = []
+    for pdf_file in args.pdf_files:
+        pdf_path = Path(pdf_file)
+        if not pdf_path.exists():
+            print(f"Error: PDF file not found: {pdf_file}", file=sys.stderr)
+            return 1
+        if not pdf_path.is_file():
+            print(f"Error: Not a file: {pdf_file}", file=sys.stderr)
+            return 1
+        pdf_paths.append(pdf_path)
 
     try:
-        # Parse PDF
-        print(f"Parsing PDF: {args.pdf_file}", file=sys.stderr)
+        # Parse all PDFs
         pdf_parser = PdfParser()
-        packages = pdf_parser.parse_pdf(str(pdf_path))
+        all_packages = []
 
-        print(f"Found {len(packages)} top-level packages", file=sys.stderr)
+        for pdf_path in pdf_paths:
+            print(f"Parsing PDF: {pdf_path}", file=sys.stderr)
+            packages = pdf_parser.parse_pdf(str(pdf_path))
+            all_packages.extend(packages)
+            print(f"  Found {len(packages)} top-level packages", file=sys.stderr)
+
+        print(f"Total: {len(all_packages)} top-level packages", file=sys.stderr)
 
         # Write to markdown
         writer = MarkdownWriter(deduplicate=not args.no_deduplicate)
-        markdown = writer.write_packages(packages)
+        markdown = writer.write_packages(all_packages)
 
         # Output
         if args.output:

@@ -26,6 +26,12 @@ autosar-extract path/to/file.pdf
 # Extract from multiple PDFs
 autosar-extract path/to/file1.pdf path/to/file2.pdf path/to/file3.pdf
 
+# Extract from directory (processes all PDFs in directory)
+autosar-extract path/to/directory
+
+# Extract from multiple directories and files
+autosar-extract path/to/dir1 path/to/file.pdf path/to/dir2
+
 # Extract and save to file
 autosar-extract path/to/file.pdf -o output.md
 

@@ -107,27 +107,3 @@ class MarkdownWriter:
         indent = "  " * level
         abstract_suffix = " (abstract)" if cls.is_abstract else ""
         output.write(f"{indent}* {cls.name}{abstract_suffix}\n")
-
-
-def write_markdown(packages: List[AutosarPackage], deduplicate: bool = True) -> str:
-    """Functional interface for writing packages to markdown format.
-
-    Args:
-        packages: List of top-level AutosarPackage objects.
-        deduplicate: Whether to skip duplicate packages and classes.
-
-    Returns:
-        Markdown formatted string representing the package hierarchy.
-
-    Examples:
-        >>> from autosar_pdf2txt.models import AutosarPackage, AutosarClass
-        >>> from autosar_pdf2txt.writer import write_markdown
-        >>> pkg = AutosarPackage("TestPackage")
-        >>> pkg.add_class(AutosarClass("MyClass", False))
-        >>> markdown = write_markdown([pkg])
-        >>> print(markdown)
-        * TestPackage
-            * MyClass
-    """
-    writer = MarkdownWriter(deduplicate=deduplicate)
-    return writer.write_packages(packages)

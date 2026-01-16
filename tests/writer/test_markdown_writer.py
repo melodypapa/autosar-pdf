@@ -4,7 +4,7 @@ Test coverage for markdown_writer.py targeting 100%.
 """
 
 from autosar_pdf2txt.models import AutosarClass, AutosarPackage
-from autosar_pdf2txt.writer.markdown_writer import MarkdownWriter, write_markdown
+from autosar_pdf2txt.writer.markdown_writer import MarkdownWriter
 
 
 class TestMarkdownWriter:
@@ -261,44 +261,3 @@ class TestMarkdownWriter:
         # Both CommonClass instances should be written (different parents)
         assert "CommonClass" in result
         assert result.count("* CommonClass") == 2
-
-
-class TestFunctionalInterface:
-    """Tests for functional interface."""
-
-    def test_write_markdown_function(self) -> None:
-        """Test write_markdown function."""
-        pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
-        result = write_markdown([pkg])
-        expected = "* TestPackage\n    * MyClass\n"
-        assert result == expected
-
-    def test_write_markdown_with_deduplicate_false(self) -> None:
-        """Test write_markdown with deduplication disabled."""
-        pkg1 = AutosarPackage(name="TestPackage")
-        pkg1.add_class(AutosarClass(name="MyClass", is_abstract=False))
-        pkg2 = AutosarPackage(name="TestPackage")
-        pkg2.add_class(AutosarClass(name="OtherClass", is_abstract=False))
-        result = write_markdown([pkg1, pkg2], deduplicate=False)
-        # Both packages should be written
-        assert result.count("* TestPackage") == 2
-        assert "MyClass" in result
-        assert "OtherClass" in result
-
-    def test_write_markdown_with_deduplicate_true(self) -> None:
-        """Test write_markdown with deduplication enabled."""
-        pkg1 = AutosarPackage(name="TestPackage")
-        pkg1.add_class(AutosarClass(name="MyClass", is_abstract=False))
-        pkg2 = AutosarPackage(name="TestPackage")
-        pkg2.add_class(AutosarClass(name="OtherClass", is_abstract=False))
-        result = write_markdown([pkg1, pkg2], deduplicate=True)
-        # Only first package and class should be written
-        expected = "* TestPackage\n    * MyClass\n"
-        assert result == expected
-
-    def test_write_markdown_empty_list(self) -> None:
-        """Test write_markdown with empty package list."""
-        result = write_markdown([])
-        expected = ""
-        assert result == expected

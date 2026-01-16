@@ -36,7 +36,7 @@ class TestMarkdownWriter:
         pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
-        expected = "* TestPackage\n    * MyClass\n"
+        expected = "* TestPackage\n  * MyClass\n"
         assert result == expected
 
     def test_write_package_with_abstract_class(self) -> None:
@@ -45,7 +45,7 @@ class TestMarkdownWriter:
         pkg.add_class(AutosarClass(name="AbstractClass", is_abstract=True))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
-        expected = "* TestPackage\n    * AbstractClass (abstract)\n"
+        expected = "* TestPackage\n  * AbstractClass (abstract)\n"
         assert result == expected
 
     def test_write_package_with_multiple_classes(self) -> None:
@@ -58,9 +58,9 @@ class TestMarkdownWriter:
         result = writer.write_packages([pkg])
         expected = (
             "* TestPackage\n"
-            "    * Class1\n"
-            "    * Class2 (abstract)\n"
-            "    * Class3\n"
+            "  * Class1\n"
+            "  * Class2 (abstract)\n"
+            "  * Class3\n"
         )
         assert result == expected
 
@@ -75,7 +75,7 @@ class TestMarkdownWriter:
         expected = (
             "* RootPackage\n"
             "  * ChildPackage\n"
-            "      * GrandchildClass\n"
+            "    * GrandchildClass\n"
         )
         assert result == expected
 
@@ -100,8 +100,8 @@ class TestMarkdownWriter:
             "* AUTOSARTemplates\n"
             "  * BswModuleTemplate\n"
             "    * BswBehavior\n"
-            "        * BswInternalBehavior\n"
-            "        * ExecutableEntity (abstract)\n"
+            "      * BswInternalBehavior\n"
+            "      * ExecutableEntity (abstract)\n"
         )
         assert result == expected
 
@@ -115,9 +115,9 @@ class TestMarkdownWriter:
         result = writer.write_packages([pkg1, pkg2])
         expected = (
             "* Package1\n"
-            "    * Class1\n"
+            "  * Class1\n"
             "* Package2\n"
-            "    * Class2 (abstract)\n"
+            "  * Class2 (abstract)\n"
         )
         assert result == expected
 
@@ -135,7 +135,7 @@ class TestMarkdownWriter:
             "* Level1\n"
             "  * Level2\n"
             "    * Level3\n"
-            "        * DeepClass\n"
+            "      * DeepClass\n"
         )
         assert result == expected
 
@@ -147,7 +147,7 @@ class TestMarkdownWriter:
 
         # First write
         result1 = writer.write_packages([pkg])
-        assert result1 == "* TestPackage\n    * MyClass\n"
+        assert result1 == "* TestPackage\n  * MyClass\n"
 
         # Second write - everything should be skipped due to deduplication
         result2 = writer.write_packages([pkg])
@@ -162,7 +162,7 @@ class TestMarkdownWriter:
 
         # First write
         result1 = writer.write_packages([pkg])
-        assert result1 == "* TestPackage\n    * MyClass\n    * OtherClass\n"
+        assert result1 == "* TestPackage\n  * MyClass\n  * OtherClass\n"
 
         # Create same package structure again - both classes should be skipped
         pkg2 = AutosarPackage(name="TestPackage")
@@ -199,9 +199,9 @@ class TestMarkdownWriter:
         # Both packages should be written even though they have the same name
         expected = (
             "* TestPackage\n"
-            "    * MyClass\n"
+            "  * MyClass\n"
             "* TestPackage\n"
-            "    * OtherClass\n"
+            "  * OtherClass\n"
         )
         assert result == expected
 
@@ -223,9 +223,9 @@ class TestMarkdownWriter:
         result = writer.write_packages([pkg])
         expected = (
             "* ParentPackage\n"
-            "    * DirectClass\n"
+            "  * DirectClass\n"
             "  * ChildPackage\n"
-            "      * ChildClass (abstract)\n"
+            "    * ChildClass (abstract)\n"
         )
         assert result == expected
 
@@ -237,7 +237,7 @@ class TestMarkdownWriter:
 
         # First call
         result1 = writer.write_packages([pkg])
-        assert result1 == "* TestPackage\n    * MyClass\n"
+        assert result1 == "* TestPackage\n  * MyClass\n"
 
         # Second call - package and class should be skipped
         result2 = writer.write_packages([pkg])

@@ -29,8 +29,8 @@ Perform a comprehensive code review of the specified files focusing on:
 - Import organization: standard library → third-party → local
 - Naming: snake_case (functions), PascalCase (classes), UPPER_CASE (constants)
 - Error handling: ValueError for invalid args, try-except for I/O
-- Two-tier API: functional + class-based implementations
-- English comments; Chinese test docstrings
+- Class-based APIs: Use class interfaces instead of module-level functions
+- English comments: All comments and docstrings must be in English
 
 ### 2. Security Vulnerabilities
 - Command injection (os.system, subprocess without sanitization)

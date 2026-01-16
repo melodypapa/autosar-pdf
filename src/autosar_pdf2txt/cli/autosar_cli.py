@@ -20,7 +20,7 @@ def main() -> int:
         "pdf_files",
         type=str,
         nargs="+",
-        help="Path(s) to the PDF file(s) to parse",
+        help="Path(s) to PDF file(s) or director(y/ies) containing PDFs to parse",
     )
     parser.add_argument(
         "-o",
@@ -36,17 +36,35 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # Validate input files
+    # Validate and collect input paths (files and directories)
     pdf_paths = []
-    for pdf_file in args.pdf_files:
-        pdf_path = Path(pdf_file)
-        if not pdf_path.exists():
-            print(f"Error: PDF file not found: {pdf_file}", file=sys.stderr)
+    for input_path in args.pdf_files:
+        path = Path(input_path)
+        if not path.exists():
+            print(f"Error: Path not found: {input_path}", file=sys.stderr)
             return 1
-        if not pdf_path.is_file():
-            print(f"Error: Not a file: {pdf_file}", file=sys.stderr)
+
+        if path.is_file():
+            # It's a file, add directly
+            if path.suffix.lower() != ".pdf":
+                print(f"Warning: Skipping non-PDF file: {input_path}", file=sys.stderr)
+                continue
+            pdf_paths.append(path)
+        elif path.is_dir():
+            # It's a directory, find all PDF files
+            pdf_files_in_dir = sorted(path.glob("*.pdf"))
+            if not pdf_files_in_dir:
+                print(f"Warning: No PDF files found in directory: {input_path}", file=sys.stderr)
+                continue
+            pdf_paths.extend(pdf_files_in_dir)
+            print(f"Found {len(pdf_files_in_dir)} PDF file(s) in directory: {input_path}", file=sys.stderr)
+        else:
+            print(f"Error: Not a file or directory: {input_path}", file=sys.stderr)
             return 1
-        pdf_paths.append(pdf_path)
+
+    if not pdf_paths:
+        print("Error: No PDF files to process", file=sys.stderr)
+        return 1
 
     try:
         # Parse all PDFs

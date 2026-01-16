@@ -120,7 +120,7 @@ class TestPDFReader:
             mock_pdf_reader = Mock()
             mock_pdf_reader.pages = [mock_page]
 
-            with patch("autosar_pdf2txt.parser.pdf_reader.pypdf.PdfReader", return_value=mock_pdf_reader):
+            with patch("pypdf.PdfReader", return_value=mock_pdf_reader):
                 with open(tmp_path / "test.pdf", "wb") as f:
                     f.write(b"fake pdf content")
 

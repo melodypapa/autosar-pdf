@@ -1,7 +1,7 @@
 """AUTOSAR data models for packages and classes."""
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -100,7 +100,7 @@ class AutosarPackage:
             raise ValueError(f"Subpackage '{pkg.name}' already exists in package '{self.name}'")
         self.subpackages.append(pkg)
 
-    def get_class(self, name: str) -> AutosarClass | None:
+    def get_class(self, name: str) -> Optional[AutosarClass]:
         """Get a class by name.
 
         Args:
@@ -114,7 +114,7 @@ class AutosarPackage:
                 return cls
         return None
 
-    def get_subpackage(self, name: str) -> "AutosarPackage | None":
+    def get_subpackage(self, name: str) -> Optional["AutosarPackage"]:
         """Get a subpackage by name.
 
         Args:

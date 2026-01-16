@@ -1,6 +1,7 @@
 """Command-line interface for extracting AUTOSAR models from PDF files."""
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
@@ -9,6 +10,9 @@ from autosar_pdf2txt import PdfParser, MarkdownWriter
 
 def main() -> int:
     """Main entry point for the CLI.
+
+    Requirements:
+        SWR_Cli_00001: CLI Entry Point
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -29,41 +33,53 @@ def main() -> int:
         help="Output file path (default: stdout)",
     )
     parser.add_argument(
-        "--no-deduplicate",
+        "-v",
+        "--verbose",
         action="store_true",
-        help="Disable deduplication of packages and classes",
+        help="Enable verbose output mode for detailed debug information",
     )
 
     args = parser.parse_args()
 
+    # Configure logging based on verbose flag
+    # SWR_Cli_00005: CLI Verbose Mode
+    # SWR_Cli_00008: CLI Logging
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(levelname)s: %(message)s",
+    )
+
     # Validate and collect input paths (files and directories)
+    # SWR_Cli_00006: CLI Input Validation
     pdf_paths = []
     for input_path in args.pdf_files:
         path = Path(input_path)
         if not path.exists():
-            print(f"Error: Path not found: {input_path}", file=sys.stderr)
+            logging.error(f"Path not found: {input_path}")
             return 1
 
         if path.is_file():
             # It's a file, add directly
             if path.suffix.lower() != ".pdf":
-                print(f"Warning: Skipping non-PDF file: {input_path}", file=sys.stderr)
+                logging.warning(f"Skipping non-PDF file: {input_path}")
                 continue
             pdf_paths.append(path)
         elif path.is_dir():
             # It's a directory, find all PDF files
+            # SWR_Cli_00003: CLI Directory Input Support
             pdf_files_in_dir = sorted(path.glob("*.pdf"))
             if not pdf_files_in_dir:
-                print(f"Warning: No PDF files found in directory: {input_path}", file=sys.stderr)
+                logging.warning(f"No PDF files found in directory: {input_path}")
                 continue
             pdf_paths.extend(pdf_files_in_dir)
-            print(f"Found {len(pdf_files_in_dir)} PDF file(s) in directory: {input_path}", file=sys.stderr)
+            logging.info(f"Found {len(pdf_files_in_dir)} PDF file(s) in directory: {input_path}")
         else:
-            print(f"Error: Not a file or directory: {input_path}", file=sys.stderr)
+            logging.error(f"Not a file or directory: {input_path}")
             return 1
 
     if not pdf_paths:
-        print("Error: No PDF files to process", file=sys.stderr)
+        logging.error("No PDF files to process")
         return 1
 
     try:
@@ -72,29 +88,38 @@ def main() -> int:
         all_packages = []
 
         for pdf_path in pdf_paths:
-            print(f"Parsing PDF: {pdf_path}", file=sys.stderr)
+            # SWR_Cli_00007: CLI Progress Feedback
+            logging.info(f"Parsing PDF: {pdf_path}")
+            logging.debug(f"  Full path: {pdf_path.absolute()}")
             packages = pdf_parser.parse_pdf(str(pdf_path))
             all_packages.extend(packages)
-            print(f"  Found {len(packages)} top-level packages", file=sys.stderr)
+            logging.info(f"  Found {len(packages)} top-level packages")
+            if args.verbose:
+                for pkg in packages:
+                    logging.debug(f"    - {pkg.name}")
 
-        print(f"Total: {len(all_packages)} top-level packages", file=sys.stderr)
+        # SWR_Cli_00007: CLI Progress Feedback
+        logging.info(f"Total: {len(all_packages)} top-level packages")
 
         # Write to markdown
-        writer = MarkdownWriter(deduplicate=not args.no_deduplicate)
+        writer = MarkdownWriter()
         markdown = writer.write_packages(all_packages)
 
-        # Output
+        # SWR_Cli_00004: CLI Output File Option
         if args.output:
             output_path = Path(args.output)
             output_path.write_text(markdown, encoding="utf-8")
-            print(f"Output written to: {args.output}", file=sys.stderr)
+            logging.info(f"Output written to: {args.output}")
         else:
             print(markdown, end="")
 
         return 0
 
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        # SWR_Cli_00009: CLI Error Handling
+        logging.error(f"{e}")
+        if args.verbose:
+            logging.exception("Detailed error traceback:")
         return 1
 
 

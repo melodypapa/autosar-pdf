@@ -9,47 +9,85 @@ from autosar_pdf2txt.models import AutosarClass, AutosarPackage
 
 
 class TestAutosarClass:
-    """Tests for AutosarClass class."""
+    """Tests for AutosarClass class.
+
+    Requirements:
+        SWR_Model_00001: AUTOSAR Class Representation
+        SWR_Model_00002: AUTOSAR Class Name Validation
+        SWR_Model_00003: AUTOSAR Class String Representation
+    """
 
     def test_init_concrete_class(self) -> None:
-        """Test creating a concrete class."""
+        """Test creating a concrete class.
+
+        Requirements:
+            SWR_Model_00001: AUTOSAR Class Representation
+        """
         cls = AutosarClass(name="RunnableEntity", is_abstract=False)
         assert cls.name == "RunnableEntity"
         assert cls.is_abstract is False
 
     def test_init_abstract_class(self) -> None:
-        """Test creating an abstract class."""
+        """Test creating an abstract class.
+
+        Requirements:
+            SWR_Model_00001: AUTOSAR Class Representation
+        """
         cls = AutosarClass(name="InternalBehavior", is_abstract=True)
         assert cls.name == "InternalBehavior"
         assert cls.is_abstract is True
 
     def test_post_init_valid_name(self) -> None:
-        """Test valid name validation."""
+        """Test valid name validation.
+
+        Requirements:
+            SWR_Model_00002: AUTOSAR Class Name Validation
+        """
         cls = AutosarClass(name="ValidClass", is_abstract=False)
         assert cls.name == "ValidClass"
 
     def test_post_init_empty_name(self) -> None:
-        """Test empty name raises ValueError."""
+        """Test empty name raises ValueError.
+
+        Requirements:
+            SWR_Model_00002: AUTOSAR Class Name Validation
+        """
         with pytest.raises(ValueError, match="Class name cannot be empty"):
             AutosarClass(name="", is_abstract=False)
 
     def test_post_init_whitespace_name(self) -> None:
-        """Test whitespace-only name raises ValueError."""
+        """Test whitespace-only name raises ValueError.
+
+        Requirements:
+            SWR_Model_00002: AUTOSAR Class Name Validation
+        """
         with pytest.raises(ValueError, match="Class name cannot be empty"):
             AutosarClass(name="   ", is_abstract=False)
 
     def test_str_concrete_class(self) -> None:
-        """Test string representation of concrete class."""
+        """Test string representation of concrete class.
+
+        Requirements:
+            SWR_Model_00003: AUTOSAR Class String Representation
+        """
         cls = AutosarClass(name="MyClass", is_abstract=False)
         assert str(cls) == "MyClass"
 
     def test_str_abstract_class(self) -> None:
-        """Test string representation of abstract class."""
+        """Test string representation of abstract class.
+
+        Requirements:
+            SWR_Model_00003: AUTOSAR Class String Representation
+        """
         cls = AutosarClass(name="AbstractClass", is_abstract=True)
         assert str(cls) == "AbstractClass (abstract)"
 
     def test_repr(self) -> None:
-        """Test __repr__ method."""
+        """Test __repr__ method.
+
+        Requirements:
+            SWR_Model_00003: AUTOSAR Class String Representation
+        """
         cls = AutosarClass(name="TestClass", is_abstract=True)
         result = repr(cls)
         assert "AutosarClass" in result
@@ -58,17 +96,34 @@ class TestAutosarClass:
 
 
 class TestAutosarPackage:
-    """Tests for AutosarPackage class."""
+    """Tests for AutosarPackage class.
+
+    Requirements:
+        SWR_Model_00004: AUTOSAR Package Representation
+        SWR_Model_00005: AUTOSAR Package Name Validation
+        SWR_Model_00006: Add Class to Package
+        SWR_Model_00007: Add Subpackage to Package
+        SWR_Model_00008: Query Package Contents
+        SWR_Model_00009: Package String Representation
+    """
 
     def test_init_empty_package(self) -> None:
-        """Test creating an empty package."""
+        """Test creating an empty package.
+
+        Requirements:
+            SWR_Model_00004: AUTOSAR Package Representation
+        """
         pkg = AutosarPackage(name="TestPackage")
         assert pkg.name == "TestPackage"
         assert len(pkg.classes) == 0
         assert len(pkg.subpackages) == 0
 
     def test_init_with_classes(self) -> None:
-        """Test creating a package with classes."""
+        """Test creating a package with classes.
+
+        Requirements:
+            SWR_Model_00004: AUTOSAR Package Representation
+        """
         cls1 = AutosarClass(name="Class1", is_abstract=False)
         cls2 = AutosarClass(name="Class2", is_abstract=True)
         pkg = AutosarPackage(name="TestPackage", classes=[cls1, cls2])
@@ -77,29 +132,49 @@ class TestAutosarPackage:
         assert pkg.classes[1].name == "Class2"
 
     def test_init_with_subpackages(self) -> None:
-        """Test creating a package with subpackages."""
+        """Test creating a package with subpackages.
+
+        Requirements:
+            SWR_Model_00004: AUTOSAR Package Representation
+        """
         subpkg = AutosarPackage(name="SubPackage")
         pkg = AutosarPackage(name="TestPackage", subpackages=[subpkg])
         assert len(pkg.subpackages) == 1
         assert pkg.subpackages[0].name == "SubPackage"
 
     def test_post_init_valid_name(self) -> None:
-        """Test valid name validation."""
+        """Test valid name validation.
+
+        Requirements:
+            SWR_Model_00005: AUTOSAR Package Name Validation
+        """
         pkg = AutosarPackage(name="ValidPackage")
         assert pkg.name == "ValidPackage"
 
     def test_post_init_empty_name(self) -> None:
-        """Test empty name raises ValueError."""
+        """Test empty name raises ValueError.
+
+        Requirements:
+            SWR_Model_00005: AUTOSAR Package Name Validation
+        """
         with pytest.raises(ValueError, match="Package name cannot be empty"):
             AutosarPackage(name="")
 
     def test_post_init_whitespace_name(self) -> None:
-        """Test whitespace-only name raises ValueError."""
+        """Test whitespace-only name raises ValueError.
+
+        Requirements:
+            SWR_Model_00005: AUTOSAR Package Name Validation
+        """
         with pytest.raises(ValueError, match="Package name cannot be empty"):
             AutosarPackage(name="   ")
 
     def test_add_class_success(self) -> None:
-        """Test successfully adding a class."""
+        """Test successfully adding a class.
+
+        Requirements:
+            SWR_Model_00006: Add Class to Package
+        """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="NewClass", is_abstract=False)
         pkg.add_class(cls)
@@ -107,7 +182,11 @@ class TestAutosarPackage:
         assert pkg.classes[0] == cls
 
     def test_add_class_duplicate(self) -> None:
-        """Test adding duplicate class raises ValueError."""
+        """Test adding duplicate class raises ValueError.
+
+        Requirements:
+            SWR_Model_00006: Add Class to Package
+        """
         pkg = AutosarPackage(name="TestPackage")
         cls1 = AutosarClass(name="DuplicateClass", is_abstract=False)
         cls2 = AutosarClass(name="DuplicateClass", is_abstract=True)
@@ -116,7 +195,11 @@ class TestAutosarPackage:
             pkg.add_class(cls2)
 
     def test_add_subpackage_success(self) -> None:
-        """Test successfully adding a subpackage."""
+        """Test successfully adding a subpackage.
+
+        Requirements:
+            SWR_Model_00007: Add Subpackage to Package
+        """
         pkg = AutosarPackage(name="ParentPackage")
         subpkg = AutosarPackage(name="ChildPackage")
         pkg.add_subpackage(subpkg)
@@ -124,7 +207,11 @@ class TestAutosarPackage:
         assert pkg.subpackages[0] == subpkg
 
     def test_add_subpackage_duplicate(self) -> None:
-        """Test adding duplicate subpackage raises ValueError."""
+        """Test adding duplicate subpackage raises ValueError.
+
+        Requirements:
+            SWR_Model_00007: Add Subpackage to Package
+        """
         pkg = AutosarPackage(name="ParentPackage")
         subpkg1 = AutosarPackage(name="DuplicateSub")
         subpkg2 = AutosarPackage(name="DuplicateSub")
@@ -133,7 +220,11 @@ class TestAutosarPackage:
             pkg.add_subpackage(subpkg2)
 
     def test_get_class_found(self) -> None:
-        """Test finding an existing class."""
+        """Test finding an existing class.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="TargetClass", is_abstract=False)
         pkg.add_class(cls)
@@ -142,13 +233,21 @@ class TestAutosarPackage:
         assert result.name == "TargetClass"
 
     def test_get_class_not_found(self) -> None:
-        """Test finding a non-existent class."""
+        """Test finding a non-existent class.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="TestPackage")
         result = pkg.get_class("NonExistent")
         assert result is None
 
     def test_get_subpackage_found(self) -> None:
-        """Test finding an existing subpackage."""
+        """Test finding an existing subpackage.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="ParentPackage")
         subpkg = AutosarPackage(name="TargetSub")
         pkg.add_subpackage(subpkg)
@@ -157,37 +256,61 @@ class TestAutosarPackage:
         assert result.name == "TargetSub"
 
     def test_get_subpackage_not_found(self) -> None:
-        """Test finding a non-existent subpackage."""
+        """Test finding a non-existent subpackage.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="ParentPackage")
         result = pkg.get_subpackage("NonExistent")
         assert result is None
 
     def test_has_class_true(self) -> None:
-        """Test has_class returns True when class exists."""
+        """Test has_class returns True when class exists.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="ExistingClass", is_abstract=False)
         pkg.add_class(cls)
         assert pkg.has_class("ExistingClass") is True
 
     def test_has_class_false(self) -> None:
-        """Test has_class returns False when class doesn't exist."""
+        """Test has_class returns False when class doesn't exist.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="TestPackage")
         assert pkg.has_class("NonExistent") is False
 
     def test_has_subpackage_true(self) -> None:
-        """Test has_subpackage returns True when subpackage exists."""
+        """Test has_subpackage returns True when subpackage exists.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="ParentPackage")
         subpkg = AutosarPackage(name="ExistingSub")
         pkg.add_subpackage(subpkg)
         assert pkg.has_subpackage("ExistingSub") is True
 
     def test_has_subpackage_false(self) -> None:
-        """Test has_subpackage returns False when subpackage doesn't exist."""
+        """Test has_subpackage returns False when subpackage doesn't exist.
+
+        Requirements:
+            SWR_Model_00008: Query Package Contents
+        """
         pkg = AutosarPackage(name="ParentPackage")
         assert pkg.has_subpackage("NonExistent") is False
 
     def test_str_package_with_classes_only(self) -> None:
-        """Test string representation of package with only classes."""
+        """Test string representation of package with only classes.
+
+        Requirements:
+            SWR_Model_00009: Package String Representation
+        """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
         pkg.add_class(AutosarClass(name="Class2", is_abstract=True))
@@ -196,7 +319,11 @@ class TestAutosarPackage:
         assert "2 classes" in result
 
     def test_str_package_with_subpackages_only(self) -> None:
-        """Test string representation of package with only subpackages."""
+        """Test string representation of package with only subpackages.
+
+        Requirements:
+            SWR_Model_00009: Package String Representation
+        """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_subpackage(AutosarPackage(name="Sub1"))
         pkg.add_subpackage(AutosarPackage(name="Sub2"))
@@ -205,7 +332,11 @@ class TestAutosarPackage:
         assert "2 subpackages" in result
 
     def test_str_package_with_both(self) -> None:
-        """Test string representation of package with both classes and subpackages."""
+        """Test string representation of package with both classes and subpackages.
+
+        Requirements:
+            SWR_Model_00009: Package String Representation
+        """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
         pkg.add_subpackage(AutosarPackage(name="Sub1"))
@@ -215,13 +346,21 @@ class TestAutosarPackage:
         assert "1 subpackages" in result
 
     def test_str_empty_package(self) -> None:
-        """Test string representation of empty package."""
+        """Test string representation of empty package.
+
+        Requirements:
+            SWR_Model_00009: Package String Representation
+        """
         pkg = AutosarPackage(name="EmptyPackage")
         result = str(pkg)
         assert "EmptyPackage" in result
 
     def test_repr(self) -> None:
-        """Test __repr__ method."""
+        """Test __repr__ method.
+
+        Requirements:
+            SWR_Model_00009: Package String Representation
+        """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
         pkg.add_subpackage(AutosarPackage(name="Sub1"))
@@ -232,7 +371,12 @@ class TestAutosarPackage:
         assert "subpackages=1" in result
 
     def test_nested_packages(self) -> None:
-        """Test nested package structure."""
+        """Test nested package structure.
+
+        Requirements:
+            SWR_Model_00007: Add Subpackage to Package
+            SWR_Model_00008: Query Package Contents
+        """
         root = AutosarPackage(name="Root")
         child = AutosarPackage(name="Child")
         grandchild = AutosarPackage(name="Grandchild")

@@ -3,14 +3,10 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-# Optional dependencies (PDF backends)
-# At least one backend required: pdfplumber (preferred), pymupdf (fitz), or pypdf
-install_requires = [
-    # PDF backends are optional - install at least one:
-    # "pdfplumber>=0.10.0",  # Preferred
-    # "pymupdf>=1.23.0",      # Alternative: fitz/PyMuPDF
-    # "pypdf>=3.0.0",         # Fallback
-]
+with open("requirements.txt", "r", encoding="utf-8") as fh:
+    requirements = [
+        line.strip() for line in fh if line.strip() and not line.startswith("#")
+    ]
 
 setup(
     name="autosar-pdf2txt",
@@ -36,7 +32,7 @@ setup(
         "Programming Language :: Python :: 3.11",
     ],
     python_requires=">=3.7",
-    install_requires=install_requires,
+    install_requires=requirements,
     entry_points={
         "console_scripts": [
             "autosar-extract=autosar_pdf2txt.cli.autosar_cli:main",

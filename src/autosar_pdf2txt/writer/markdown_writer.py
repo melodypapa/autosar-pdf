@@ -10,11 +10,13 @@ class MarkdownWriter:
     """Write AUTOSAR packages and classes to markdown format.
 
     The output format uses asterisks (*) for hierarchy with indentation
-    to show nesting levels:
-    * Package
+    to show nesting levels. Each level adds 2 spaces of indentation.
+    Classes and subpackages are written at the same indentation level:
+
+    * TopLevelPackage
       * SubPackage
-          * Class
-          * Class (abstract)
+        * Class
+        * Class (abstract)
     """
 
     def __init__(self, deduplicate: bool = True) -> None:
@@ -73,11 +75,11 @@ class MarkdownWriter:
         indent = "  " * level
         output.write(f"{indent}* {pkg.name}\n")
 
-        # Write classes first (add one more level for proper indentation)
+        # Write classes at one level deeper than their parent package
         for cls in pkg.classes:
-            self._write_class(cls, parent_path + [pkg.name], level + 2, output)
+            self._write_class(cls, parent_path + [pkg.name], level + 1, output)
 
-        # Write subpackages
+        # Write subpackages at one level deeper than their parent package
         for subpkg in pkg.subpackages:
             self._write_package(subpkg, parent_path + [pkg.name], level + 1, output)
 

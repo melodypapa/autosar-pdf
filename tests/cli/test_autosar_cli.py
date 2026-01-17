@@ -5,8 +5,6 @@ Test coverage for autosar_cli.py targeting 100%.
 
 from unittest.mock import MagicMock, PropertyMock, patch
 
-import pytest
-
 from autosar_pdf2txt.cli.autosar_cli import main
 
 
@@ -32,7 +30,7 @@ class TestAutosarCli:
             SWR_Cli_00001: CLI Entry Point
         """
         assert callable(main)
-        assert main.__annotations__.get("return") == int
+        assert main.__annotations__.get("return") is int
 
     @patch("sys.argv", ["autosar-extract", "nonexistent.pdf"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
@@ -199,7 +197,6 @@ class TestAutosarCli:
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
-             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
              patch("builtins.print"):
             # Make parser raise exception
             mock_parser.return_value.parse_pdf.side_effect = Exception("Parse error")
@@ -236,7 +233,6 @@ class TestAutosarCli:
         mock_logging.basicConfig = MagicMock()
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
-             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
              patch("builtins.print"):
             # Make parser raise exception
             mock_parser.return_value.parse_pdf.side_effect = Exception("Parse error")

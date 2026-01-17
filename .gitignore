@@ -128,3 +128,6 @@ Desktop.ini
 
 # Output files (project-specific)
 # Note: requirements.txt is NOT ignored - it's needed for setup.py
+
+# Claude Code
+.claude/

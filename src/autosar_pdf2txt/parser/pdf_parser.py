@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from autosar_pdf2txt.models import AutosarClass, AutosarPackage
 

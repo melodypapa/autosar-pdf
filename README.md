@@ -8,6 +8,7 @@ A Python package to extract AUTOSAR model hierarchies from PDF files and convert
 - Parse hierarchical class structures
 - Generate markdown output with proper indentation
 - Support for abstract classes
+- Model-level duplicate prevention
 
 ## Installation
 
@@ -35,8 +36,11 @@ autosar-extract path/to/dir1 path/to/file.pdf path/to/dir2
 # Extract and save to file
 autosar-extract path/to/file.pdf -o output.md
 
-# Extract from multiple PDFs with deduplication disabled
-autosar-extract *.pdf --no-deduplicate -o output.md
+# Enable verbose mode for detailed debug information
+autosar-extract path/to/file.pdf -v
+
+# Extract from multiple PDFs with verbose output
+autosar-extract *.pdf -o output.md -v
 ```
 
 ### Python API
@@ -63,7 +67,7 @@ print(markdown)
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.7+
 - pdfplumber
 
 ## License

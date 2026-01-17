@@ -12,6 +12,9 @@ from autosar_pdf2txt.models import AutosarClass, AutosarPackage
 class ClassDefinition:
     """Represents a parsed class definition from PDF.
 
+    Requirements:
+        SWR_Parser_00005: Class Definition Data Model
+
     Attributes:
         name: The name of the class.
         package_path: Full package path (e.g., "M2::AUTOSARTemplates::BswModuleTemplate::BswBehavior").
@@ -30,8 +33,12 @@ class ClassDefinition:
 class PdfParser:
     """Parse AUTOSAR PDF files to extract package and class hierarchies.
 
+    Requirements:
+        SWR_Parser_00001: PDF Parser Initialization
+
     The parser extracts class definitions from PDF files and builds
-    AutosarPackage and AutosarClass objects.
+    AutosarPackage and AutosarClass objects using pdfplumber as the
+    default PDF engine.
 
     Usage:
         >>> parser = PdfParser()
@@ -40,44 +47,46 @@ class PdfParser:
     """
 
     # Regex patterns for parsing class definitions
+    # SWR_Parser_00004: Class Definition Pattern Recognition
     CLASS_PATTERN = re.compile(r"^Class\s+(.+?)(?:\s*\((abstract)\))?\s*$")
     PACKAGE_PATTERN = re.compile(r"^Package\s+(M2::)?(.+)$")
     BASE_PATTERN = re.compile(r"^Base\s+(.+)$")
     SUBCLASS_PATTERN = re.compile(r"^Subclasses\s+(.+)$")
 
-    def __init__(self, backend: str = "pdfplumber") -> None:
+    def __init__(self) -> None:
         """Initialize the PDF parser.
 
-        Args:
-            backend: PDF parsing backend to use ("pdfplumber", "pypdf", or "fitz").
+        Requirements:
+            SWR_Parser_00001: PDF Parser Initialization
+            SWR_Parser_00007: PDF Backend Support - pdfplumber
 
         Raises:
-            ImportError: If the specified backend is not available.
+            ImportError: If pdfplumber is not installed.
         """
-        self.backend = backend
         self._validate_backend()
 
     def _validate_backend(self) -> None:
-        """Validate that the requested backend is available.
+        """Validate that pdfplumber backend is available.
+
+        Requirements:
+            SWR_Parser_00002: Backend Validation
+            SWR_Parser_00007: PDF Backend Support - pdfplumber
 
         Raises:
-            ImportError: If the backend is not installed.
+            ImportError: If pdfplumber is not installed.
         """
-        if self.backend == "pdfplumber":
-            try:
-                import pdfplumber as _  # noqa: F401
-            except ImportError:
-                raise ImportError(
-                    "pdfplumber is not installed. Install it with: pip install pdfplumber"
-                )
-        elif self.backend == "pypdf" or self.backend == "fitz":
-            # These backends are not yet implemented
-            raise NotImplementedError(f"{self.backend} backend is not yet implemented")
-        else:
-            raise ValueError(f"Unknown backend: {self.backend}")
+        try:
+            import pdfplumber as _  # noqa: F401
+        except ImportError:
+            raise ImportError(
+                "pdfplumber is not installed. Install it with: pip install pdfplumber"
+            )
 
     def parse_pdf(self, pdf_path: str) -> List[AutosarPackage]:
         """Parse a PDF file and extract the package hierarchy.
+
+        Requirements:
+            SWR_Parser_00003: PDF File Parsing
 
         Args:
             pdf_path: Path to the PDF file.
@@ -98,19 +107,23 @@ class PdfParser:
     def _extract_class_definitions(self, pdf_path: str) -> List[ClassDefinition]:
         """Extract all class definitions from the PDF.
 
+        Requirements:
+            SWR_Parser_00003: PDF File Parsing
+
         Args:
             pdf_path: Path to the PDF file.
 
         Returns:
             List of ClassDefinition objects.
         """
-        if self.backend == "pdfplumber":
-            return self._extract_with_pdfplumber(pdf_path)
-        else:
-            raise NotImplementedError(f"Backend {self.backend} not implemented")
+        return self._extract_with_pdfplumber(pdf_path)
 
     def _extract_with_pdfplumber(self, pdf_path: str) -> List[ClassDefinition]:
         """Extract class definitions using pdfplumber.
+
+        Requirements:
+            SWR_Parser_00003: PDF File Parsing
+            SWR_Parser_00007: PDF Backend Support - pdfplumber
 
         Args:
             pdf_path: Path to the PDF file.
@@ -141,6 +154,9 @@ class PdfParser:
 
     def _parse_class_text(self, text: str) -> List[ClassDefinition]:
         """Parse class definitions from extracted text.
+
+        Requirements:
+            SWR_Parser_00004: Class Definition Pattern Recognition
 
         Args:
             text: The extracted text from PDF.
@@ -208,6 +224,9 @@ class PdfParser:
         self, class_defs: List[ClassDefinition]
     ) -> List[AutosarPackage]:
         """Build AutosarPackage hierarchy from class definitions.
+
+        Requirements:
+            SWR_Parser_00006: Package Hierarchy Building
 
         Args:
             class_defs: List of ClassDefinition objects.

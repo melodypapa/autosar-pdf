@@ -9,6 +9,9 @@ from autosar_pdf2txt.models import AutosarClass, AutosarPackage
 class MarkdownWriter:
     """Write AUTOSAR packages and classes to markdown format.
 
+    Requirements:
+        SWR_Writer_00001: Markdown Writer Initialization
+
     The output format uses asterisks (*) for hierarchy with indentation
     to show nesting levels. Each level adds 2 spaces of indentation.
     Classes and subpackages are written at the same indentation level:
@@ -19,18 +22,19 @@ class MarkdownWriter:
         * Class (abstract)
     """
 
-    def __init__(self, deduplicate: bool = True) -> None:
+    def __init__(self) -> None:
         """Initialize the markdown writer.
 
-        Args:
-            deduplicate: Whether to track and skip duplicate items during writing.
+        Requirements:
+            SWR_Writer_00001: Markdown Writer Initialization
         """
-        self.deduplicate = deduplicate
-        self._seen_packages: set[tuple[str, ...]] = set()
-        self._seen_classes: set[tuple[str, ...]] = set()
 
     def write_packages(self, packages: List[AutosarPackage]) -> str:
         """Write a list of top-level packages to markdown format.
+
+        Requirements:
+            SWR_Writer_00002: Markdown Package Hierarchy Output
+            SWR_Writer_00004: Bulk Package Writing
 
         Args:
             packages: List of top-level AutosarPackage objects.
@@ -58,19 +62,15 @@ class MarkdownWriter:
     ) -> None:
         """Write a single package with its contents to the output.
 
+        Requirements:
+            SWR_Writer_00002: Markdown Package Hierarchy Output
+
         Args:
             pkg: The package to write.
-            parent_path: List of parent package names for duplicate tracking.
+            parent_path: List of parent package names.
             level: Current indentation level (0 for top-level).
             output: StringIO buffer to write to.
         """
-        # Check for duplicate package
-        if self.deduplicate:
-            package_path = tuple(parent_path + [pkg.name])
-            if package_path in self._seen_packages:
-                return
-            self._seen_packages.add(package_path)
-
         # Write package line
         indent = "  " * level
         output.write(f"{indent}* {pkg.name}\n")
@@ -92,19 +92,15 @@ class MarkdownWriter:
     ) -> None:
         """Write a single class to the output.
 
+        Requirements:
+            SWR_Writer_00003: Markdown Class Output Format
+
         Args:
             cls: The class to write.
-            parent_path: List of parent package names for duplicate tracking.
+            parent_path: List of parent package names.
             level: Current indentation level.
             output: StringIO buffer to write to.
         """
-        # Check for duplicate class
-        if self.deduplicate:
-            class_path = tuple(parent_path + [cls.name])
-            if class_path in self._seen_classes:
-                return
-            self._seen_classes.add(class_path)
-
         # Write class line
         indent = "  " * level
         abstract_suffix = " (abstract)" if cls.is_abstract else ""

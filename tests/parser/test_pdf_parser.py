@@ -5,7 +5,6 @@ Test coverage for pdf_parser.py targeting PDF parsing functionality.
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarPackage
 from autosar_pdf2txt.parser import PdfParser
 
 

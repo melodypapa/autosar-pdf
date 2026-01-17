@@ -12,14 +12,98 @@ Each test case has a maturity level that indicates its status:
 - **accept**: Accepted test case, implemented and passing
 - **invalid**: Deprecated test case, superseded, or no longer applicable
 
+All existing integration test cases in this document are currently at maturity level **accept**.
+
 ---
 
 ## Integration Test Scenarios
 
-*No integration tests documented yet.*
+### 1. PDF Parser Integration Tests
 
-Integration tests should cover:
+#### SWIT_00001
+**Title**: Test Parsing Real AUTOSAR PDF and Verifying First Class
+
+**Maturity**: accept
+
+**Description**: Integration test that parses a real AUTOSAR PDF file and verifies the first extracted class has correct structure including name, abstract flag, base classes, and note.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
+3. Find the first class in the extracted packages
+4. Verify the class name is "AUTOSAR"
+5. Verify the class is not abstract (is_abstract=False)
+6. Verify the class has one base class "ARObject" (bases=["ARObject"])
+7. Verify the class has a note containing "AUTOSAR" or "Rootelement"
+8. Verify the class is in the "AutosarTopLevelStructure" package
+
+**Expected Result**: First class is extracted successfully with:
+- Name: "AUTOSAR"
+- Abstract: False
+- Bases: ["ARObject"]
+- Note contains "AUTOSAR" or "Rootelement"
+- Package: "AutosarTopLevelStructure"
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001
+
+---
+
+#### SWIT_00002
+**Title**: Test Parsing Real AUTOSAR PDF Extracts Multiple Classes
+
+**Maturity**: accept
+
+**Description**: Verify that the parser can extract all classes from a large real AUTOSAR PDF file, confirming comprehensive parsing functionality.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
+3. Count total classes by iterating through all packages and subpackages
+4. Verify that more than 10 classes are extracted (should be 240 in actual PDF)
+5. Print total classes and packages extracted
+
+**Expected Result**: Parser successfully extracts many classes (240 classes from 14 packages), demonstrating comprehensive parsing of the entire AUTOSAR template document
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00006
+
+---
+
+#### SWIT_00003
+**Title**: Test Parsing Real AUTOSAR PDF Has Bases and Notes
+
+**Maturity**: accept
+
+**Description**: Verify that classes with base classes and notes are correctly parsed and transferred from real AUTOSAR PDF to the AutosarClass model.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
+3. Iterate through all packages and subpackages to find classes with bases
+4. Iterate through all packages and subpackages to find classes with notes
+5. Verify that multiple classes have base classes (expected: 231)
+6. Verify that multiple classes have notes (expected: 240 - all classes)
+7. Print counts and examples of classes with bases and notes
+
+**Expected Result**: Parser correctly extracts:
+- Many classes with base classes (231 out of 240 classes)
+- All classes have notes (240 out of 240 classes)
+- Example class shows: Name="AUTOSAR", Bases=["ARObject"], Note contains description
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_MODEL_00001
+
+---
+
+## Additional Integration Test Scenarios
+
+Future integration tests should cover:
 - End-to-end PDF parsing and markdown generation
 - CLI functionality with various input combinations
 - Error handling across module boundaries
 - Performance testing with large PDFs
+- Writer output verification with real data

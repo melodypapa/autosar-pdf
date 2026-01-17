@@ -192,6 +192,512 @@ All existing test cases in this document are currently at maturity level **accep
 ---
 
 #### SWUT_MODEL_00010
+**Title**: Test Creating Class with Empty Attributes Dictionary
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with an empty attributes dictionary (default).
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="Component"
+2. Verify the attributes dictionary is empty
+3. Verify len(attributes) is 0
+
+**Expected Result**: Class is created with empty attributes dict
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00011
+**Title**: Test Creating Class with Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with attributes.
+
+**Precondition**: Two AutosarAttribute instances exist
+
+**Test Steps**:
+1. Create two AutosarAttribute instances (attr1: "dataReadPort", type="PPortPrototype", is_ref=True; attr2: "id", type="uint32", is_ref=False)
+2. Create an AutosarClass with attributes={"dataReadPort": attr1, "id": attr2}
+3. Verify the class has 2 attributes
+4. Verify "dataReadPort" and "id" are in the attributes dict
+
+**Expected Result**: Class is created with both attributes
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00012
+**Title**: Test Debug Representation Shows Attributes Count
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ includes the attributes count.
+
+**Precondition**: An AutosarClass instance with attributes exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="Component" and multiple attributes
+2. Call repr(cls)
+3. Verify "attributes=2" is in the result (or actual count)
+
+**Expected Result**: Debug representation shows attributes count
+
+**Requirements Coverage**: SWR_MODEL_00003
+
+---
+
+#### SWUT_MODEL_00013
+**Title**: Test Creating Class with Empty Bases List
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with an empty bases list (default).
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass"
+2. Verify the bases list is empty
+3. Verify len(bases) is 0
+
+**Expected Result**: Class is created with empty bases list
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00014
+**Title**: Test Creating Class with Base Classes
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with base classes for inheritance.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="DerivedClass", bases=["BaseClass1", "BaseClass2"]
+2. Verify the class has 2 bases
+3. Verify "BaseClass1" and "BaseClass2" are in the bases list
+
+**Expected Result**: Class is created with base classes
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00015
+**Title**: Test Creating Class with Single Base Class
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with a single base class.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="DerivedClass", bases=["BaseClass"]
+2. Verify the class has 1 base
+3. Verify the base is "BaseClass"
+
+**Expected Result**: Class is created with single base class
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00016
+**Title**: Test Debug Representation Shows Bases Count
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ includes the bases count.
+
+**Precondition**: An AutosarClass instance with bases exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="DerivedClass", bases=["Base1", "Base2"]
+2. Call repr(cls)
+3. Verify "bases=2" is in the result
+
+**Expected Result**: Debug representation shows bases count
+
+**Requirements Coverage**: SWR_MODEL_00003
+
+---
+
+#### SWUT_MODEL_00017
+**Title**: Test Creating Class with None Note (Default)
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with None note (default).
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass"
+2. Verify the note is None
+
+**Expected Result**: Class is created with None note
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00018
+**Title**: Test Creating Class with Note
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with a note.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", note="This is a documentation note"
+2. Verify the note is "This is a documentation note"
+
+**Expected Result**: Class is created with note
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00019
+**Title**: Test Creating Class with Empty String Note
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with an empty string note.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", note=""
+2. Verify the note is ""
+
+**Expected Result**: Class is created with empty note
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00020
+**Title**: Test Debug Representation Shows Note Presence
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ includes whether a note is present.
+
+**Precondition**: An AutosarClass instance with note exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", note="Documentation"
+2. Call repr(cls)
+3. Verify "note=True" is in the result
+
+**Expected Result**: Debug representation shows note presence
+
+**Requirements Coverage**: SWR_MODEL_00003
+
+---
+
+#### SWUT_MODEL_00021
+**Title**: Test Creating Class with All Fields Populated
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with all fields populated.
+
+**Precondition**: AutosarAttribute instances exist
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="port", type="PPortPrototype", is_ref=True
+2. Create an AutosarClass with name="CompleteClass", is_abstract=False, attributes={"port": attr}, bases=["Base1", "Base2"], note="Complete example"
+3. Verify name is "CompleteClass"
+4. Verify is_abstract is False
+5. Verify len(attributes) is 1
+6. Verify len(bases) is 2
+7. Verify note is "Complete example"
+
+**Expected Result**: Class is created with all fields correctly set
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00022
+**Title**: Test Bases List Mutation
+
+**Maturity**: accept
+
+**Description**: Verify that the bases list can be mutated after class creation.
+
+**Precondition**: An AutosarClass instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass"
+2. Append "BaseClass" to cls.bases
+3. Verify len(bases) is 1
+4. Verify "BaseClass" is in bases
+
+**Expected Result**: Bases list can be mutated
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00023
+**Title**: Test Note Reassignment
+
+**Maturity**: accept
+
+**Description**: Verify that the note can be reassigned after class creation.
+
+**Precondition**: An AutosarClass instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass"
+2. Set cls.note = "Updated note"
+3. Verify cls.note is "Updated note"
+
+**Expected Result**: Note can be reassigned
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+### 2. Attribute Tests
+
+#### SWUT_MODEL_00024
+**Title**: Test Creating Reference Attribute
+
+**Maturity**: accept
+
+**Description**: Verify that a reference type attribute can be created.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="dataReadPort", type="PPortPrototype", is_ref=True
+2. Verify name is "dataReadPort"
+3. Verify type is "PPortPrototype"
+4. Verify is_ref is True
+
+**Expected Result**: Reference attribute is created successfully
+
+**Requirements Coverage**: SWR_MODEL_00010
+
+---
+
+#### SWUT_MODEL_00025
+**Title**: Test Creating Non-Reference Attribute
+
+**Maturity**: accept
+
+**Description**: Verify that a non-reference type attribute can be created.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="id", type="uint32", is_ref=False
+2. Verify name is "id"
+3. Verify type is "uint32"
+4. Verify is_ref is False
+
+**Expected Result**: Non-reference attribute is created successfully
+
+**Requirements Coverage**: SWR_MODEL_00010
+
+---
+
+#### SWUT_MODEL_00026
+**Title**: Test Valid Attribute Name Validation
+
+**Maturity**: accept
+
+**Description**: Verify that a valid attribute name is accepted during initialization.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="validAttribute", type="string", is_ref=False
+2. Verify the name attribute is set to "validAttribute"
+
+**Expected Result**: Attribute is created successfully
+
+**Requirements Coverage**: SWR_MODEL_00011
+
+---
+
+#### SWUT_MODEL_00027
+**Title**: Test Empty Attribute Name Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that empty attribute names are rejected with ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Attempt to create an AutosarAttribute with name="", type="string", is_ref=False
+2. Verify that ValueError is raised with message "Attribute name cannot be empty"
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_MODEL_00011
+
+---
+
+#### SWUT_MODEL_00028
+**Title**: Test Whitespace-Only Attribute Name Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that whitespace-only attribute names are rejected with ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Attempt to create an AutosarAttribute with name="   ", type="string", is_ref=False
+2. Verify that ValueError is raised with message "Attribute name cannot be empty"
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_MODEL_00011
+
+---
+
+#### SWUT_MODEL_00029
+**Title**: Test Valid Attribute Type Validation
+
+**Maturity**: accept
+
+**Description**: Verify that a valid attribute type is accepted during initialization.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="attr", type="ValidType", is_ref=False
+2. Verify the type attribute is set to "ValidType"
+
+**Expected Result**: Attribute is created successfully
+
+**Requirements Coverage**: SWR_MODEL_00012
+
+---
+
+#### SWUT_MODEL_00030
+**Title**: Test Empty Attribute Type Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that empty attribute types are rejected with ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Attempt to create an AutosarAttribute with name="attr", type="", is_ref=False
+2. Verify that ValueError is raised with message "Attribute type cannot be empty"
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_MODEL_00012
+
+---
+
+#### SWUT_MODEL_00031
+**Title**: Test Whitespace-Only Attribute Type Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that whitespace-only attribute types are rejected with ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Attempt to create an AutosarAttribute with name="attr", type="   ", is_ref=False
+2. Verify that ValueError is raised with message "Attribute type cannot be empty"
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_MODEL_00012
+
+---
+
+#### SWUT_MODEL_00032
+**Title**: Test String Representation of Reference Attribute
+
+**Maturity**: accept
+
+**Description**: Verify that the string representation of a reference attribute includes "(ref)" suffix.
+
+**Precondition**: An AutosarAttribute instance exists
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="port", type="PPortPrototype", is_ref=True
+2. Call str(attr)
+3. Verify the result is "port: PPortPrototype (ref)"
+
+**Expected Result**: String representation includes "(ref)" suffix
+
+**Requirements Coverage**: SWR_MODEL_00013
+
+---
+
+#### SWUT_MODEL_00033
+**Title**: Test String Representation of Non-Reference Attribute
+
+**Maturity**: accept
+
+**Description**: Verify that the string representation of a non-reference attribute does not include "(ref)" suffix.
+
+**Precondition**: An AutosarAttribute instance exists
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="value", type="uint32", is_ref=False
+2. Call str(attr)
+3. Verify the result is "value: uint32"
+
+**Expected Result**: String representation does not include "(ref)" suffix
+
+**Requirements Coverage**: SWR_MODEL_00013
+
+---
+
+#### SWUT_MODEL_00034
+**Title**: Test Debug Representation of AUTOSAR Attribute
+
+**Maturity**: accept
+
+**Description**: Verify that the debug representation shows all attributes.
+
+**Precondition**: An AutosarAttribute instance exists
+
+**Test Steps**:
+1. Create an AutosarAttribute with name="testAttr", type="TestType", is_ref=True
+2. Call repr(attr)
+3. Verify "AutosarAttribute" is in the result
+4. Verify "name='testAttr'" is in the result
+5. Verify "type='TestType'" is in the result
+6. Verify "is_ref=True" is in the result
+
+**Expected Result**: Debug representation contains all attribute fields
+
+**Requirements Coverage**: SWR_MODEL_00013
+
+---
+
+### 3. Package Tests (continued)
+
+#### SWUT_MODEL_00035
 **Title**: Test Creating an Empty Package
 
 **Maturity**: accept
@@ -1219,3 +1725,242 @@ All existing test cases in this document are currently at maturity level **accep
 **Expected Result**: CLI can process directories containing PDF files
 
 **Requirements Coverage**: SWR_CLI_00003
+
+---
+
+### 4. Parser Tests
+
+#### SWUT_PARSER_00001
+**Title**: Test Parser Initialization
+
+**Maturity**: accept
+
+**Description**: Verify that the PDF parser can be initialized successfully.
+
+**Precondition**: pdfplumber is installed
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Verify the parser is not None
+
+**Expected Result**: Parser instance is created successfully
+
+**Requirements Coverage**: SWR_PARSER_00001
+
+---
+
+#### SWUT_PARSER_00002
+**Title**: Test Extracting Class with Base Classes
+
+**Maturity**: accept
+
+**Description**: Verify that base classes are extracted from class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class RunnableEntity", "Package M2::AUTOSAR::BswModule", "Base InternalBehavior"
+3. Verify one class definition is extracted
+4. Verify the class name is "RunnableEntity"
+5. Verify base_classes is ["InternalBehavior"]
+
+**Expected Result**: Base classes are extracted correctly
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00003
+**Title**: Test Extracting Class with Multiple Base Classes
+
+**Maturity**: accept
+
+**Description**: Verify that multiple base classes are extracted and split correctly.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class DerivedClass", "Base BaseClass1, BaseClass2, BaseClass3"
+3. Verify base_classes is ["BaseClass1", "BaseClass2", "BaseClass3"]
+
+**Expected Result**: Multiple base classes are extracted and split by comma
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00004
+**Title**: Test Extracting Class with Note
+
+**Maturity**: accept
+
+**Description**: Verify that notes are extracted from class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class BswInternalBehavior", "Package M2::AUTOSAR::BswModule", "Note Implementation for basic software internal behavior"
+3. Verify the class name is "BswInternalBehavior"
+4. Verify note is "Implementation for basic software internal behavior"
+
+**Expected Result**: Note is extracted correctly
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00005
+**Title**: Test Extracting Class with Base and Note
+
+**Maturity**: accept
+
+**Description**: Verify that both base classes and notes are extracted together.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition including both "Base InternalBehavior" and "Note Implementation for basic software entities"
+3. Verify base_classes is ["InternalBehavior"]
+4. Verify note contains "Implementation for basic software entities"
+
+**Expected Result**: Both base classes and note are extracted correctly
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00006
+**Title**: Test Extracting Class Without Base or Note
+
+**Maturity**: accept
+
+**Description**: Verify that classes without bases or notes are extracted with default values.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class SimpleClass", "Package M2::AUTOSAR" (no Base or Note lines)
+3. Verify the class name is "SimpleClass"
+4. Verify base_classes is []
+5. Verify note is None
+
+**Expected Result**: Class is extracted with empty bases and None note
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00007
+**Title**: Test Extracting Abstract Class
+
+**Maturity**: accept
+
+**Description**: Verify that abstract classes are extracted with the is_abstract flag.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class InternalBehavior (abstract)", "Package M2::AUTOSAR"
+3. Verify the class name is "InternalBehavior"
+4. Verify is_abstract is True
+
+**Expected Result**: Abstract class is extracted correctly
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00008
+**Title**: Test Extracting Class with Subclasses
+
+**Maturity**: accept
+
+**Description**: Verify that subclasses are extracted from class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class BaseClass", "Subclasses DerivedClass1, DerivedClass2"
+3. Verify subclasses is ["DerivedClass1", "DerivedClass2"]
+
+**Expected Result**: Subclasses are extracted correctly
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00009
+**Title**: Test Extracting Multiple Classes
+
+**Maturity**: accept
+
+**Description**: Verify that multiple class definitions are extracted from a single text.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with two class definitions (InternalBehavior abstract with note, BswInternalBehavior with base and note)
+3. Verify two class definitions are extracted
+4. Verify first class: name="InternalBehavior", is_abstract=True, has note
+5. Verify second class: name="BswInternalBehavior", base_classes=["InternalBehavior"], has note
+
+**Expected Result**: All classes are extracted with correct properties
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00010
+**Title**: Test Building Package Hierarchy with Bases and Notes
+
+**Maturity**: accept
+
+**Description**: Verify that package hierarchy is built with bases and notes transferred to AutosarClass.
+
+**Precondition**: Two ClassDefinition instances exist
+
+**Test Steps**:
+1. Create ClassDefinition for InternalBehavior (abstract, with note="Base behavior class")
+2. Create ClassDefinition for BswInternalBehavior (bases=["InternalBehavior"], note="BSW specific behavior")
+3. Call parser._build_package_hierarchy()
+4. Verify top-level package exists
+5. Verify InternalBehavior class: is_abstract=True, bases=[], note="Base behavior class"
+6. Verify BswInternalBehavior class: bases=["InternalBehavior"], note="BSW specific behavior"
+
+**Expected Result**: Package hierarchy is built with bases and notes transferred correctly
+
+**Requirements Coverage**: SWR_PARSER_00006
+
+---
+
+#### SWUT_PARSER_00011
+**Title**: Test Parsing Real AUTOSAR PDF and Verifying First Class
+
+**Maturity**: accept
+
+**Description**: Integration test that parses a real AUTOSAR PDF and verifies the first extracted class.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
+3. Find the first class in the extracted packages
+4. Verify the class name is "AUTOSAR"
+5. Verify the class is not abstract
+6. Verify the class has one base class "ARObject"
+7. Verify the class has a note containing "AUTOSAR" or "Rootelement"
+8. Verify the class is in the "AutosarTopLevelStructure" package
+
+**Expected Result**: First class is extracted with correct name="AUTOSAR", bases=["ARObject"], and valid note
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006
+

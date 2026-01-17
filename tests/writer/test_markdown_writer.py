@@ -326,6 +326,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
@@ -344,12 +345,17 @@ class TestMarkdownWriterFiles:
         # Check file content
         content = class_file.read_text(encoding="utf-8")
         assert "# MyClass\n\n" in content
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
 
     def test_write_abstract_class_to_file(self, tmp_path: Path) -> None:
         """Test writing an abstract class to a file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="AbstractClass", is_abstract=True))
@@ -360,6 +366,10 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "AbstractClass.md"
         content = class_file.read_text(encoding="utf-8")
         assert "# AbstractClass (abstract)\n\n" in content
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Abstract\n\n" in content
 
     def test_write_multiple_classes_to_files(self, tmp_path: Path) -> None:
         """Test writing multiple classes to separate files.
@@ -408,6 +418,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyClass", is_abstract=False)
@@ -421,6 +432,10 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "MyClass.md"
         content = class_file.read_text(encoding="utf-8")
 
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
         assert "## Attributes\n\n" in content
         assert "* attr1 : String\n" in content
         assert "* attr2 : Integer (ref)\n" in content
@@ -430,6 +445,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="DerivedClass", is_abstract=False)
@@ -442,6 +458,10 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "DerivedClass.md"
         content = class_file.read_text(encoding="utf-8")
 
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
         assert "## Base Classes\n\n" in content
         assert "* BaseClass1\n" in content
         assert "* BaseClass2\n" in content
@@ -451,6 +471,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyClass", is_abstract=False)
@@ -463,6 +484,10 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "MyClass.md"
         content = class_file.read_text(encoding="utf-8")
 
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
         assert "## Note\n\n" in content
         assert "This is a documentation note." in content
 
@@ -471,6 +496,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="CompleteClass", is_abstract=True)
@@ -487,12 +513,107 @@ class TestMarkdownWriterFiles:
         content = class_file.read_text(encoding="utf-8")
 
         assert "# CompleteClass (abstract)\n\n" in content
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Abstract\n\n" in content
         assert "## Base Classes\n\n" in content
         assert "* BaseClass\n" in content
         assert "## Attributes\n\n" in content
         assert "* attr1 : String\n" in content
         assert "## Note\n\n" in content
         assert "Complete documentation." in content
+
+    def test_class_file_content_structure(self, tmp_path: Path) -> None:
+        """Test that class file content follows SWR_WRITER_00006 structure.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+
+        Verifies that all required fields are present and in the correct order:
+        1. Package name
+        2. Abstract class indicator (Type)
+        3. Base classes
+        4. Note as description
+        5. Attributes list
+        """
+        pkg = AutosarPackage(name="AUTOSAR")
+        cls = AutosarClass(name="BswInternalBehavior", is_abstract=True)
+        cls.bases = ["IBswInternalBehavior", "IReferable"]
+        cls.attributes["swDataDefProps"] = AutosarAttribute(
+            name="swDataDefProps", type="SwDataDefProps", is_ref=True
+        )
+        cls.note = "This class represents the internal behavior of a BSW module."
+
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "AUTOSAR" / "BswInternalBehavior.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify title with abstract suffix
+        assert content.startswith("# BswInternalBehavior (abstract)\n\n")
+
+        # Find sections and verify order
+        package_idx = content.find("## Package\n\n")
+        type_idx = content.find("## Type\n\n")
+        base_classes_idx = content.find("## Base Classes\n\n")
+        note_idx = content.find("## Note\n\n")
+        attributes_idx = content.find("## Attributes\n\n")
+
+        # Verify all sections exist
+        assert package_idx != -1, "Package section missing"
+        assert type_idx != -1, "Type section missing"
+        assert base_classes_idx != -1, "Base Classes section missing"
+        assert note_idx != -1, "Note section missing"
+        assert attributes_idx != -1, "Attributes section missing"
+
+        # Verify correct order: Package < Type < Base Classes < Note < Attributes
+        assert package_idx < type_idx, "Package should come before Type"
+        assert type_idx < base_classes_idx, "Type should come before Base Classes"
+        assert base_classes_idx < note_idx, "Base Classes should come before Note"
+        assert note_idx < attributes_idx, "Note should come before Attributes"
+
+        # Verify package name
+        assert "AUTOSAR\n\n" in content
+
+        # Verify type
+        assert "Abstract\n\n" in content
+
+        # Verify base classes list
+        assert "* IBswInternalBehavior\n" in content
+        assert "* IReferable\n" in content
+
+        # Verify note content
+        assert "This class represents the internal behavior of a BSW module." in content
+
+        # Verify attributes list with reference indicator
+        assert "* swDataDefProps : SwDataDefProps (ref)\n" in content
+
+    def test_concrete_class_type_indicator(self, tmp_path: Path) -> None:
+        """Test that concrete classes have correct type indicator.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="ConcreteClass", is_abstract=False)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "ConcreteClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify type section shows Concrete
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
+
+        # Verify it does not show Abstract
+        assert "Abstract\n\n" not in content
 
     def test_write_empty_package_to_files(self, tmp_path: Path) -> None:
         """Test writing an empty package creates directory but no files.
@@ -753,6 +874,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="<<atpVariation>>Class", is_abstract=False))
@@ -767,3 +889,7 @@ class TestMarkdownWriterFiles:
         # Check that the content still has the original class name
         content = class_file.read_text(encoding="utf-8")
         assert "# <<atpVariation>>Class\n\n" in content
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content

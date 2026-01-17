@@ -22,7 +22,21 @@ from pathlib import Path
 from typing import Dict, List
 
 
-def run_command(cmd: List[str], capture: bool = True, env: dict | None = None) -> subprocess.CompletedProcess:
+def _get_test_env() -> Dict[str, str]:
+    """Get environment with PYTHONPATH configured for testing.
+
+    Returns:
+        Environment dictionary with PYTHONPATH set.
+    """
+    import os
+    env = os.environ.copy()
+    project_root = Path(__file__).parent.parent
+    src_path = project_root / "src"
+    env["PYTHONPATH"] = str(src_path) + os.pathsep + env.get("PYTHONPATH", "")
+    return env
+
+
+def run_command(cmd: List[str], capture: bool = True, env: Dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """Run a command and return the result.
 
     Args:
@@ -37,18 +51,13 @@ def run_command(cmd: List[str], capture: bool = True, env: dict | None = None) -
     print(f"Running: {' '.join(cmd)}")
     print(f"{'='*70}\n")
 
-    if capture:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=env
-        )
-        return result
-    else:
-        result = subprocess.run(cmd, check=False, env=env)
-        return result
+    return subprocess.run(
+        cmd,
+        capture_output=capture,
+        text=True,
+        check=False,
+        env=env
+    )
 
 
 def run_all_tests() -> int:
@@ -57,12 +66,7 @@ def run_all_tests() -> int:
     Returns:
         Exit code from pytest.
     """
-    import os
-    # Add src directory to PYTHONPATH for coverage to work
-    env = os.environ.copy()
-    project_root = Path(__file__).parent.parent
-    src_path = project_root / "src"
-    env["PYTHONPATH"] = str(src_path) + os.pathsep + env.get("PYTHONPATH", "")
+    env = _get_test_env()
 
     cmd = [
         sys.executable, "-m", "pytest",
@@ -82,12 +86,7 @@ def run_integration_tests() -> int:
     Returns:
         Exit code from pytest.
     """
-    import os
-    # Add src directory to PYTHONPATH for coverage to work
-    env = os.environ.copy()
-    project_root = Path(__file__).parent.parent
-    src_path = project_root / "src"
-    env["PYTHONPATH"] = str(src_path) + os.pathsep + env.get("PYTHONPATH", "")
+    env = _get_test_env()
 
     cmd = [
         sys.executable, "-m", "pytest",
@@ -107,12 +106,7 @@ def run_unit_tests() -> int:
     Returns:
         Exit code from pytest.
     """
-    import os
-    # Add src directory to PYTHONPATH for coverage to work
-    env = os.environ.copy()
-    project_root = Path(__file__).parent.parent
-    src_path = project_root / "src"
-    env["PYTHONPATH"] = str(src_path) + os.pathsep + env.get("PYTHONPATH", "")
+    env = _get_test_env()
 
     cmd = [
         sys.executable, "-m", "pytest",

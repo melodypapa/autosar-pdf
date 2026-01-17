@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from autosar_pdf2txt.models import AutosarClass, AutosarPackage
 
@@ -244,23 +244,20 @@ class PdfParser:
             List of top-level AutosarPackage objects.
         """
         # Track all packages by their full path
-        package_map: dict[str, AutosarPackage] = {}
+        package_map: Dict[str, AutosarPackage] = {}
 
         # Track which classes have been added to packages
         processed_classes: Set[Tuple[str, str]] = set()
 
         for class_def in class_defs:
             # Parse package path
-            package_parts = [p.strip() for p in class_def.package_path.split("::")]
+            package_parts = [p.strip() for p in class_def.package_path.split("::") if p.strip()]
 
             # Create/get packages in hierarchy
             current_path = ""
-            parent_package: Optional[AutosarPackage] = None
+            parent_package: AutosarPackage | None = None
 
             for part in package_parts:
-                if not part:
-                    continue
-
                 if current_path:
                     current_path += "::" + part
                 else:

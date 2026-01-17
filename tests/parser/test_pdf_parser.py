@@ -6,6 +6,7 @@ Test coverage for pdf_parser.py targeting PDF parsing functionality.
 import pytest
 
 from autosar_pdf2txt.parser import PdfParser
+from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
 
 
 class TestPdfParser:
@@ -180,7 +181,6 @@ class TestPdfParser:
             SWR_PARSER_00006: Package Hierarchy Building
         """
         parser = PdfParser()
-        from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
 
         class_defs = [
             ClassDefinition(
@@ -245,7 +245,6 @@ class TestPdfParser:
             SWR_PARSER_00006: Package Hierarchy Building
         """
         parser = PdfParser()
-        from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
 
         # Create package and subpackage
         parent_pkg = parser._build_package_hierarchy([
@@ -314,7 +313,6 @@ class TestPdfParser:
             SWR_PARSER_00006: Package Hierarchy Building
         """
         parser = PdfParser()
-        from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
         from autosar_pdf2txt.models import AutosarClass
 
         # Create package with a class
@@ -426,7 +424,6 @@ class TestPdfParser:
             SWR_PARSER_00006: Package Hierarchy Building
         """
         parser = PdfParser()
-        from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
 
         # Create class definition with empty parts in package path
         class_defs = [

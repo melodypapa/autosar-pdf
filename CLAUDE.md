@@ -73,13 +73,19 @@ pip install -e .
 
 ### Running Tests
 ```bash
-# Run all tests
-pytest tests/ -v
+# Run all tests (generates coverage report automatically)
+python scripts/run_tests.py --all
+
+# Run only unit tests
+python scripts/run_tests.py --unit
+
+# Run only integration tests
+python scripts/run_tests.py --integration
 
 # Run specific test file
 pytest tests/models/test_autosar_models.py -v
 
-# Run with coverage
+# Run with coverage manually (if needed)
 pytest tests/ -v --cov=src/autosar_pdf2txt --cov-report=term
 ```
 
@@ -95,12 +101,14 @@ mypy src/autosar_pdf2txt/
 ### Running Full CI Pipeline
 ```bash
 # Install dev dependencies
-pip install pytest pytest-cov ruff mypy
+pip install pytest pytest-cov ruff mypy pdfplumber
 
-# Run all checks
+# Run all checks using test runner
+python scripts/run_tests.py --unit
+
+# Individual checks
 ruff check src/ tests/
 mypy src/autosar_pdf2txt/
-pytest tests/ -v --cov=src/autosar_pdf2txt --cov-report=term
 ```
 
 ## Code Architecture
@@ -126,9 +134,10 @@ src/autosar_pdf2txt/
 ### Core Components
 
 **Models (`models/autosar_models.py`)**
-- `AutosarClass`: Dataclass representing an AUTOSAR class with name and abstract flag
+- `AutosarClass`: Dataclass representing an AUTOSAR class with name, abstract flag, attributes, bases (inheritance), and note (documentation)
+- `AutosarAttribute`: Dataclass representing an AUTOSAR attribute with name, type, and reference flag
 - `AutosarPackage`: Dataclass for hierarchical package structures containing classes and subpackages
-- Validation: Both classes validate non-empty names in `__post_init__`
+- Validation: All classes validate non-empty names in `__post_init__`
 - Duplicate prevention: `add_class()` and `add_subpackage()` check for duplicates by name
 - Query methods: `get_class()`, `get_subpackage()`, `has_class()`, `has_subpackage()`
 
@@ -250,13 +259,15 @@ autosar-extract input.pdf -v
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>`
 - Subclasses: `Subclasses <class_list>`
+- Notes: `Note <text>` (documentation/comments)
+- Attributes: `<name> : <type>` with `(ref)` suffix for reference types
 
 ## Requirement Traceability
 
 All code includes requirement IDs in docstrings for traceability to `docs/requirement/requirements.md`. Coding standards are defined in `docs/development/coding_rules.md` with stable identifiers.
 
 **Requirements by Module:**
-- **Model**: SWR_MODEL_00001 - SWR_MODEL_00009
+- **Model**: SWR_MODEL_00001 - SWR_MODEL_00013
   - SWR_MODEL_00001: AUTOSAR Class Representation
   - SWR_MODEL_00002: AUTOSAR Class Name Validation
   - SWR_MODEL_00003: AUTOSAR Class String Representation
@@ -266,6 +277,10 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
   - SWR_MODEL_00007: Add Subpackage to Package
   - SWR_MODEL_00008: Query Package Contents
   - SWR_MODEL_00009: Package String Representation
+  - SWR_MODEL_00010: AUTOSAR Attribute Representation
+  - SWR_MODEL_00011: AUTOSAR Attribute Name Validation
+  - SWR_MODEL_00012: AUTOSAR Attribute Type Validation
+  - SWR_MODEL_00013: AUTOSAR Attribute String Representation
 
 - **Parser**: SWR_PARSER_00001 - SWR_PARSER_00007
   - SWR_PARSER_00001: PDF Parser Initialization

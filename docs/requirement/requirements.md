@@ -279,6 +279,20 @@ All existing requirements in this document are currently at maturity level **acc
 
 ---
 
+#### SWR_WRITER_00006
+**Title**: Individual Class Markdown File Content
+
+**Maturity**: accept
+
+**Description**: The markdown file for each AUTOSAR class shall contain the following information in a structured format:
+- Package name: The full package path containing the class
+- Abstract class indicator: Whether the class is abstract or concrete
+- Base classes: List of base class names that this class inherits from
+- Note: Class documentation/description extracted from the note field
+- Attributes list: Complete list of class attributes showing name, type, and reference indicator for each attribute
+
+---
+
 ### 4. CLI
 
 #### SWR_CLI_00001

@@ -291,12 +291,13 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
   - SWR_PARSER_00006: Package Hierarchy Building
   - SWR_PARSER_00007: PDF Backend Support - pdfplumber
 
-- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00005
+- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00006
   - SWR_WRITER_00001: Markdown Writer Initialization
   - SWR_WRITER_00002: Markdown Package Hierarchy Output
   - SWR_WRITER_00003: Markdown Class Output Format
   - SWR_WRITER_00004: Bulk Package Writing
   - SWR_WRITER_00005: Directory-Based Class File Output
+  - SWR_WRITER_00006: Individual Class Markdown File Content
 
 - **CLI**: SWR_CLI_00001 - SWR_CLI_00011
   - SWR_CLI_00001: CLI Entry Point

@@ -188,21 +188,30 @@ class MarkdownWriter:
 
         # Write each class to a separate file
         for cls in pkg.classes:
-            self._write_class_to_file(cls, pkg_dir)
+            self._write_class_to_file(cls, pkg_dir, pkg.name)
 
         # Recursively write subpackages
         for subpkg in pkg.subpackages:
             self._write_package_to_files(subpkg, pkg_dir)
 
-    def _write_class_to_file(self, cls: AutosarClass, pkg_dir: Path) -> None:
+    def _write_class_to_file(self, cls: AutosarClass, pkg_dir: Path, package_name: str) -> None:
         """Write a single class to its own markdown file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+
+        The markdown file contains:
+        - Package name
+        - Abstract class indicator
+        - Base classes (if any)
+        - Note as description (if present)
+        - Attributes list (if any)
 
         Args:
             cls: The class to write.
             pkg_dir: Directory where the class file will be created.
+            package_name: Name of the package containing the class.
 
         Raises:
             OSError: If file writing fails.
@@ -212,11 +221,24 @@ class MarkdownWriter:
         output.write(f"# {cls.name}{abstract_suffix}\n\n")
 
         # Write package information
+        output.write("## Package\n\n")
+        output.write(f"{package_name}\n\n")
+
+        # Write abstract indicator
+        output.write("## Type\n\n")
+        output.write(f"{'Abstract' if cls.is_abstract else 'Concrete'}\n\n")
+
+        # Write base classes if present
         if cls.bases:
             output.write("## Base Classes\n\n")
             for base in cls.bases:
                 output.write(f"* {base}\n")
             output.write("\n")
+
+        # Write note if present
+        if cls.note:
+            output.write("## Note\n\n")
+            output.write(f"{cls.note}\n\n")
 
         # Write attributes if present
         if cls.attributes:
@@ -225,11 +247,6 @@ class MarkdownWriter:
                 ref_suffix = " (ref)" if attr.is_ref else ""
                 output.write(f"* {attr_name} : {attr.type}{ref_suffix}\n")
             output.write("\n")
-
-        # Write note if present
-        if cls.note:
-            output.write("## Note\n\n")
-            output.write(f"{cls.note}\n\n")
 
         # Write to file with sanitized filename
         sanitized_name = self._sanitize_filename(cls.name)

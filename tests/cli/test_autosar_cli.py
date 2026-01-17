@@ -21,6 +21,8 @@ class TestAutosarCli:
         SWR_CLI_00007: CLI Progress Feedback
         SWR_CLI_00008: CLI Logging
         SWR_CLI_00009: CLI Error Handling
+        SWR_CLI_00010: CLI Class File Output
+        SWR_CLI_00011: CLI Class Files Flag
     """
 
     def test_main_entry_point(self) -> None:
@@ -110,13 +112,54 @@ class TestAutosarCli:
             call_kwargs = mock_logging.basicConfig.call_args[1]
             assert call_kwargs["level"] == mock_logging.DEBUG
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md", "--write-class-files"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
-    def test_output_file_option(self, mock_path: MagicMock) -> None:
-        """Test CLI writes output to specified file.
+    def test_output_file_option_with_class_files(self, mock_path: MagicMock) -> None:
+        """Test CLI writes output to specified file and creates class files when flag is set.
 
         Requirements:
             SWR_CLI_00004: CLI Output File Option
+            SWR_CLI_00010: CLI Class File Output
+            SWR_CLI_00011: CLI Class Files Flag
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        mock_path.return_value = mock_path_instance
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer:
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_parser.return_value.parse_pdf.return_value = [mock_pkg]
+            mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
+            mock_logging.basicConfig = MagicMock()
+
+            # Mock Path for output file
+            output_path = MagicMock()
+            output_path.write_text = MagicMock()
+            output_path.parent = MagicMock()
+            mock_path.side_effect = [mock_path_instance, output_path, output_path.parent]
+
+            result = main()
+
+            assert result == 0
+            # Verify output was written to file
+            output_path.write_text.assert_called_once()
+            # Verify write_packages_to_files was called when flag is set
+            mock_writer.return_value.write_packages_to_files.assert_called_once()
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    def test_output_file_option_without_class_files(self, mock_path: MagicMock) -> None:
+        """Test CLI writes output to specified file but does not create class files when flag is not set.
+
+        Requirements:
+            SWR_CLI_00004: CLI Output File Option
+            SWR_CLI_00011: CLI Class Files Flag
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -144,6 +187,8 @@ class TestAutosarCli:
             assert result == 0
             # Verify output was written to file
             output_path.write_text.assert_called_once()
+            # Verify write_packages_to_files was NOT called when flag is not set
+            mock_writer.return_value.write_packages_to_files.assert_not_called()
 
     @patch("sys.argv", ["autosar-extract", "test.pdf"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")

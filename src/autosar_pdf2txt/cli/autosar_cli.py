@@ -13,6 +13,8 @@ def main() -> int:
 
     Requirements:
         SWR_CLI_00001: CLI Entry Point
+        SWR_CLI_00010: CLI Class File Output
+        SWR_CLI_00011: CLI Class Files Flag
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -31,6 +33,11 @@ def main() -> int:
         "--output",
         type=str,
         help="Output file path (default: stdout)",
+    )
+    parser.add_argument(
+        "--write-class-files",
+        action="store_true",
+        help="Create separate markdown files for each class (requires -o/--output)",
     )
     parser.add_argument(
         "-v",
@@ -110,6 +117,13 @@ def main() -> int:
             output_path = Path(args.output)
             output_path.write_text(markdown, encoding="utf-8")
             logging.info(f"Output written to: {args.output}")
+
+            # SWR_CLI_00010: CLI Class File Output
+            # SWR_CLI_00011: CLI Class Files Flag
+            # Write each class to separate files if flag is enabled
+            if args.write_class_files:
+                writer.write_packages_to_files(all_packages, output_path=output_path)
+                logging.info(f"Class files written to directory: {output_path.parent}")
         else:
             print(markdown, end="")
 

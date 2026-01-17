@@ -13,7 +13,13 @@
       "Bash(git commit:*)",
       "Bash(test:*)",
       "Skill(lint)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(autosar-extract:*)",
+      "Bash(git restore:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(gh issue create:*)"
     ]
   }
 }

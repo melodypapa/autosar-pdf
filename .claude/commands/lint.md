@@ -15,6 +15,9 @@ allowed-tools: Bash(ruff*), Bash(mypy*), Read, Grep
 **Flake8 Checks:**
 !`ruff check --select F src/autosar_pdf2txt/ tests/`
 
+**Pytest Results:**
+!`pytest tests/ -v --cov=src/autosar_pdf2txt --cov-report=term`
+
 ## Context
 
 @CLAUDE.md

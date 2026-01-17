@@ -4,10 +4,22 @@
 
 This document contains all test cases extracted from the test suite of the autosar-pdf2txt package. Each test case maps to one or more software requirements from `requirements.md`.
 
+## Maturity Levels
+
+Each test case has a maturity level that indicates its status:
+
+- **draft**: Newly created test case, under review, or not yet implemented
+- **accept**: Accepted test case, implemented and passing
+- **invalid**: Deprecated test case, superseded, or no longer applicable
+
+All existing test cases in this document are currently at maturity level **accept**.
+
 ### 1. Model Tests
 
 #### SWUT_MODEL_00001
 **Title**: Test Initialization with Default Settings
+
+**Maturity**: accept
 
 **Description**: Verify that MarkdownWriter can be initialized without parameters.
 
@@ -24,6 +36,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00002
 **Title**: Test Creating a Concrete AUTOSAR Class
+
+**Maturity**: accept
 
 **Description**: Verify that an AUTOSAR class can be created with name and abstract flag.
 
@@ -43,6 +57,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00003
 **Title**: Test Creating an Abstract AUTOSAR Class
 
+**Maturity**: accept
+
 **Description**: Verify that an abstract AUTOSAR class can be created.
 
 **Precondition**: None
@@ -61,6 +77,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00004
 **Title**: Test Valid Class Name Validation
 
+**Maturity**: accept
+
 **Description**: Verify that a valid class name is accepted during initialization.
 
 **Precondition**: None
@@ -77,6 +95,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00005
 **Title**: Test Empty Class Name Raises ValueError
+
+**Maturity**: accept
 
 **Description**: Verify that empty class names are rejected with ValueError.
 
@@ -95,6 +115,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00006
 **Title**: Test Whitespace-Only Class Name Raises ValueError
 
+**Maturity**: accept
+
 **Description**: Verify that whitespace-only class names are rejected with ValueError.
 
 **Precondition**: None
@@ -111,6 +133,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00007
 **Title**: Test String Representation of Concrete Class
+
+**Maturity**: accept
 
 **Description**: Verify that the string representation of a concrete class shows the class name.
 
@@ -129,6 +153,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00008
 **Title**: Test String Representation of Abstract Class
 
+**Maturity**: accept
+
 **Description**: Verify that the string representation of an abstract class includes "(abstract)" suffix.
 
 **Precondition**: An AutosarClass instance exists
@@ -145,6 +171,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00009
 **Title**: Test Debug Representation of AUTOSAR Class
+
+**Maturity**: accept
 
 **Description**: Verify that the debug representation shows all attributes.
 
@@ -166,6 +194,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00010
 **Title**: Test Creating an Empty Package
 
+**Maturity**: accept
+
 **Description**: Verify that an empty AUTOSAR package can be created.
 
 **Precondition**: None
@@ -184,6 +214,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00011
 **Title**: Test Creating Package with Classes
+
+**Maturity**: accept
 
 **Description**: Verify that a package can be created with existing classes.
 
@@ -204,6 +236,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00012
 **Title**: Test Creating Package with Subpackages
 
+**Maturity**: accept
+
 **Description**: Verify that a package can be created with existing subpackages.
 
 **Precondition**: An AutosarPackage instance exists
@@ -223,6 +257,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00013
 **Title**: Test Valid Package Name Validation
 
+**Maturity**: accept
+
 **Description**: Verify that a valid package name is accepted during initialization.
 
 **Precondition**: None
@@ -239,6 +275,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00014
 **Title**: Test Empty Package Name Raises ValueError
+
+**Maturity**: accept
 
 **Description**: Verify that empty package names are rejected with ValueError.
 
@@ -257,6 +295,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00015
 **Title**: Test Whitespace-Only Package Name Raises ValueError
 
+**Maturity**: accept
+
 **Description**: Verify that whitespace-only package names are rejected with ValueError.
 
 **Precondition**: None
@@ -273,6 +313,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00016
 **Title**: Test Adding Class to Package Successfully
+
+**Maturity**: accept
 
 **Description**: Verify that a class can be added to a package.
 
@@ -294,6 +336,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00017
 **Title**: Test Adding Duplicate Class Raises ValueError
 
+**Maturity**: accept
+
 **Description**: Verify that adding a class with a duplicate name raises ValueError.
 
 **Precondition**: An AutosarPackage instance with one class exists
@@ -312,6 +356,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00018
 **Title**: Test Adding Subpackage to Package Successfully
+
+**Maturity**: accept
 
 **Description**: Verify that a subpackage can be added to a package.
 
@@ -333,6 +379,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00019
 **Title**: Test Adding Duplicate Subpackage Raises ValueError
 
+**Maturity**: accept
+
 **Description**: Verify that adding a subpackage with a duplicate name raises ValueError.
 
 **Precondition**: An AutosarPackage instance exists
@@ -351,6 +399,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00020
 **Title**: Test Finding Existing Class by Name
+
+**Maturity**: accept
 
 **Description**: Verify that an existing class can be retrieved from a package.
 
@@ -372,6 +422,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00021
 **Title**: Test Finding Non-Existent Class Returns None
 
+**Maturity**: accept
+
 **Description**: Verify that attempting to find a non-existent class returns None.
 
 **Precondition**: An AutosarPackage instance exists
@@ -389,6 +441,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00022
 **Title**: Test Finding Existing Subpackage by Name
+
+**Maturity**: accept
 
 **Description**: Verify that an existing subpackage can be retrieved from a package.
 
@@ -410,6 +464,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00023
 **Title**: Test Finding Non-Existent Subpackage Returns None
 
+**Maturity**: accept
+
 **Description**: Verify that attempting to find a non-existent subpackage returns None.
 
 **Precondition**: An AutosarPackage instance exists
@@ -427,6 +483,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00024
 **Title**: Test Checking if Class Exists Returns True
+
+**Maturity**: accept
 
 **Description**: Verify that has_class returns True for existing classes.
 
@@ -447,6 +505,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00025
 **Title**: Test Checking if Non-Existent Class Exists Returns False
 
+**Maturity**: accept
+
 **Description**: Verify that has_class returns False for non-existent classes.
 
 **Precondition**: An AutosarPackage instance exists
@@ -464,6 +524,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00026
 **Title**: Test Checking if Subpackage Exists Returns True
+
+**Maturity**: accept
 
 **Description**: Verify that has_subpackage returns True for existing subpackages.
 
@@ -484,6 +546,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00027
 **Title**: Test Checking if Non-Existent Subpackage Exists Returns False
 
+**Maturity**: accept
+
 **Description**: Verify that has_subpackage returns False for non-existent subpackages.
 
 **Precondition**: An AutosarPackage instance exists
@@ -501,6 +565,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00028
 **Title**: Test String Representation of Package with Classes
+
+**Maturity**: accept
 
 **Description**: Verify that the string representation includes class count.
 
@@ -522,6 +588,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00029
 **Title**: Test String Representation of Package with Subpackages
 
+**Maturity**: accept
+
 **Description**: Verify that the string representation includes subpackage count.
 
 **Precondition**: An AutosarPackage with subpackages exists
@@ -541,6 +609,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00030
 **Title**: Test String Representation of Package with Both Classes and Subpackages
+
+**Maturity**: accept
 
 **Description**: Verify that the string representation includes both class and subpackage counts.
 
@@ -563,6 +633,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_MODEL_00031
 **Title**: Test String Representation of Empty Package
 
+**Maturity**: accept
+
 **Description**: Verify that the string representation of an empty package shows only the name.
 
 **Precondition**: An empty AutosarPackage instance exists
@@ -580,6 +652,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00032
 **Title**: Test Debug Representation of AUTOSAR Package
+
+**Maturity**: accept
 
 **Description**: Verify that the debug representation shows all package attributes.
 
@@ -602,6 +676,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_MODEL_00033
 **Title**: Test Nested Package Structure
+
+**Maturity**: accept
 
 **Description**: Verify that nested package hierarchies can be created and navigated.
 
@@ -628,6 +704,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_WRITER_00001
 **Title**: Test Writing Single Empty Package
 
+**Maturity**: accept
+
 **Description**: Verify that a single empty package can be written to markdown.
 
 **Precondition**: A MarkdownWriter instance and an empty AutosarPackage exist
@@ -646,6 +724,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00002
 **Title**: Test Writing Package with Single Class
+
+**Maturity**: accept
 
 **Description**: Verify that a package with one class can be written to markdown.
 
@@ -667,6 +747,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_WRITER_00003
 **Title**: Test Writing Package with Abstract Class
 
+**Maturity**: accept
+
 **Description**: Verify that abstract classes are written with "(abstract)" suffix.
 
 **Precondition**: A MarkdownWriter instance and an AutosarPackage with an abstract class exist
@@ -686,6 +768,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00004
 **Title**: Test Writing Package with Multiple Classes
+
+**Maturity**: accept
 
 **Description**: Verify that multiple classes in a package are written correctly.
 
@@ -707,6 +791,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00005
 **Title**: Test Writing Nested Packages
+
+**Maturity**: accept
 
 **Description**: Verify that nested package structures are written with proper indentation.
 
@@ -730,6 +816,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_WRITER_00006
 **Title**: Test Writing Complex Nested Hierarchy
 
+**Maturity**: accept
+
 **Description**: Verify that deeply nested AUTOSAR hierarchies are written correctly.
 
 **Precondition**: A MarkdownWriter instance and a complex 3-level package hierarchy exist
@@ -751,6 +839,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_WRITER_00007
 **Title**: Test Writing Multiple Top-Level Packages
 
+**Maturity**: accept
+
 **Description**: Verify that multiple top-level packages can be written in one call.
 
 **Precondition**: A MarkdownWriter instance and multiple AutosarPackage instances exist
@@ -770,6 +860,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00008
 **Title**: Test Writing Deeply Nested Hierarchy
+
+**Maturity**: accept
 
 **Description**: Verify that deeply nested package structures (3+ levels) are written correctly.
 
@@ -791,6 +883,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_WRITER_00009
 **Title**: Test Writing Empty Package List
 
+**Maturity**: accept
+
 **Description**: Verify that writing an empty list of packages produces empty output.
 
 **Precondition**: A MarkdownWriter instance exists
@@ -808,6 +902,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00010
 **Title**: Test Writing Package with Both Classes and Subpackages
+
+**Maturity**: accept
 
 **Description**: Verify that packages with both direct classes and subpackages are written correctly.
 
@@ -831,6 +927,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_WRITER_00011
 **Title**: Test Multiple Writes of Same Structure
 
+**Maturity**: accept
+
 **Description**: Verify that multiple writes of the same structure produce identical output.
 
 **Precondition**: A MarkdownWriter instance and a package exist
@@ -850,6 +948,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00012
 **Title**: Test Model-Level Duplicate Prevention
+
+**Maturity**: accept
 
 **Description**: Verify that duplicate classes are prevented at the model level.
 
@@ -872,6 +972,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_WRITER_00013
 **Title**: Test Writing Multiple Packages with Same Name Different Content
+
+**Maturity**: accept
 
 **Description**: Verify that packages with the same name but different content are both written.
 
@@ -896,6 +998,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_CLI_00001
 **Title**: Test CLI Main Entry Point
 
+**Maturity**: accept
+
 **Description**: Verify that the main() function is callable and returns int type.
 
 **Precondition**: None
@@ -913,6 +1017,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_CLI_00002
 **Title**: Test CLI Handles Non-Existent Paths
+
+**Maturity**: accept
 
 **Description**: Verify that CLI returns error code when given a non-existent path.
 
@@ -933,6 +1039,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_CLI_00003
 **Title**: Test CLI Warns About Non-PDF Files
+
+**Maturity**: accept
 
 **Description**: Verify that CLI warns about non-PDF files and skips them.
 
@@ -955,6 +1063,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_CLI_00004
 **Title**: Test CLI Verbose Mode Enables DEBUG Logging
 
+**Maturity**: accept
+
 **Description**: Verify that verbose mode configures logging to DEBUG level.
 
 **Precondition**: None
@@ -974,6 +1084,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_CLI_00005
 **Title**: Test CLI Output File Option
+
+**Maturity**: accept
 
 **Description**: Verify that CLI can write output to a specified file.
 
@@ -995,6 +1107,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_CLI_00006
 **Title**: Test CLI Default Logging is INFO Level
 
+**Maturity**: accept
+
 **Description**: Verify that CLI uses INFO level logging by default (without verbose flag).
 
 **Precondition**: None
@@ -1014,6 +1128,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_CLI_00007
 **Title**: Test CLI Error Handling Without Verbose Mode
+
+**Maturity**: accept
 
 **Description**: Verify that exceptions are caught and logged without traceback in normal mode.
 
@@ -1038,6 +1154,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_CLI_00008
 **Title**: Test CLI Verbose Mode Shows Exception Traceback
 
+**Maturity**: accept
+
 **Description**: Verify that verbose mode includes exception traceback in error output.
 
 **Precondition**: None
@@ -1061,6 +1179,8 @@ This document contains all test cases extracted from the test suite of the autos
 #### SWUT_CLI_00009
 **Title**: Test CLI Success Exit Code
 
+**Maturity**: accept
+
 **Description**: Verify that CLI returns 0 on successful execution.
 
 **Precondition**: None
@@ -1081,6 +1201,8 @@ This document contains all test cases extracted from the test suite of the autos
 
 #### SWUT_CLI_00010
 **Title**: Test CLI Supports Directory Input
+
+**Maturity**: accept
 
 **Description**: Verify that CLI accepts directory paths as input for PDF discovery.
 

@@ -6,6 +6,64 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `autosar-pdf2txt` is a Python package for extracting AUTOSAR model hierarchies from PDF files and converting them to markdown format. The project uses a dataclass-based model for representing AUTOSAR packages and classes, a PDF parser for extraction, and a markdown writer for output.
 
+## Stable Identifiers
+
+**CRITICAL: All unique IDs are permanent and immutable.**
+
+Once assigned, requirement IDs, test IDs, and coding rule IDs must never be changed, even if:
+- The associated requirement, test, or rule is removed from the codebase
+- The requirement is superseded by a new requirement
+- The test is no longer applicable
+- The coding rule is modified or replaced
+
+### ID Formats
+
+**Requirements:** `SWR_<MODULE>_<NUMBER>`
+- Example: `SWR_MODEL_00001`, `SWR_PARSER_00003`
+
+**Tests:** `SWUT_<MODULE>_<NUMBER>` (Software Unit Test)
+- Example: `SWUT_MODEL_00001`, `SWUT_PARSER_00002`
+
+**Coding Rules:** `CODING_RULE_<CATEGORY>_<NUMBER>`
+- Example: `CODING_RULE_IMPORT_00001`, `CODING_RULE_STYLE_00003`
+
+### Maturity Levels
+
+Each requirement, test case, and coding rule has a maturity level that indicates its status:
+
+**Maturity Levels:**
+- **draft**: Newly created, under review, or not yet implemented
+- **accept**: Accepted, implemented, and validated
+- **invalid**: Deprecated, superseded, or no longer applicable
+
+**Examples:**
+```markdown
+#### SWR_MODEL_00001
+**Title**: AUTOSAR Class Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide a data model...
+```
+
+```markdown
+### CODING_RULE_IMPORT_00001: Import Order
+
+**Maturity**: accept
+
+**Imports must be organized into three distinct sections...**
+```
+
+### Purpose of Stable IDs
+
+Stable IDs ensure:
+- **Traceability**: Links between requirements, code, and tests remain valid over time
+- **Historical accuracy**: Old documentation and references remain meaningful
+- **Audit trails**: Change history can be tracked accurately
+- **Cross-references**: External systems can reference IDs without fear of breakage
+
+When adding new items, always use the next available number in the sequence. Never reuse a deleted ID.
+
 ## Development Commands
 
 ### Installation
@@ -119,6 +177,8 @@ autosar-extract input.pdf -v
 
 ## Code Style Conventions
 
+**Complete coding standards are documented in `docs/development/coding_rules.md`, which combines project-specific rules with PEP 8 standards.**
+
 ### Type Hints
 - All functions and methods must have type hints for parameters and return values
 - Use `|` for union types (e.g., `str | None`) - Python 3.10+ syntax
@@ -193,7 +253,7 @@ autosar-extract input.pdf -v
 
 ## Requirement Traceability
 
-All code includes requirement IDs in docstrings for traceability to `docs/requirement/requirements.md`:
+All code includes requirement IDs in docstrings for traceability to `docs/requirement/requirements.md`. Coding standards are defined in `docs/development/coding_rules.md` with stable identifiers.
 
 **Requirements by Module:**
 - **Model**: SWR_MODEL_00001 - SWR_MODEL_00009

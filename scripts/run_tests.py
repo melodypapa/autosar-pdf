@@ -123,7 +123,8 @@ def run_unit_tests() -> int:
         "-v",
         "--cov=autosar_pdf2txt",
         "--cov-report=term",
-        "--cov-report=json:cov_report.json"
+        "--cov-report=json:cov_report.json",
+        "--cov-report=xml:coverage.xml"
     ]
     result = run_command(cmd, capture=False, env=env)
     return result.returncode

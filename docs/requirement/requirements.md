@@ -267,6 +267,18 @@ All existing requirements in this document are currently at maturity level **acc
 
 ---
 
+#### SWR_WRITER_00005
+**Title**: Directory-Based Class File Output
+
+**Maturity**: accept
+
+**Description**: The system shall provide functionality to write AUTOSAR classes to separate markdown files organized in a directory structure that mirrors the package hierarchy. The root directory for the file structure shall be the same as the output markdown file location. For each package:
+- Create a directory corresponding to the package name
+- Create a single markdown file for each class in the package, named with the class name
+- Maintain nested directory structure for subpackages
+
+---
+
 ### 4. CLI
 
 #### SWR_CLI_00001
@@ -355,6 +367,24 @@ All existing requirements in this document are currently at maturity level **acc
 **Maturity**: accept
 
 **Description**: The CLI shall catch and report exceptions with user-friendly error messages via stderr and return appropriate exit codes (0 for success, 1 for error).
+
+---
+
+#### SWR_CLI_00010
+**Title**: CLI Class File Output
+
+**Maturity**: accept
+
+**Description**: When the `--write-class-files` flag is specified along with the `-o` / `--output` option, the CLI shall create separate markdown files for each AUTOSAR class in a directory structure that mirrors the package hierarchy. The root directory for the class files shall be the same as the output markdown file location.
+
+---
+
+#### SWR_CLI_00011
+**Title**: CLI Class Files Flag
+
+**Maturity**: accept
+
+**Description**: The CLI shall support a `--write-class-files` flag to enable creation of separate markdown files for each class. This flag only has effect when used with the `-o` / `--output` option. When not specified, only the main hierarchy output file is created.
 
 ---
 

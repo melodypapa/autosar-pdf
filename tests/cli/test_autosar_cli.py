@@ -12,22 +12,22 @@ class TestAutosarCli:
     """Tests for AUTOSAR CLI.
 
     Requirements:
-        SWR_Cli_00001: CLI Entry Point
-        SWR_Cli_00002: CLI File Input Support
-        SWR_Cli_00003: CLI Directory Input Support
-        SWR_Cli_00004: CLI Output File Option
-        SWR_Cli_00005: CLI Verbose Mode
-        SWR_Cli_00006: CLI Input Validation
-        SWR_Cli_00007: CLI Progress Feedback
-        SWR_Cli_00008: CLI Logging
-        SWR_Cli_00009: CLI Error Handling
+        SWR_CLI_00001: CLI Entry Point
+        SWR_CLI_00002: CLI File Input Support
+        SWR_CLI_00003: CLI Directory Input Support
+        SWR_CLI_00004: CLI Output File Option
+        SWR_CLI_00005: CLI Verbose Mode
+        SWR_CLI_00006: CLI Input Validation
+        SWR_CLI_00007: CLI Progress Feedback
+        SWR_CLI_00008: CLI Logging
+        SWR_CLI_00009: CLI Error Handling
     """
 
     def test_main_entry_point(self) -> None:
         """Test that main function exists and returns exit code.
 
         Requirements:
-            SWR_Cli_00001: CLI Entry Point
+            SWR_CLI_00001: CLI Entry Point
         """
         assert callable(main)
         assert main.__annotations__.get("return") is int
@@ -38,8 +38,8 @@ class TestAutosarCli:
         """Test CLI handles non-existent paths with error.
 
         Requirements:
-            SWR_Cli_00006: CLI Input Validation
-            SWR_Cli_00009: CLI Error Handling
+            SWR_CLI_00006: CLI Input Validation
+            SWR_CLI_00009: CLI Error Handling
         """
         mock_path.return_value.exists.return_value = False
         with patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging:
@@ -53,8 +53,8 @@ class TestAutosarCli:
         """Test CLI warns about non-PDF files.
 
         Requirements:
-            SWR_Cli_00006: CLI Input Validation
-            SWR_Cli_00008: CLI Logging
+            SWR_CLI_00006: CLI Input Validation
+            SWR_CLI_00008: CLI Logging
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -81,8 +81,8 @@ class TestAutosarCli:
         """Test CLI verbose mode enables detailed logging.
 
         Requirements:
-            SWR_Cli_00005: CLI Verbose Mode
-            SWR_Cli_00008: CLI Logging
+            SWR_CLI_00005: CLI Verbose Mode
+            SWR_CLI_00008: CLI Logging
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -116,7 +116,7 @@ class TestAutosarCli:
         """Test CLI writes output to specified file.
 
         Requirements:
-            SWR_Cli_00004: CLI Output File Option
+            SWR_CLI_00004: CLI Output File Option
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -152,7 +152,7 @@ class TestAutosarCli:
         """Test CLI logging is configured correctly in normal mode.
 
         Requirements:
-            SWR_Cli_00008: CLI Logging
+            SWR_CLI_00008: CLI Logging
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -186,7 +186,7 @@ class TestAutosarCli:
         """Test CLI handles exceptions gracefully.
 
         Requirements:
-            SWR_Cli_00009: CLI Error Handling
+            SWR_CLI_00009: CLI Error Handling
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -218,8 +218,8 @@ class TestAutosarCli:
         """Test CLI shows exception traceback in verbose mode.
 
         Requirements:
-            SWR_Cli_00005: CLI Verbose Mode
-            SWR_Cli_00009: CLI Error Handling
+            SWR_CLI_00005: CLI Verbose Mode
+            SWR_CLI_00009: CLI Error Handling
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -250,7 +250,7 @@ class TestAutosarCli:
         """Test CLI supports directory input for PDF discovery.
 
         Requirements:
-            SWR_Cli_00003: CLI Directory Input Support
+            SWR_CLI_00003: CLI Directory Input Support
         """
         # This test documents that CLI supports directory input
         # Actual implementation tested by integration tests
@@ -267,7 +267,7 @@ class TestAutosarCli:
         """Test CLI returns success exit code.
 
         Requirements:
-            SWR_Cli_00009: CLI Error Handling
+            SWR_CLI_00009: CLI Error Handling
         """
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True

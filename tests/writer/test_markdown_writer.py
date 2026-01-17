@@ -11,17 +11,17 @@ class TestMarkdownWriter:
     """Tests for MarkdownWriter class.
 
     Requirements:
-        SWR_Writer_00001: Markdown Writer Initialization
-        SWR_Writer_00002: Markdown Package Hierarchy Output
-        SWR_Writer_00003: Markdown Class Output Format
-        SWR_Writer_00004: Bulk Package Writing
+        SWR_WRITER_00001: Markdown Writer Initialization
+        SWR_WRITER_00002: Markdown Package Hierarchy Output
+        SWR_WRITER_00003: Markdown Class Output Format
+        SWR_WRITER_00004: Bulk Package Writing
     """
 
     def test_init_default(self) -> None:
         """Test initialization with default settings.
 
         Requirements:
-            SWR_Writer_00001: Markdown Writer Initialization
+            SWR_WRITER_00001: Markdown Writer Initialization
         """
         writer = MarkdownWriter()
         # No deduplicate attribute or tracking sets anymore
@@ -31,8 +31,8 @@ class TestMarkdownWriter:
         """Test writing a single empty package.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00004: Bulk Package Writing
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00004: Bulk Package Writing
         """
         pkg = AutosarPackage(name="TestPackage")
         writer = MarkdownWriter()
@@ -44,8 +44,8 @@ class TestMarkdownWriter:
         """Test writing a package with a class.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
@@ -58,8 +58,8 @@ class TestMarkdownWriter:
         """Test writing a package with an abstract class.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="AbstractClass", is_abstract=True))
@@ -72,8 +72,8 @@ class TestMarkdownWriter:
         """Test writing a package with multiple classes.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
@@ -93,7 +93,7 @@ class TestMarkdownWriter:
         """Test writing nested packages.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
         """
         root = AutosarPackage(name="RootPackage")
         child = AutosarPackage(name="ChildPackage")
@@ -112,8 +112,8 @@ class TestMarkdownWriter:
         """Test writing complex nested hierarchy.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
 
         Test structure:
             * AUTOSARTemplates
@@ -145,8 +145,8 @@ class TestMarkdownWriter:
         """Test writing multiple top-level packages.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00004: Bulk Package Writing
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00004: Bulk Package Writing
         """
         pkg1 = AutosarPackage(name="Package1")
         pkg1.add_class(AutosarClass(name="Class1", is_abstract=False))
@@ -166,7 +166,7 @@ class TestMarkdownWriter:
         """Test writing deeply nested package structure.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
         """
         level1 = AutosarPackage(name="Level1")
         level2 = AutosarPackage(name="Level2")
@@ -188,7 +188,7 @@ class TestMarkdownWriter:
         """Test writing an empty package list.
 
         Requirements:
-            SWR_Writer_00004: Bulk Package Writing
+            SWR_WRITER_00004: Bulk Package Writing
         """
         writer = MarkdownWriter()
         result = writer.write_packages([])
@@ -199,8 +199,8 @@ class TestMarkdownWriter:
         """Test writing package with both classes and subpackages.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="ParentPackage")
         pkg.add_class(AutosarClass(name="DirectClass", is_abstract=False))
@@ -221,8 +221,8 @@ class TestMarkdownWriter:
         """Test that multiple writes of the same structure produce identical output.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
@@ -241,9 +241,9 @@ class TestMarkdownWriter:
         """Test that model-level duplicate prevention works with writer.
 
         Requirements:
-            SWR_Model_00006: Add Class to Package
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_MODEL_00006: Add Class to Package
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
@@ -265,8 +265,8 @@ class TestMarkdownWriter:
         """Test writing multiple packages with same name but different content.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00004: Bulk Package Writing
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00004: Bulk Package Writing
         """
         pkg1 = AutosarPackage(name="TestPackage")
         pkg1.add_class(AutosarClass(name="Class1", is_abstract=False))
@@ -289,9 +289,9 @@ class TestMarkdownWriter:
         """Test that same class names in different packages are both written.
 
         Requirements:
-            SWR_Model_00006: Add Class to Package
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_MODEL_00006: Add Class to Package
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
         """
         # Create structure where same class name appears in different packages
         pkg1 = AutosarPackage(name="Package1")

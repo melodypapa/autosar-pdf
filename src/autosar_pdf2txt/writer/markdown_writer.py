@@ -10,7 +10,7 @@ class MarkdownWriter:
     """Write AUTOSAR packages and classes to markdown format.
 
     Requirements:
-        SWR_Writer_00001: Markdown Writer Initialization
+        SWR_WRITER_00001: Markdown Writer Initialization
 
     The output format uses asterisks (*) for hierarchy with indentation
     to show nesting levels. Each level adds 2 spaces of indentation.
@@ -26,15 +26,15 @@ class MarkdownWriter:
         """Initialize the markdown writer.
 
         Requirements:
-            SWR_Writer_00001: Markdown Writer Initialization
+            SWR_WRITER_00001: Markdown Writer Initialization
         """
 
     def write_packages(self, packages: List[AutosarPackage]) -> str:
         """Write a list of top-level packages to markdown format.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
-            SWR_Writer_00004: Bulk Package Writing
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00004: Bulk Package Writing
 
         Args:
             packages: List of top-level AutosarPackage objects.
@@ -63,7 +63,7 @@ class MarkdownWriter:
         """Write a single package with its contents to the output.
 
         Requirements:
-            SWR_Writer_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
 
         Args:
             pkg: The package to write.
@@ -93,7 +93,7 @@ class MarkdownWriter:
         """Write a single class to the output.
 
         Requirements:
-            SWR_Writer_00003: Markdown Class Output Format
+            SWR_WRITER_00003: Markdown Class Output Format
 
         Args:
             cls: The class to write.

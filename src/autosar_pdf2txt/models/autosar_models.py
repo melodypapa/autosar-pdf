@@ -9,7 +9,7 @@ class AutosarClass:
     """Represents an AUTOSAR class.
 
     Requirements:
-        SWR_Model_00001: AUTOSAR Class Representation
+        SWR_MODEL_00001: AUTOSAR Class Representation
 
     Attributes:
         name: The name of the class.
@@ -27,7 +27,7 @@ class AutosarClass:
         """Validate the class fields.
 
         Requirements:
-            SWR_Model_00002: AUTOSAR Class Name Validation
+            SWR_MODEL_00002: AUTOSAR Class Name Validation
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
@@ -39,7 +39,7 @@ class AutosarClass:
         """Return string representation of the class.
 
         Requirements:
-            SWR_Model_00003: AUTOSAR Class String Representation
+            SWR_MODEL_00003: AUTOSAR Class String Representation
 
         Returns:
             Class name with '(abstract)' suffix if abstract.
@@ -51,7 +51,7 @@ class AutosarClass:
         """Return detailed representation for debugging.
 
         Requirements:
-            SWR_Model_00003: AUTOSAR Class String Representation
+            SWR_MODEL_00003: AUTOSAR Class String Representation
         """
         return f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract})"
 
@@ -61,7 +61,7 @@ class AutosarPackage:
     """Represents an AUTOSAR package containing classes and subpackages.
 
     Requirements:
-        SWR_Model_00004: AUTOSAR Package Representation
+        SWR_MODEL_00004: AUTOSAR Package Representation
 
     Attributes:
         name: The name of the package.
@@ -83,7 +83,7 @@ class AutosarPackage:
         """Validate the package fields.
 
         Requirements:
-            SWR_Model_00005: AUTOSAR Package Name Validation
+            SWR_MODEL_00005: AUTOSAR Package Name Validation
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
@@ -95,7 +95,7 @@ class AutosarPackage:
         """Add a class to the package.
 
         Requirements:
-            SWR_Model_00006: Add Class to Package
+            SWR_MODEL_00006: Add Class to Package
 
         Args:
             cls: The AutosarClass to add.
@@ -112,7 +112,7 @@ class AutosarPackage:
         """Add a subpackage to this package.
 
         Requirements:
-            SWR_Model_00007: Add Subpackage to Package
+            SWR_MODEL_00007: Add Subpackage to Package
 
         Args:
             pkg: The AutosarPackage to add as a subpackage.
@@ -129,7 +129,7 @@ class AutosarPackage:
         """Get a class by name.
 
         Requirements:
-            SWR_Model_00008: Query Package Contents
+            SWR_MODEL_00008: Query Package Contents
 
         Args:
             name: The name of the class to find.
@@ -146,7 +146,7 @@ class AutosarPackage:
         """Get a subpackage by name.
 
         Requirements:
-            SWR_Model_00008: Query Package Contents
+            SWR_MODEL_00008: Query Package Contents
 
         Args:
             name: The name of the subpackage to find.
@@ -163,7 +163,7 @@ class AutosarPackage:
         """Check if a class exists in the package.
 
         Requirements:
-            SWR_Model_00008: Query Package Contents
+            SWR_MODEL_00008: Query Package Contents
 
         Args:
             name: The name of the class to check.
@@ -177,7 +177,7 @@ class AutosarPackage:
         """Check if a subpackage exists in the package.
 
         Requirements:
-            SWR_Model_00008: Query Package Contents
+            SWR_MODEL_00008: Query Package Contents
 
         Args:
             name: The name of the subpackage to check.
@@ -191,7 +191,7 @@ class AutosarPackage:
         """Return string representation of the package.
 
         Requirements:
-            SWR_Model_00009: Package String Representation
+            SWR_MODEL_00009: Package String Representation
         """
         parts = [f"Package '{self.name}'"]
         if self.classes:
@@ -204,7 +204,7 @@ class AutosarPackage:
         """Return detailed representation for debugging.
 
         Requirements:
-            SWR_Model_00009: Package String Representation
+            SWR_MODEL_00009: Package String Representation
         """
         return (
             f"AutosarPackage(name='{self.name}', "

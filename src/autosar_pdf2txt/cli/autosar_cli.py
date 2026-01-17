@@ -12,7 +12,7 @@ def main() -> int:
     """Main entry point for the CLI.
 
     Requirements:
-        SWR_Cli_00001: CLI Entry Point
+        SWR_CLI_00001: CLI Entry Point
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -42,8 +42,8 @@ def main() -> int:
     args = parser.parse_args()
 
     # Configure logging based on verbose flag
-    # SWR_Cli_00005: CLI Verbose Mode
-    # SWR_Cli_00008: CLI Logging
+    # SWR_CLI_00005: CLI Verbose Mode
+    # SWR_CLI_00008: CLI Logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=log_level,
@@ -51,7 +51,7 @@ def main() -> int:
     )
 
     # Validate and collect input paths (files and directories)
-    # SWR_Cli_00006: CLI Input Validation
+    # SWR_CLI_00006: CLI Input Validation
     pdf_paths = []
     for input_path in args.pdf_files:
         path = Path(input_path)
@@ -67,7 +67,7 @@ def main() -> int:
             pdf_paths.append(path)
         elif path.is_dir():
             # It's a directory, find all PDF files
-            # SWR_Cli_00003: CLI Directory Input Support
+            # SWR_CLI_00003: CLI Directory Input Support
             pdf_files_in_dir = sorted(path.glob("*.pdf"))
             if not pdf_files_in_dir:
                 logging.warning(f"No PDF files found in directory: {input_path}")
@@ -88,7 +88,7 @@ def main() -> int:
         all_packages = []
 
         for pdf_path in pdf_paths:
-            # SWR_Cli_00007: CLI Progress Feedback
+            # SWR_CLI_00007: CLI Progress Feedback
             logging.info(f"Parsing PDF: {pdf_path}")
             logging.debug(f"  Full path: {pdf_path.absolute()}")
             packages = pdf_parser.parse_pdf(str(pdf_path))
@@ -98,14 +98,14 @@ def main() -> int:
                 for pkg in packages:
                     logging.debug(f"    - {pkg.name}")
 
-        # SWR_Cli_00007: CLI Progress Feedback
+        # SWR_CLI_00007: CLI Progress Feedback
         logging.info(f"Total: {len(all_packages)} top-level packages")
 
         # Write to markdown
         writer = MarkdownWriter()
         markdown = writer.write_packages(all_packages)
 
-        # SWR_Cli_00004: CLI Output File Option
+        # SWR_CLI_00004: CLI Output File Option
         if args.output:
             output_path = Path(args.output)
             output_path.write_text(markdown, encoding="utf-8")
@@ -116,7 +116,7 @@ def main() -> int:
         return 0
 
     except Exception as e:
-        # SWR_Cli_00009: CLI Error Handling
+        # SWR_CLI_00009: CLI Error Handling
         logging.error(f"{e}")
         if args.verbose:
             logging.exception("Detailed error traceback:")

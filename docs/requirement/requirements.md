@@ -6,7 +6,7 @@ This document contains all software requirements extracted from the current impl
 
 ### 1. Model
 
-#### SWR_Model_00001
+#### SWR_MODEL_00001
 **Title**: AUTOSAR Class Representation
 
 **Description**: The system shall provide a data model to represent an AUTOSAR class with the following attributes:
@@ -15,14 +15,14 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Model_00002
+#### SWR_MODEL_00002
 **Title**: AUTOSAR Class Name Validation
 
 **Description**: The system shall validate that AUTOSAR class names are non-empty and do not contain only whitespace upon initialization.
 
 ---
 
-#### SWR_Model_00003
+#### SWR_MODEL_00003
 **Title**: AUTOSAR Class String Representation
 
 **Description**: The system shall provide string representations of AUTOSAR classes, including:
@@ -31,7 +31,7 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Model_00004
+#### SWR_MODEL_00004
 **Title**: AUTOSAR Package Representation
 
 **Description**: The system shall provide a data model to represent an AUTOSAR package with the following attributes:
@@ -41,28 +41,28 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Model_00005
+#### SWR_MODEL_00005
 **Title**: AUTOSAR Package Name Validation
 
 **Description**: The system shall validate that AUTOSAR package names are non-empty and do not contain only whitespace upon initialization.
 
 ---
 
-#### SWR_Model_00006
+#### SWR_MODEL_00006
 **Title**: Add Class to Package
 
 **Description**: The system shall provide functionality to add an AutosarClass to an AutosarPackage. The system shall check for duplicate classes by class name. If a class with the same name already exists in the package, the class shall not be added again.
 
 ---
 
-#### SWR_Model_00007
+#### SWR_MODEL_00007
 **Title**: Add Subpackage to Package
 
 **Description**: The system shall provide functionality to add an AutosarPackage as a subpackage to another AutosarPackage. The system shall check for duplicate subpackages by subpackage name. If a subpackage with the same name already exists in the parent package, the subpackage shall not be added again.
 
 ---
 
-#### SWR_Model_00008
+#### SWR_MODEL_00008
 **Title**: Query Package Contents
 
 **Description**: The system shall provide query methods to:
@@ -73,7 +73,7 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Model_00009
+#### SWR_MODEL_00009
 **Title**: Package String Representation
 
 **Description**: The system shall provide string representations of AUTOSAR packages, including summary information about the number of classes and subpackages.
@@ -82,28 +82,28 @@ This document contains all software requirements extracted from the current impl
 
 ### 2. Parser
 
-#### SWR_Parser_00001
+#### SWR_PARSER_00001
 **Title**: PDF Parser Initialization
 
 **Description**: The system shall provide a PDF parser class that uses pdfplumber as the default PDF engine.
 
 ---
 
-#### SWR_Parser_00002
+#### SWR_PARSER_00002
 **Title**: Backend Validation
 
 **Description**: The system shall validate that the requested PDF parsing backend is available and properly installed before attempting to parse PDFs.
 
 ---
 
-#### SWR_Parser_00003
+#### SWR_PARSER_00003
 **Title**: PDF File Parsing
 
 **Description**: The system shall provide functionality to parse a PDF file and extract AUTOSAR package and class hierarchies from it.
 
 ---
 
-#### SWR_Parser_00004
+#### SWR_PARSER_00004
 **Title**: Class Definition Pattern Recognition
 
 **Description**: The system shall recognize and parse AUTOSAR class definitions from PDF text using the following patterns:
@@ -114,7 +114,7 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Parser_00005
+#### SWR_PARSER_00005
 **Title**: Class Definition Data Model
 
 **Description**: The system shall provide an internal data model (`ClassDefinition`) to represent parsed class information including:
@@ -126,14 +126,14 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Parser_00006
+#### SWR_PARSER_00006
 **Title**: Package Hierarchy Building
 
 **Description**: The system shall build a hierarchical AUTOSAR package structure from parsed class definitions, creating nested packages based on the package path delimiter ("::").
 
 ---
 
-#### SWR_Parser_00007
+#### SWR_PARSER_00007
 **Title**: PDF Backend Support - pdfplumber
 
 **Description**: The system shall support pdfplumber as a PDF parsing backend for extracting text content from PDF files.
@@ -142,21 +142,21 @@ This document contains all software requirements extracted from the current impl
 
 ### 3. Writer
 
-#### SWR_Writer_00001
+#### SWR_WRITER_00001
 **Title**: Markdown Writer Initialization
 
 **Description**: The system shall provide a markdown writer class for writing AUTOSAR packages and classes to markdown format.
 
 ---
 
-#### SWR_Writer_00002
+#### SWR_WRITER_00002
 **Title**: Markdown Package Hierarchy Output
 
 **Description**: The system shall write AUTOSAR package hierarchies to markdown format using asterisk (*) bullet points with 2-space indentation per nesting level.
 
 ---
 
-#### SWR_Writer_00003
+#### SWR_WRITER_00003
 **Title**: Markdown Class Output Format
 
 **Description**: The system shall write AUTOSAR classes in markdown format with:
@@ -165,7 +165,7 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Writer_00004
+#### SWR_WRITER_00004
 **Title**: Bulk Package Writing
 
 **Description**: The system shall provide functionality to write multiple top-level packages to markdown format in a single operation.
@@ -174,42 +174,42 @@ This document contains all software requirements extracted from the current impl
 
 ### 4. CLI
 
-#### SWR_Cli_00001
+#### SWR_CLI_00001
 **Title**: CLI Entry Point
 
 **Description**: The system shall provide a command-line interface tool named `autosar-extract` for extracting AUTOSAR models from PDF files.
 
 ---
 
-#### SWR_Cli_00002
+#### SWR_CLI_00002
 **Title**: CLI File Input Support
 
 **Description**: The CLI shall accept one or more PDF file paths as input arguments.
 
 ---
 
-#### SWR_Cli_00003
+#### SWR_CLI_00003
 **Title**: CLI Directory Input Support
 
 **Description**: The CLI shall accept directory paths as input and automatically discover all PDF files within them (sorted alphabetically).
 
 ---
 
-#### SWR_Cli_00004
+#### SWR_CLI_00004
 **Title**: CLI Output File Option
 
 **Description**: The CLI shall support an `-o` / `--output` option to write the extracted markdown to a specified file instead of stdout.
 
 ---
 
-#### SWR_Cli_00005
+#### SWR_CLI_00005
 **Title**: CLI Verbose Mode
 
 **Description**: The CLI shall support a `-v` / `--verbose` option to enable verbose output mode, which prints detailed debug information during processing.
 
 ---
 
-#### SWR_Cli_00006
+#### SWR_CLI_00006
 **Title**: CLI Input Validation
 
 **Description**: The CLI shall validate input paths and provide appropriate error messages for:
@@ -220,7 +220,7 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Cli_00007
+#### SWR_CLI_00007
 **Title**: CLI Progress Feedback
 
 **Description**: The CLI shall provide progress feedback via stderr messages indicating:
@@ -231,14 +231,14 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Cli_00008
+#### SWR_CLI_00008
 **Title**: CLI Logging
 
 **Description**: The CLI shall provide logging information to show the current processing progress, including detailed status messages for each operation step.
 
 ---
 
-#### SWR_Cli_00009
+#### SWR_CLI_00009
 **Title**: CLI Error Handling
 
 **Description**: The CLI shall catch and report exceptions with user-friendly error messages via stderr and return appropriate exit codes (0 for success, 1 for error).
@@ -247,7 +247,7 @@ This document contains all software requirements extracted from the current impl
 
 ### 5. Package
 
-#### SWR_Package_00001
+#### SWR_PACKAGE_00001
 **Title**: Package API Export
 
 **Description**: The system shall export the following public API from the root package:
@@ -259,14 +259,14 @@ This document contains all software requirements extracted from the current impl
 
 ---
 
-#### SWR_Package_00002
+#### SWR_PACKAGE_00002
 **Title**: Python Version Support
 
 **Description**: The system shall support Python versions 3.7 through 3.11.
 
 ---
 
-#### SWR_Package_00003
+#### SWR_PACKAGE_00003
 **Title**: Package Metadata
 
 **Description**: The system shall include appropriate package metadata including:

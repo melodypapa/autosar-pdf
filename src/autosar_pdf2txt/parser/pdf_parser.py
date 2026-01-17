@@ -13,7 +13,7 @@ class ClassDefinition:
     """Represents a parsed class definition from PDF.
 
     Requirements:
-        SWR_Parser_00005: Class Definition Data Model
+        SWR_PARSER_00005: Class Definition Data Model
 
     Attributes:
         name: The name of the class.
@@ -34,7 +34,7 @@ class PdfParser:
     """Parse AUTOSAR PDF files to extract package and class hierarchies.
 
     Requirements:
-        SWR_Parser_00001: PDF Parser Initialization
+        SWR_PARSER_00001: PDF Parser Initialization
 
     The parser extracts class definitions from PDF files and builds
     AutosarPackage and AutosarClass objects using pdfplumber as the
@@ -47,7 +47,7 @@ class PdfParser:
     """
 
     # Regex patterns for parsing class definitions
-    # SWR_Parser_00004: Class Definition Pattern Recognition
+    # SWR_PARSER_00004: Class Definition Pattern Recognition
     CLASS_PATTERN = re.compile(r"^Class\s+(.+?)(?:\s*\((abstract)\))?\s*$")
     PACKAGE_PATTERN = re.compile(r"^Package\s+(M2::)?(.+)$")
     BASE_PATTERN = re.compile(r"^Base\s+(.+)$")
@@ -57,8 +57,8 @@ class PdfParser:
         """Initialize the PDF parser.
 
         Requirements:
-            SWR_Parser_00001: PDF Parser Initialization
-            SWR_Parser_00007: PDF Backend Support - pdfplumber
+            SWR_PARSER_00001: PDF Parser Initialization
+            SWR_PARSER_00007: PDF Backend Support - pdfplumber
 
         Raises:
             ImportError: If pdfplumber is not installed.
@@ -69,8 +69,8 @@ class PdfParser:
         """Validate that pdfplumber backend is available.
 
         Requirements:
-            SWR_Parser_00002: Backend Validation
-            SWR_Parser_00007: PDF Backend Support - pdfplumber
+            SWR_PARSER_00002: Backend Validation
+            SWR_PARSER_00007: PDF Backend Support - pdfplumber
 
         Raises:
             ImportError: If pdfplumber is not installed.
@@ -86,7 +86,7 @@ class PdfParser:
         """Parse a PDF file and extract the package hierarchy.
 
         Requirements:
-            SWR_Parser_00003: PDF File Parsing
+            SWR_PARSER_00003: PDF File Parsing
 
         Args:
             pdf_path: Path to the PDF file.
@@ -108,7 +108,7 @@ class PdfParser:
         """Extract all class definitions from the PDF.
 
         Requirements:
-            SWR_Parser_00003: PDF File Parsing
+            SWR_PARSER_00003: PDF File Parsing
 
         Args:
             pdf_path: Path to the PDF file.
@@ -122,8 +122,8 @@ class PdfParser:
         """Extract class definitions using pdfplumber.
 
         Requirements:
-            SWR_Parser_00003: PDF File Parsing
-            SWR_Parser_00007: PDF Backend Support - pdfplumber
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00007: PDF Backend Support - pdfplumber
 
         Args:
             pdf_path: Path to the PDF file.
@@ -156,7 +156,7 @@ class PdfParser:
         """Parse class definitions from extracted text.
 
         Requirements:
-            SWR_Parser_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00004: Class Definition Pattern Recognition
 
         Args:
             text: The extracted text from PDF.
@@ -226,7 +226,7 @@ class PdfParser:
         """Build AutosarPackage hierarchy from class definitions.
 
         Requirements:
-            SWR_Parser_00006: Package Hierarchy Building
+            SWR_PARSER_00006: Package Hierarchy Building
 
         Args:
             class_defs: List of ClassDefinition objects.

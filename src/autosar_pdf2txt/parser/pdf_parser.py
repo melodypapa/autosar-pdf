@@ -21,6 +21,7 @@ class ClassDefinition:
         is_abstract: Whether the class is abstract.
         base_classes: List of base class names.
         subclasses: List of subclass names.
+        note: Documentation note extracted from the Note column.
     """
 
     name: str
@@ -28,6 +29,7 @@ class ClassDefinition:
     is_abstract: bool
     base_classes: List[str] = field(default_factory=list)
     subclasses: List[str] = field(default_factory=list)
+    note: str | None = None
 
 
 class PdfParser:
@@ -52,6 +54,7 @@ class PdfParser:
     PACKAGE_PATTERN = re.compile(r"^Package\s+(M2::)?(.+)$")
     BASE_PATTERN = re.compile(r"^Base\s+(.+)$")
     SUBCLASS_PATTERN = re.compile(r"^Subclasses\s+(.+)$")
+    NOTE_PATTERN = re.compile(r"^Note\s+(.+)$")
 
     def __init__(self) -> None:
         """Initialize the PDF parser.
@@ -77,7 +80,7 @@ class PdfParser:
         """
         try:
             import pdfplumber as _  # noqa: F401
-        except ImportError:
+        except ImportError:  # pragma: no cover
             raise ImportError(
                 "pdfplumber is not installed. Install it with: pip install pdfplumber"
             )
@@ -214,6 +217,12 @@ class PdfParser:
                 ]
                 continue
 
+            # Check for note
+            note_match = self.NOTE_PATTERN.match(line)
+            if note_match and current_class is not None:
+                current_class.note = note_match.group(1).strip()
+                continue
+
         # Don't forget the last class
         if current_class is not None:
             class_defs.append(current_class)
@@ -264,11 +273,7 @@ class PdfParser:
 
                     # Add to parent package if exists
                     if parent_package is not None:
-                        try:
-                            parent_package.add_subpackage(pkg)
-                        except ValueError:
-                            # Package already added, skip
-                            pass
+                        parent_package.add_subpackage(pkg)
 
                 parent_package = package_map[current_path]
 
@@ -276,15 +281,14 @@ class PdfParser:
             if parent_package is not None:
                 class_key = (parent_package.name, class_def.name)
                 if class_key not in processed_classes:
-                    try:
-                        autosar_class = AutosarClass(
-                            name=class_def.name, is_abstract=class_def.is_abstract
-                        )
-                        parent_package.add_class(autosar_class)
-                        processed_classes.add(class_key)
-                    except ValueError:
-                        # Class already exists, skip
-                        pass
+                    autosar_class = AutosarClass(
+                        name=class_def.name,
+                        is_abstract=class_def.is_abstract,
+                        bases=class_def.base_classes.copy(),
+                        note=class_def.note
+                    )
+                    parent_package.add_class(autosar_class)
+                    processed_classes.add(class_key)
 
         # Return top-level packages (those with no "::" in path)
         top_level_packages = [

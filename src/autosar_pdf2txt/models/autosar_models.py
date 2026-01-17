@@ -1,7 +1,64 @@
 """AUTOSAR data models for packages and classes."""
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List
+
+
+@dataclass
+class AutosarAttribute:
+    """Represents an AUTOSAR class attribute.
+
+    Requirements:
+        SWR_MODEL_00010: AUTOSAR Attribute Representation
+
+    Attributes:
+        name: The name of the attribute.
+        type: The data type of the attribute.
+        is_ref: Whether the attribute is a reference type.
+
+    Examples:
+        >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True)
+        >>> non_ref_attr = AutosarAttribute("id", "uint32", False)
+    """
+
+    name: str
+    type: str
+    is_ref: bool
+
+    def __post_init__(self) -> None:
+        """Validate the attribute fields.
+
+        Requirements:
+            SWR_MODEL_00011: AUTOSAR Attribute Name Validation
+            SWR_MODEL_00012: AUTOSAR Attribute Type Validation
+
+        Raises:
+            ValueError: If name or type is empty or contains only whitespace.
+        """
+        if not self.name or not self.name.strip():
+            raise ValueError("Attribute name cannot be empty")
+        if not self.type or not self.type.strip():
+            raise ValueError("Attribute type cannot be empty")
+
+    def __str__(self) -> str:
+        """Return string representation of the attribute.
+
+        Requirements:
+            SWR_MODEL_00013: AUTOSAR Attribute String Representation
+
+        Returns:
+            Attribute name and type with '(ref)' suffix if reference type.
+        """
+        suffix = " (ref)" if self.is_ref else ""
+        return f"{self.name}: {self.type}{suffix}"
+
+    def __repr__(self) -> str:
+        """Return detailed representation for debugging.
+
+        Requirements:
+            SWR_MODEL_00013: AUTOSAR Attribute String Representation
+        """
+        return f"AutosarAttribute(name='{self.name}', type='{self.type}', is_ref={self.is_ref})"
 
 
 @dataclass
@@ -14,14 +71,24 @@ class AutosarClass:
     Attributes:
         name: The name of the class.
         is_abstract: Whether the class is abstract.
+        attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
+        bases: List of base class names for inheritance tracking.
+        note: Optional documentation or comments about the class.
 
     Examples:
         >>> cls = AutosarClass("RunnableEntity", False)
         >>> abstract_cls = AutosarClass("InternalBehavior", True)
+        >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True)
+        >>> cls_with_attr = AutosarClass("Component", False, {"dataReadPort": attr})
+        >>> cls_with_bases = AutosarClass("DerivedClass", False, bases=["BaseClass"])
+        >>> cls_with_note = AutosarClass("MyClass", False, note="Documentation note")
     """
 
     name: str
     is_abstract: bool
+    attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
+    bases: List[str] = field(default_factory=list)
+    note: str | None = None
 
     def __post_init__(self) -> None:
         """Validate the class fields.
@@ -53,7 +120,13 @@ class AutosarClass:
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
-        return f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract})"
+        attrs_count = len(self.attributes)
+        bases_count = len(self.bases)
+        note_present = self.note is not None
+        return (
+            f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
+            f"attributes={attrs_count}, bases={bases_count}, note={note_present})"
+        )
 
 
 @dataclass

@@ -1,11 +1,129 @@
-"""Tests for AutosarClass and AutosarPackage models.
+"""Tests for AutosarAttribute, AutosarClass and AutosarPackage models.
 
 Test coverage for autosar_models.py targeting 100%.
 """
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import AutosarAttribute, AutosarClass, AutosarPackage
+
+
+class TestAutosarAttribute:
+    """Tests for AutosarAttribute class.
+
+    Requirements:
+        SWR_MODEL_00010: AUTOSAR Attribute Representation
+        SWR_MODEL_00011: AUTOSAR Attribute Name Validation
+        SWR_MODEL_00012: AUTOSAR Attribute Type Validation
+        SWR_MODEL_00013: AUTOSAR Attribute String Representation
+    """
+
+    def test_init_reference_attribute(self) -> None:
+        """Test creating a reference type attribute.
+
+        Requirements:
+            SWR_MODEL_00010: AUTOSAR Attribute Representation
+        """
+        attr = AutosarAttribute(name="dataReadPort", type="PPortPrototype", is_ref=True)
+        assert attr.name == "dataReadPort"
+        assert attr.type == "PPortPrototype"
+        assert attr.is_ref is True
+
+    def test_init_non_reference_attribute(self) -> None:
+        """Test creating a non-reference type attribute.
+
+        Requirements:
+            SWR_MODEL_00010: AUTOSAR Attribute Representation
+        """
+        attr = AutosarAttribute(name="id", type="uint32", is_ref=False)
+        assert attr.name == "id"
+        assert attr.type == "uint32"
+        assert attr.is_ref is False
+
+    def test_post_init_valid_name(self) -> None:
+        """Test valid name validation.
+
+        Requirements:
+            SWR_MODEL_00011: AUTOSAR Attribute Name Validation
+        """
+        attr = AutosarAttribute(name="validAttribute", type="string", is_ref=False)
+        assert attr.name == "validAttribute"
+
+    def test_post_init_empty_name(self) -> None:
+        """Test empty name raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00011: AUTOSAR Attribute Name Validation
+        """
+        with pytest.raises(ValueError, match="Attribute name cannot be empty"):
+            AutosarAttribute(name="", type="string", is_ref=False)
+
+    def test_post_init_whitespace_name(self) -> None:
+        """Test whitespace-only name raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00011: AUTOSAR Attribute Name Validation
+        """
+        with pytest.raises(ValueError, match="Attribute name cannot be empty"):
+            AutosarAttribute(name="   ", type="string", is_ref=False)
+
+    def test_post_init_valid_type(self) -> None:
+        """Test valid type validation.
+
+        Requirements:
+            SWR_MODEL_00012: AUTOSAR Attribute Type Validation
+        """
+        attr = AutosarAttribute(name="attr", type="ValidType", is_ref=False)
+        assert attr.type == "ValidType"
+
+    def test_post_init_empty_type(self) -> None:
+        """Test empty type raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00012: AUTOSAR Attribute Type Validation
+        """
+        with pytest.raises(ValueError, match="Attribute type cannot be empty"):
+            AutosarAttribute(name="attr", type="", is_ref=False)
+
+    def test_post_init_whitespace_type(self) -> None:
+        """Test whitespace-only type raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00012: AUTOSAR Attribute Type Validation
+        """
+        with pytest.raises(ValueError, match="Attribute type cannot be empty"):
+            AutosarAttribute(name="attr", type="   ", is_ref=False)
+
+    def test_str_reference_attribute(self) -> None:
+        """Test string representation of reference attribute.
+
+        Requirements:
+            SWR_MODEL_00013: AUTOSAR Attribute String Representation
+        """
+        attr = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
+        assert str(attr) == "port: PPortPrototype (ref)"
+
+    def test_str_non_reference_attribute(self) -> None:
+        """Test string representation of non-reference attribute.
+
+        Requirements:
+            SWR_MODEL_00013: AUTOSAR Attribute String Representation
+        """
+        attr = AutosarAttribute(name="value", type="uint32", is_ref=False)
+        assert str(attr) == "value: uint32"
+
+    def test_repr(self) -> None:
+        """Test __repr__ method.
+
+        Requirements:
+            SWR_MODEL_00013: AUTOSAR Attribute String Representation
+        """
+        attr = AutosarAttribute(name="testAttr", type="TestType", is_ref=True)
+        result = repr(attr)
+        assert "AutosarAttribute" in result
+        assert "name='testAttr'" in result
+        assert "type='TestType'" in result
+        assert "is_ref=True" in result
 
 
 class TestAutosarClass:
@@ -93,6 +211,208 @@ class TestAutosarClass:
         assert "AutosarClass" in result
         assert "name='TestClass'" in result
         assert "is_abstract=True" in result
+
+    def test_init_with_empty_attributes(self) -> None:
+        """Test creating a class with empty attributes dictionary.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="Component", is_abstract=False)
+        assert cls.attributes == {}
+        assert len(cls.attributes) == 0
+
+    def test_init_with_attributes(self) -> None:
+        """Test creating a class with attributes.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        attr1 = AutosarAttribute(name="dataReadPort", type="PPortPrototype", is_ref=True)
+        attr2 = AutosarAttribute(name="id", type="uint32", is_ref=False)
+        cls = AutosarClass(
+            name="Component",
+            is_abstract=False,
+            attributes={"dataReadPort": attr1, "id": attr2}
+        )
+        assert len(cls.attributes) == 2
+        assert "dataReadPort" in cls.attributes
+        assert "id" in cls.attributes
+        assert cls.attributes["dataReadPort"] == attr1
+        assert cls.attributes["id"] == attr2
+
+    def test_repr_with_attributes(self) -> None:
+        """Test __repr__ method shows attributes count.
+
+        Requirements:
+            SWR_MODEL_00003: AUTOSAR Class String Representation
+        """
+        attr1 = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
+        attr2 = AutosarAttribute(name="value", type="uint32", is_ref=False)
+        cls = AutosarClass(
+            name="Component",
+            is_abstract=False,
+            attributes={"port": attr1, "value": attr2}
+        )
+        result = repr(cls)
+        assert "AutosarClass" in result
+        assert "name='Component'" in result
+        assert "is_abstract=False" in result
+        assert "attributes=2" in result
+
+    def test_repr_without_attributes(self) -> None:
+        """Test __repr__ method with no attributes.
+
+        Requirements:
+            SWR_MODEL_00003: AUTOSAR Class String Representation
+        """
+        cls = AutosarClass(name="Component", is_abstract=False)
+        result = repr(cls)
+        assert "AutosarClass" in result
+        assert "name='Component'" in result
+        assert "is_abstract=False" in result
+        assert "attributes=0" in result
+        assert "bases=0" in result
+        assert "note=False" in result
+
+    def test_init_with_empty_bases(self) -> None:
+        """Test creating a class with empty bases list (default).
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        assert cls.bases == []
+        assert len(cls.bases) == 0
+
+    def test_init_with_bases(self) -> None:
+        """Test creating a class with base classes.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="DerivedClass",
+            is_abstract=False,
+            bases=["BaseClass1", "BaseClass2"]
+        )
+        assert len(cls.bases) == 2
+        assert "BaseClass1" in cls.bases
+        assert "BaseClass2" in cls.bases
+
+    def test_init_with_single_base(self) -> None:
+        """Test creating a class with single base class.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="DerivedClass",
+            is_abstract=False,
+            bases=["BaseClass"]
+        )
+        assert len(cls.bases) == 1
+        assert cls.bases[0] == "BaseClass"
+
+    def test_repr_with_bases(self) -> None:
+        """Test __repr__ includes bases count.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="DerivedClass",
+            is_abstract=False,
+            bases=["Base1", "Base2"]
+        )
+        result = repr(cls)
+        assert "bases=2" in result
+
+    def test_init_with_none_note(self) -> None:
+        """Test creating a class with None note (default).
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        assert cls.note is None
+
+    def test_init_with_note(self) -> None:
+        """Test creating a class with a note.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="MyClass",
+            is_abstract=False,
+            note="This is a documentation note"
+        )
+        assert cls.note == "This is a documentation note"
+
+    def test_init_with_empty_note(self) -> None:
+        """Test creating a class with empty string note.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False, note="")
+        assert cls.note == ""
+
+    def test_repr_with_note(self) -> None:
+        """Test __repr__ includes note presence.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="MyClass",
+            is_abstract=False,
+            note="Documentation"
+        )
+        result = repr(cls)
+        assert "note=True" in result
+
+    def test_init_with_all_fields(self) -> None:
+        """Test creating a class with all fields populated.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        attr = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
+        cls = AutosarClass(
+            name="CompleteClass",
+            is_abstract=False,
+            attributes={"port": attr},
+            bases=["Base1", "Base2"],
+            note="Complete example"
+        )
+        assert cls.name == "CompleteClass"
+        assert cls.is_abstract is False
+        assert len(cls.attributes) == 1
+        assert len(cls.bases) == 2
+        assert cls.note == "Complete example"
+
+    def test_bases_mutation(self) -> None:
+        """Test that bases list can be mutated.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls.bases.append("BaseClass")
+        assert len(cls.bases) == 1
+        assert "BaseClass" in cls.bases
+
+    def test_note_reassignment(self) -> None:
+        """Test that note can be reassigned.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls.note = "Updated note"
+        assert cls.note == "Updated note"
 
 
 class TestAutosarPackage:

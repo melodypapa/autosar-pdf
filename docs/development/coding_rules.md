@@ -215,12 +215,6 @@ from autosar_pdf2txt.writer import MarkdownWriter
 
 **Within each section, imports sorted alphabetically.**
 
-### CODING_RULE_IMPORT_00004: Absolute Import Paths
-
-**Maturity**: accept
-
-**Use absolute imports for local modules (not relative imports), and group `from` imports together with direct imports.**
-
 ---
 
 ## Naming Conventions

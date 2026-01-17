@@ -24,6 +24,9 @@ All existing requirements in this document are currently at maturity level **acc
 **Description**: The system shall provide a data model to represent an AUTOSAR class with the following attributes:
 - `name`: The name of the class (non-empty string)
 - `is_abstract`: Boolean flag indicating whether the class is abstract
+- `attributes`: Dictionary of AUTOSAR attributes where key is the attribute name and value is the AUTOSAR attribute object
+- `bases`: List of base class names for inheritance tracking (List[str], defaults to empty list)
+- `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
 
 ---
 
@@ -108,6 +111,47 @@ All existing requirements in this document are currently at maturity level **acc
 
 ---
 
+#### SWR_MODEL_00010
+**Title**: AUTOSAR Attribute Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide a data model to represent an AUTOSAR class attribute with the following attributes:
+- `name`: The name of the attribute (non-empty string)
+- `type`: The data type of the attribute (non-empty string)
+- `is_ref`: Boolean flag indicating whether the attribute is a reference type
+
+---
+
+#### SWR_MODEL_00011
+**Title**: AUTOSAR Attribute Name Validation
+
+**Maturity**: accept
+
+**Description**: The system shall validate that AUTOSAR attribute names are non-empty and do not contain only whitespace upon initialization.
+
+---
+
+#### SWR_MODEL_00012
+**Title**: AUTOSAR Attribute Type Validation
+
+**Maturity**: accept
+
+**Description**: The system shall validate that AUTOSAR attribute types are non-empty and do not contain only whitespace upon initialization.
+
+---
+
+#### SWR_MODEL_00013
+**Title**: AUTOSAR Attribute String Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide string representations of AUTOSAR attributes, including:
+- A user-friendly string showing attribute name and type, with "(ref)" suffix for reference types
+- A debug representation showing all attributes (name, type, is_ref)
+
+---
+
 ### 2. Parser
 
 #### SWR_PARSER_00001
@@ -145,8 +189,9 @@ All existing requirements in this document are currently at maturity level **acc
 **Description**: The system shall recognize and parse AUTOSAR class definitions from PDF text using the following patterns:
 - Class definitions: `Class <name> (abstract)`
 - Package definitions: `Package <M2::?><path>`
-- Base classes: `Base <class_list>`
+- Base classes: `Base <class_list>` (extracted from the Base column in class tables)
 - Subclasses: `Subclasses <class_list>`
+- Notes: Extracted from the Note column in class tables as free-form documentation text
 
 ---
 
@@ -321,6 +366,7 @@ All existing requirements in this document are currently at maturity level **acc
 **Maturity**: accept
 
 **Description**: The system shall export the following public API from the root package:
+- `AutosarAttribute`
 - `AutosarClass`
 - `AutosarPackage`
 - `PdfParser`

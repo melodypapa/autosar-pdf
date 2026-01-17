@@ -196,47 +196,47 @@ autosar-extract input.pdf -v
 All code includes requirement IDs in docstrings for traceability to `docs/requirement/requirements.md`:
 
 **Requirements by Module:**
-- **Model**: SWR_Model_00001 - SWR_Model_00009
-  - SWR_Model_00001: AUTOSAR Class Representation
-  - SWR_Model_00002: AUTOSAR Class Name Validation
-  - SWR_Model_00003: AUTOSAR Class String Representation
-  - SWR_Model_00004: AUTOSAR Package Representation
-  - SWR_Model_00005: AUTOSAR Package Name Validation
-  - SWR_Model_00006: Add Class to Package
-  - SWR_Model_00007: Add Subpackage to Package
-  - SWR_Model_00008: Query Package Contents
-  - SWR_Model_00009: Package String Representation
+- **Model**: SWR_MODEL_00001 - SWR_MODEL_00009
+  - SWR_MODEL_00001: AUTOSAR Class Representation
+  - SWR_MODEL_00002: AUTOSAR Class Name Validation
+  - SWR_MODEL_00003: AUTOSAR Class String Representation
+  - SWR_MODEL_00004: AUTOSAR Package Representation
+  - SWR_MODEL_00005: AUTOSAR Package Name Validation
+  - SWR_MODEL_00006: Add Class to Package
+  - SWR_MODEL_00007: Add Subpackage to Package
+  - SWR_MODEL_00008: Query Package Contents
+  - SWR_MODEL_00009: Package String Representation
 
-- **Parser**: SWR_Parser_00001 - SWR_Parser_00007
-  - SWR_Parser_00001: PDF Parser Initialization
-  - SWR_Parser_00002: Backend Validation
-  - SWR_Parser_00003: PDF File Parsing
-  - SWR_Parser_00004: Class Definition Pattern Recognition
-  - SWR_Parser_00005: Class Definition Data Model
-  - SWR_Parser_00006: Package Hierarchy Building
-  - SWR_Parser_00007: PDF Backend Support - pdfplumber
+- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00007
+  - SWR_PARSER_00001: PDF Parser Initialization
+  - SWR_PARSER_00002: Backend Validation
+  - SWR_PARSER_00003: PDF File Parsing
+  - SWR_PARSER_00004: Class Definition Pattern Recognition
+  - SWR_PARSER_00005: Class Definition Data Model
+  - SWR_PARSER_00006: Package Hierarchy Building
+  - SWR_PARSER_00007: PDF Backend Support - pdfplumber
 
-- **Writer**: SWR_Writer_00001 - SWR_Writer_00004
-  - SWR_Writer_00001: Markdown Writer Initialization
-  - SWR_Writer_00002: Markdown Package Hierarchy Output
-  - SWR_Writer_00003: Markdown Class Output Format
-  - SWR_Writer_00004: Bulk Package Writing
+- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00004
+  - SWR_WRITER_00001: Markdown Writer Initialization
+  - SWR_WRITER_00002: Markdown Package Hierarchy Output
+  - SWR_WRITER_00003: Markdown Class Output Format
+  - SWR_WRITER_00004: Bulk Package Writing
 
-- **CLI**: SWR_Cli_00001 - SWR_Cli_00009
-  - SWR_Cli_00001: CLI Entry Point
-  - SWR_Cli_00002: CLI File Input Support
-  - SWR_Cli_00003: CLI Directory Input Support
-  - SWR_Cli_00004: CLI Output File Option
-  - SWR_Cli_00005: CLI Verbose Mode
-  - SWR_Cli_00006: CLI Input Validation
-  - SWR_Cli_00007: CLI Progress Feedback
-  - SWR_Cli_00008: CLI Logging
-  - SWR_Cli_00009: CLI Error Handling
+- **CLI**: SWR_CLI_00001 - SWR_CLI_00009
+  - SWR_CLI_00001: CLI Entry Point
+  - SWR_CLI_00002: CLI File Input Support
+  - SWR_CLI_00003: CLI Directory Input Support
+  - SWR_CLI_00004: CLI Output File Option
+  - SWR_CLI_00005: CLI Verbose Mode
+  - SWR_CLI_00006: CLI Input Validation
+  - SWR_CLI_00007: CLI Progress Feedback
+  - SWR_CLI_00008: CLI Logging
+  - SWR_CLI_00009: CLI Error Handling
 
-- **Package**: SWR_Package_00001 - SWR_Package_00003
-  - SWR_Package_00001: Package API Export
-  - SWR_Package_00002: Python Version Support
-  - SWR_Package_00003: Package Metadata
+- **Package**: SWR_PACKAGE_00001 - SWR_PACKAGE_00003
+  - SWR_PACKAGE_00001: Package API Export
+  - SWR_PACKAGE_00002: Python Version Support
+  - SWR_PACKAGE_00003: Package Metadata
 
 **Example:**
 ```python
@@ -244,8 +244,8 @@ def __init__(self) -> None:
     """Initialize the PDF parser.
 
     Requirements:
-        SWR_Parser_00001: PDF Parser Initialization
-        SWR_Parser_00007: PDF Backend Support - pdfplumber
+        SWR_PARSER_00001: PDF Parser Initialization
+        SWR_PARSER_00007: PDF Backend Support - pdfplumber
 
     Raises:
         ImportError: If pdfplumber is not installed.

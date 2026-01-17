@@ -6,7 +6,7 @@ This document contains all test cases extracted from the test suite of the autos
 
 ### 1. Model Tests
 
-#### SWUT_Model_00001
+#### SWUT_MODEL_00001
 **Title**: Test Initialization with Default Settings
 
 **Description**: Verify that MarkdownWriter can be initialized without parameters.
@@ -18,11 +18,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Writer instance is created successfully
 
-**Requirements Coverage**: SWR_Writer_00001
+**Requirements Coverage**: SWR_WRITER_00001
 
 ---
 
-#### SWUT_Model_00002
+#### SWUT_MODEL_00002
 **Title**: Test Creating a Concrete AUTOSAR Class
 
 **Description**: Verify that an AUTOSAR class can be created with name and abstract flag.
@@ -36,11 +36,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Class is created with correct attributes
 
-**Requirements Coverage**: SWR_Model_00001
+**Requirements Coverage**: SWR_MODEL_00001
 
 ---
 
-#### SWUT_Model_00003
+#### SWUT_MODEL_00003
 **Title**: Test Creating an Abstract AUTOSAR Class
 
 **Description**: Verify that an abstract AUTOSAR class can be created.
@@ -54,11 +54,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Abstract class is created with correct attributes
 
-**Requirements Coverage**: SWR_Model_00001
+**Requirements Coverage**: SWR_MODEL_00001
 
 ---
 
-#### SWUT_Model_00004
+#### SWUT_MODEL_00004
 **Title**: Test Valid Class Name Validation
 
 **Description**: Verify that a valid class name is accepted during initialization.
@@ -71,11 +71,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Class is created successfully
 
-**Requirements Coverage**: SWR_Model_00002
+**Requirements Coverage**: SWR_MODEL_00002
 
 ---
 
-#### SWUT_Model_00005
+#### SWUT_MODEL_00005
 **Title**: Test Empty Class Name Raises ValueError
 
 **Description**: Verify that empty class names are rejected with ValueError.
@@ -88,11 +88,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: ValueError is raised
 
-**Requirements Coverage**: SWR_Model_00002
+**Requirements Coverage**: SWR_MODEL_00002
 
 ---
 
-#### SWUT_Model_00006
+#### SWUT_MODEL_00006
 **Title**: Test Whitespace-Only Class Name Raises ValueError
 
 **Description**: Verify that whitespace-only class names are rejected with ValueError.
@@ -105,11 +105,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: ValueError is raised
 
-**Requirements Coverage**: SWR_Model_00002
+**Requirements Coverage**: SWR_MODEL_00002
 
 ---
 
-#### SWUT_Model_00007
+#### SWUT_MODEL_00007
 **Title**: Test String Representation of Concrete Class
 
 **Description**: Verify that the string representation of a concrete class shows the class name.
@@ -122,11 +122,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: String representation returns "MyClass"
 
-**Requirements Coverage**: SWR_Model_00003
+**Requirements Coverage**: SWR_MODEL_00003
 
 ---
 
-#### SWUT_Model_00008
+#### SWUT_MODEL_00008
 **Title**: Test String Representation of Abstract Class
 
 **Description**: Verify that the string representation of an abstract class includes "(abstract)" suffix.
@@ -139,11 +139,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: String representation returns "AbstractClass (abstract)"
 
-**Requirements Coverage**: SWR_Model_00003
+**Requirements Coverage**: SWR_MODEL_00003
 
 ---
 
-#### SWUT_Model_00009
+#### SWUT_MODEL_00009
 **Title**: Test Debug Representation of AUTOSAR Class
 
 **Description**: Verify that the debug representation shows all attributes.
@@ -159,11 +159,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Debug representation contains all class attributes
 
-**Requirements Coverage**: SWR_Model_00003
+**Requirements Coverage**: SWR_MODEL_00003
 
 ---
 
-#### SWUT_Model_00010
+#### SWUT_MODEL_00010
 **Title**: Test Creating an Empty Package
 
 **Description**: Verify that an empty AUTOSAR package can be created.
@@ -178,11 +178,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Empty package is created successfully
 
-**Requirements Coverage**: SWR_Model_00004
+**Requirements Coverage**: SWR_MODEL_00004
 
 ---
 
-#### SWUT_Model_00011
+#### SWUT_MODEL_00011
 **Title**: Test Creating Package with Classes
 
 **Description**: Verify that a package can be created with existing classes.
@@ -197,11 +197,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Package is created with both classes
 
-**Requirements Coverage**: SWR_Model_00004
+**Requirements Coverage**: SWR_MODEL_00004
 
 ---
 
-#### SWUT_Model_00012
+#### SWUT_MODEL_00012
 **Title**: Test Creating Package with Subpackages
 
 **Description**: Verify that a package can be created with existing subpackages.
@@ -216,11 +216,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Package is created with subpackage
 
-**Requirements Coverage**: SWR_Model_00004
+**Requirements Coverage**: SWR_MODEL_00004
 
 ---
 
-#### SWUT_Model_00013
+#### SWUT_MODEL_00013
 **Title**: Test Valid Package Name Validation
 
 **Description**: Verify that a valid package name is accepted during initialization.
@@ -233,11 +233,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Package is created successfully
 
-**Requirements Coverage**: SWR_Model_00005
+**Requirements Coverage**: SWR_MODEL_00005
 
 ---
 
-#### SWUT_Model_00014
+#### SWUT_MODEL_00014
 **Title**: Test Empty Package Name Raises ValueError
 
 **Description**: Verify that empty package names are rejected with ValueError.
@@ -250,11 +250,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: ValueError is raised
 
-**Requirements Coverage**: SWR_Model_00005
+**Requirements Coverage**: SWR_MODEL_00005
 
 ---
 
-#### SWUT_Model_00015
+#### SWUT_MODEL_00015
 **Title**: Test Whitespace-Only Package Name Raises ValueError
 
 **Description**: Verify that whitespace-only package names are rejected with ValueError.
@@ -267,11 +267,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: ValueError is raised
 
-**Requirements Coverage**: SWR_Model_00005
+**Requirements Coverage**: SWR_MODEL_00005
 
 ---
 
-#### SWUT_Model_00016
+#### SWUT_MODEL_00016
 **Title**: Test Adding Class to Package Successfully
 
 **Description**: Verify that a class can be added to a package.
@@ -287,11 +287,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Class is added to the package
 
-**Requirements Coverage**: SWR_Model_00006
+**Requirements Coverage**: SWR_MODEL_00006
 
 ---
 
-#### SWUT_Model_00017
+#### SWUT_MODEL_00017
 **Title**: Test Adding Duplicate Class Raises ValueError
 
 **Description**: Verify that adding a class with a duplicate name raises ValueError.
@@ -306,11 +306,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: ValueError is raised
 
-**Requirements Coverage**: SWR_Model_00006
+**Requirements Coverage**: SWR_MODEL_00006
 
 ---
 
-#### SWUT_Model_00018
+#### SWUT_MODEL_00018
 **Title**: Test Adding Subpackage to Package Successfully
 
 **Description**: Verify that a subpackage can be added to a package.
@@ -326,11 +326,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Subpackage is added to the parent package
 
-**Requirements Coverage**: SWR_Model_00007
+**Requirements Coverage**: SWR_MODEL_00007
 
 ---
 
-#### SWUT_Model_00019
+#### SWUT_MODEL_00019
 **Title**: Test Adding Duplicate Subpackage Raises ValueError
 
 **Description**: Verify that adding a subpackage with a duplicate name raises ValueError.
@@ -345,11 +345,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: ValueError is raised
 
-**Requirements Coverage**: SWR_Model_00007
+**Requirements Coverage**: SWR_MODEL_00007
 
 ---
 
-#### SWUT_Model_00020
+#### SWUT_MODEL_00020
 **Title**: Test Finding Existing Class by Name
 
 **Description**: Verify that an existing class can be retrieved from a package.
@@ -365,11 +365,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: The correct class is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00021
+#### SWUT_MODEL_00021
 **Title**: Test Finding Non-Existent Class Returns None
 
 **Description**: Verify that attempting to find a non-existent class returns None.
@@ -383,11 +383,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: None is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00022
+#### SWUT_MODEL_00022
 **Title**: Test Finding Existing Subpackage by Name
 
 **Description**: Verify that an existing subpackage can be retrieved from a package.
@@ -403,11 +403,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: The correct subpackage is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00023
+#### SWUT_MODEL_00023
 **Title**: Test Finding Non-Existent Subpackage Returns None
 
 **Description**: Verify that attempting to find a non-existent subpackage returns None.
@@ -421,11 +421,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: None is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00024
+#### SWUT_MODEL_00024
 **Title**: Test Checking if Class Exists Returns True
 
 **Description**: Verify that has_class returns True for existing classes.
@@ -440,11 +440,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: True is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00025
+#### SWUT_MODEL_00025
 **Title**: Test Checking if Non-Existent Class Exists Returns False
 
 **Description**: Verify that has_class returns False for non-existent classes.
@@ -458,11 +458,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: False is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00026
+#### SWUT_MODEL_00026
 **Title**: Test Checking if Subpackage Exists Returns True
 
 **Description**: Verify that has_subpackage returns True for existing subpackages.
@@ -477,11 +477,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: True is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00027
+#### SWUT_MODEL_00027
 **Title**: Test Checking if Non-Existent Subpackage Exists Returns False
 
 **Description**: Verify that has_subpackage returns False for non-existent subpackages.
@@ -495,11 +495,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: False is returned
 
-**Requirements Coverage**: SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00008
 
 ---
 
-#### SWUT_Model_00028
+#### SWUT_MODEL_00028
 **Title**: Test String Representation of Package with Classes
 
 **Description**: Verify that the string representation includes class count.
@@ -515,11 +515,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: String representation includes package name and class count
 
-**Requirements Coverage**: SWR_Model_00009
+**Requirements Coverage**: SWR_MODEL_00009
 
 ---
 
-#### SWUT_Model_00029
+#### SWUT_MODEL_00029
 **Title**: Test String Representation of Package with Subpackages
 
 **Description**: Verify that the string representation includes subpackage count.
@@ -535,11 +535,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: String representation includes package name and subpackage count
 
-**Requirements Coverage**: SWR_Model_00009
+**Requirements Coverage**: SWR_MODEL_00009
 
 ---
 
-#### SWUT_Model_00030
+#### SWUT_MODEL_00030
 **Title**: Test String Representation of Package with Both Classes and Subpackages
 
 **Description**: Verify that the string representation includes both class and subpackage counts.
@@ -556,11 +556,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: String representation includes all counts
 
-**Requirements Coverage**: SWR_Model_00009
+**Requirements Coverage**: SWR_MODEL_00009
 
 ---
 
-#### SWUT_Model_00031
+#### SWUT_MODEL_00031
 **Title**: Test String Representation of Empty Package
 
 **Description**: Verify that the string representation of an empty package shows only the name.
@@ -574,11 +574,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: String representation shows only package name
 
-**Requirements Coverage**: SWR_Model_00009
+**Requirements Coverage**: SWR_MODEL_00009
 
 ---
 
-#### SWUT_Model_00032
+#### SWUT_MODEL_00032
 **Title**: Test Debug Representation of AUTOSAR Package
 
 **Description**: Verify that the debug representation shows all package attributes.
@@ -596,11 +596,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Debug representation contains all package attributes
 
-**Requirements Coverage**: SWR_Model_00009
+**Requirements Coverage**: SWR_MODEL_00009
 
 ---
 
-#### SWUT_Model_00033
+#### SWUT_MODEL_00033
 **Title**: Test Nested Package Structure
 
 **Description**: Verify that nested package hierarchies can be created and navigated.
@@ -619,13 +619,13 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Nested structure is created and can be navigated
 
-**Requirements Coverage**: SWR_Model_00007, SWR_Model_00008
+**Requirements Coverage**: SWR_MODEL_00007, SWR_MODEL_00008
 
 ---
 
 ### 2. Writer Tests
 
-#### SWUT_Writer_00001
+#### SWUT_WRITER_00001
 **Title**: Test Writing Single Empty Package
 
 **Description**: Verify that a single empty package can be written to markdown.
@@ -640,11 +640,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Markdown output contains the package name
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00004
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00004
 
 ---
 
-#### SWUT_Writer_00002
+#### SWUT_WRITER_00002
 **Title**: Test Writing Package with Single Class
 
 **Description**: Verify that a package with one class can be written to markdown.
@@ -660,11 +660,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Markdown output shows package with class indented correctly
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00003
+#### SWUT_WRITER_00003
 **Title**: Test Writing Package with Abstract Class
 
 **Description**: Verify that abstract classes are written with "(abstract)" suffix.
@@ -680,11 +680,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Markdown output shows abstract class with suffix
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00004
+#### SWUT_WRITER_00004
 **Title**: Test Writing Package with Multiple Classes
 
 **Description**: Verify that multiple classes in a package are written correctly.
@@ -701,11 +701,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: All classes are written in correct order with proper formatting
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00005
+#### SWUT_WRITER_00005
 **Title**: Test Writing Nested Packages
 
 **Description**: Verify that nested package structures are written with proper indentation.
@@ -723,11 +723,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Nested packages are written with correct indentation
 
-**Requirements Coverage**: SWR_Writer_00002
+**Requirements Coverage**: SWR_WRITER_00002
 
 ---
 
-#### SWUT_Writer_00006
+#### SWUT_WRITER_00006
 **Title**: Test Writing Complex Nested Hierarchy
 
 **Description**: Verify that deeply nested AUTOSAR hierarchies are written correctly.
@@ -744,11 +744,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Complex hierarchy is written with correct indentation and formatting
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00007
+#### SWUT_WRITER_00007
 **Title**: Test Writing Multiple Top-Level Packages
 
 **Description**: Verify that multiple top-level packages can be written in one call.
@@ -764,11 +764,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: All packages are written sequentially
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00004
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00004
 
 ---
 
-#### SWUT_Writer_00008
+#### SWUT_WRITER_00008
 **Title**: Test Writing Deeply Nested Hierarchy
 
 **Description**: Verify that deeply nested package structures (3+ levels) are written correctly.
@@ -784,11 +784,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Deep nesting is written correctly
 
-**Requirements Coverage**: SWR_Writer_00002
+**Requirements Coverage**: SWR_WRITER_00002
 
 ---
 
-#### SWUT_Writer_00009
+#### SWUT_WRITER_00009
 **Title**: Test Writing Empty Package List
 
 **Description**: Verify that writing an empty list of packages produces empty output.
@@ -802,11 +802,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: No output is produced
 
-**Requirements Coverage**: SWR_Writer_00004
+**Requirements Coverage**: SWR_WRITER_00004
 
 ---
 
-#### SWUT_Writer_00010
+#### SWUT_WRITER_00010
 **Title**: Test Writing Package with Both Classes and Subpackages
 
 **Description**: Verify that packages with both direct classes and subpackages are written correctly.
@@ -824,11 +824,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: All items are written with correct relative indentation
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00011
+#### SWUT_WRITER_00011
 **Title**: Test Multiple Writes of Same Structure
 
 **Description**: Verify that multiple writes of the same structure produce identical output.
@@ -844,11 +844,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Output is identical both times (no writer-level deduplication)
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00012
+#### SWUT_WRITER_00012
 **Title**: Test Model-Level Duplicate Prevention
 
 **Description**: Verify that duplicate classes are prevented at the model level.
@@ -866,11 +866,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Duplicate is prevented at model level before writing
 
-**Requirements Coverage**: SWR_Model_00006, SWR_Writer_00002, SWR_Writer_00003
+**Requirements Coverage**: SWR_MODEL_00006, SWR_WRITER_00002, SWR_WRITER_00003
 
 ---
 
-#### SWUT_Writer_00013
+#### SWUT_WRITER_00013
 **Title**: Test Writing Multiple Packages with Same Name Different Content
 
 **Description**: Verify that packages with the same name but different content are both written.
@@ -887,13 +887,13 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Both packages are written (no writer-level deduplication)
 
-**Requirements Coverage**: SWR_Writer_00002, SWR_Writer_00004
+**Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00004
 
 ---
 
 ### 3. CLI Tests
 
-#### SWUT_Cli_00001
+#### SWUT_CLI_00001
 **Title**: Test CLI Main Entry Point
 
 **Description**: Verify that the main() function is callable and returns int type.
@@ -907,11 +907,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: main() is a valid entry point function
 
-**Requirements Coverage**: SWR_Cli_00001
+**Requirements Coverage**: SWR_CLI_00001
 
 ---
 
-#### SWUT_Cli_00002
+#### SWUT_CLI_00002
 **Title**: Test CLI Handles Non-Existent Paths
 
 **Description**: Verify that CLI returns error code when given a non-existent path.
@@ -927,11 +927,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: CLI exits with error code 1 and logs error message
 
-**Requirements Coverage**: SWR_Cli_00006, SWR_Cli_00009
+**Requirements Coverage**: SWR_CLI_00006, SWR_CLI_00009
 
 ---
 
-#### SWUT_Cli_00003
+#### SWUT_CLI_00003
 **Title**: Test CLI Warns About Non-PDF Files
 
 **Description**: Verify that CLI warns about non-PDF files and skips them.
@@ -948,11 +948,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: CLI warns about non-PDF file and returns error
 
-**Requirements Coverage**: SWR_Cli_00006, SWR_Cli_00008
+**Requirements Coverage**: SWR_CLI_00006, SWR_CLI_00008
 
 ---
 
-#### SWUT_Cli_00004
+#### SWUT_CLI_00004
 **Title**: Test CLI Verbose Mode Enables DEBUG Logging
 
 **Description**: Verify that verbose mode configures logging to DEBUG level.
@@ -968,11 +968,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Logging is configured at DEBUG level
 
-**Requirements Coverage**: SWR_Cli_00005, SWR_Cli_00008
+**Requirements Coverage**: SWR_CLI_00005, SWR_CLI_00008
 
 ---
 
-#### SWUT_Cli_00005
+#### SWUT_CLI_00005
 **Title**: Test CLI Output File Option
 
 **Description**: Verify that CLI can write output to a specified file.
@@ -988,11 +988,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Output is written to specified file
 
-**Requirements Coverage**: SWR_Cli_00004
+**Requirements Coverage**: SWR_CLI_00004
 
 ---
 
-#### SWUT_Cli_00006
+#### SWUT_CLI_00006
 **Title**: Test CLI Default Logging is INFO Level
 
 **Description**: Verify that CLI uses INFO level logging by default (without verbose flag).
@@ -1008,11 +1008,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Logging is configured at INFO level
 
-**Requirements Coverage**: SWR_Cli_00008
+**Requirements Coverage**: SWR_CLI_00008
 
 ---
 
-#### SWUT_Cli_00007
+#### SWUT_CLI_00007
 **Title**: Test CLI Error Handling Without Verbose Mode
 
 **Description**: Verify that exceptions are caught and logged without traceback in normal mode.
@@ -1031,11 +1031,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Error is logged without traceback
 
-**Requirements Coverage**: SWR_Cli_00009
+**Requirements Coverage**: SWR_CLI_00009
 
 ---
 
-#### SWUT_Cli_00008
+#### SWUT_CLI_00008
 **Title**: Test CLI Verbose Mode Shows Exception Traceback
 
 **Description**: Verify that verbose mode includes exception traceback in error output.
@@ -1054,11 +1054,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: Full exception traceback is logged
 
-**Requirements Coverage**: SWR_Cli_00005, SWR_Cli_00009
+**Requirements Coverage**: SWR_CLI_00005, SWR_CLI_00009
 
 ---
 
-#### SWUT_Cli_00009
+#### SWUT_CLI_00009
 **Title**: Test CLI Success Exit Code
 
 **Description**: Verify that CLI returns 0 on successful execution.
@@ -1075,11 +1075,11 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: CLI exits with success code 0
 
-**Requirements Coverage**: SWR_Cli_00009
+**Requirements Coverage**: SWR_CLI_00009
 
 ---
 
-#### SWUT_Cli_00010
+#### SWUT_CLI_00010
 **Title**: Test CLI Supports Directory Input
 
 **Description**: Verify that CLI accepts directory paths as input for PDF discovery.
@@ -1096,4 +1096,4 @@ This document contains all test cases extracted from the test suite of the autos
 
 **Expected Result**: CLI can process directories containing PDF files
 
-**Requirements Coverage**: SWR_Cli_00003
+**Requirements Coverage**: SWR_CLI_00003

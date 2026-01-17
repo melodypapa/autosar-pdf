@@ -123,7 +123,8 @@ def run_unit_tests() -> int:
         "-v",
         "--cov=autosar_pdf2txt",
         "--cov-report=term",
-        "--cov-report=json:cov_report.json"
+        "--cov-report=json:cov_report.json",
+        "--cov-report=xml:coverage.xml"
     ]
     result = run_command(cmd, capture=False, env=env)
     return result.returncode
@@ -258,6 +259,7 @@ def generate_markdown_coverage_report(output_file: str | None = None) -> None:
         print(report_text)
 
     # Clean up the JSON report file
+    # Note: coverage.xml is not cleaned up as it's needed by Codecov/CI systems
     try:
         cov_path.unlink()
         print(f"Cleaned up temporary file: {cov_path}")

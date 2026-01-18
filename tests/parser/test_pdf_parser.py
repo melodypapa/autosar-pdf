@@ -120,6 +120,7 @@ class TestPdfParser:
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00005: Class Definition Data Model
         """
         parser = PdfParser()
         text = """
@@ -130,6 +131,80 @@ class TestPdfParser:
         assert len(class_defs) == 1
         assert class_defs[0].name == "InternalBehavior"
         assert class_defs[0].is_abstract is True
+
+    def test_extract_class_with_abstract_prefix(self) -> None:
+        """Test extracting class with Abstract prefix as abstract.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00005: Class Definition Data Model
+        """
+        parser = PdfParser()
+        text = """
+        Class AbstractRequiredPortPrototype
+        Package M2::AUTOSAR::PortPrototype
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "AbstractRequiredPortPrototype"
+        assert class_defs[0].is_abstract is True
+
+    def test_extract_class_with_abstract_prefix_explicit_abstract(self) -> None:
+        """Test extracting class with Abstract prefix and explicit abstract marker.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00005: Class Definition Data Model
+        """
+        parser = PdfParser()
+        text = """
+        Class AbstractProvidedPortPrototype (abstract)
+        Package M2::AUTOSAR::PortPrototype
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "AbstractProvidedPortPrototype"
+        assert class_defs[0].is_abstract is True
+
+    def test_extract_multiple_abstract_classes(self) -> None:
+        """Test extracting multiple abstract classes with different patterns.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00005: Class Definition Data Model
+        """
+        parser = PdfParser()
+        text = """
+        Class InternalBehavior (abstract)
+        Package M2::AUTOSAR
+
+        Class AbstractRequiredPortPrototype
+        Package M2::AUTOSAR::PortPrototype
+
+        Class AbstractProvidedPortPrototype (abstract)
+        Package M2::AUTOSAR::PortPrototype
+
+        Class ConcreteClass
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 4
+
+        # First class: explicitly marked as abstract
+        assert class_defs[0].name == "InternalBehavior"
+        assert class_defs[0].is_abstract is True
+
+        # Second class: name ends with "Abstract"
+        assert class_defs[1].name == "AbstractRequiredPortPrototype"
+        assert class_defs[1].is_abstract is True
+
+        # Third class: both name ends with "Abstract" and explicitly marked
+        assert class_defs[2].name == "AbstractProvidedPortPrototype"
+        assert class_defs[2].is_abstract is True
+
+        # Fourth class: concrete class
+        assert class_defs[3].name == "ConcreteClass"
+        assert class_defs[3].is_abstract is False
 
     def test_extract_class_with_subclasses(self) -> None:
         """Test extracting class with subclasses.

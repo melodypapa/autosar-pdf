@@ -4,9 +4,9 @@ COVERAGE REPORT - MARKDOWN FORMAT
 
 ## Overall Coverage: 97.1%
 
-**Total Statements**: 341
+**Total Statements**: 340
 
-**Statements Covered**: 331
+**Statements Covered**: 330
 
 **Statements Missing**: 10
 
@@ -22,7 +22,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 | ✓ `src\autosar_pdf2txt\parser\__init__.py` | 2 | 2 | 0 | 100.0% |
 | ✓ `src\autosar_pdf2txt\parser\pdf_parser.py` | 106 | 106 | 0 | 100.0% |
 | ✓ `src\autosar_pdf2txt\writer\__init__.py` | 2 | 2 | 0 | 100.0% |
-| ✓ `src\autosar_pdf2txt\writer\markdown_writer.py` | 78 | 78 | 0 | 100.0% |
+| ✓ `src\autosar_pdf2txt\writer\markdown_writer.py` | 77 | 77 | 0 | 100.0% |
 
 ## Files with Less Than 100% Coverage
 

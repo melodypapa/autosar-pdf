@@ -201,9 +201,9 @@ All existing requirements in this document are currently at maturity level **acc
 **Maturity**: accept
 
 **Description**: The system shall provide an internal data model (`ClassDefinition`) to represent parsed class information including:
-- Class name
+- Class name (extracted from PDF text following the pattern `Class <name>`)
 - Full package path
-- Abstract flag
+- Abstract flag (set to `true` when the class name starts with "Abstract" or the class is marked as abstract in the PDF)
 - List of base classes
 - List of subclasses
 
@@ -254,7 +254,7 @@ All existing requirements in this document are currently at maturity level **acc
 
 **Description**: The system shall write AUTOSAR classes in markdown format with:
 - Indentation 1 level deeper than their parent package
-- "(abstract)" suffix appended to abstract class names
+- No abstract marker in the class name (abstract status is shown only in individual class files)
 
 ---
 
@@ -285,8 +285,9 @@ All existing requirements in this document are currently at maturity level **acc
 **Maturity**: accept
 
 **Description**: The markdown file for each AUTOSAR class shall contain the following information in a structured format:
+- Title: Class name with "(abstract)" suffix for abstract classes
 - Package name: The full package path containing the class
-- Abstract class indicator: Whether the class is abstract or concrete
+- Type section: Explicit indicator showing whether the class is "Abstract" or "Concrete"
 - Base classes: List of base class names that this class inherits from
 - Note: Class documentation/description extracted from the note field
 - Attributes list: Complete list of class attributes showing name, type, and reference indicator for each attribute

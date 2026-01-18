@@ -201,6 +201,8 @@ The ATP type enum shall support the following values:
 - Subclasses: `Subclasses <class_list>`
 - Notes: Extracted from the Note column in class tables as free-form documentation text
 
+The system shall preserve the "M2::" prefix in package paths when present, treating "M2" as the root metamodel package. This ensures that the complete package hierarchy is maintained, with "M2" as the top-level package containing all AUTOSAR packages (e.g., M2 → AUTOSARTemplates → BswModuleTemplate).
+
 The system shall strip ATP marker patterns from the class name and determine the appropriate ATP type enum value based on the detected markers:
 - No markers: `ATPType.NONE`
 - Only <<atpMixedString>>: `ATPType.ATP_MIXED_STRING`
@@ -265,6 +267,23 @@ This requirement prevents packages that are nested within other packages from be
 **Maturity**: accept
 
 **Description**: The system shall support pdfplumber as a PDF parsing backend for extracting text content from PDF files.
+
+---
+
+#### SWR_PARSER_00009
+**Title**: Proper Word Spacing in PDF Text Extraction
+
+**Maturity**: accept
+
+**Description**: The system shall extract text from PDF files with proper spacing between words to ensure readable and accurate documentation.
+
+The system shall:
+1. Use word-level extraction (pdfplumber's `extract_words()` method) instead of raw text extraction to properly identify word boundaries
+2. Apply appropriate x-tolerance parameters (x_tolerance=1) to detect word separation based on character positions
+3. Reconstruct text from extracted words while preserving line breaks based on vertical position changes
+4. Ensure that extracted notes, descriptions, and other text fields contain spaces between words as they appear in the original PDF document
+
+This requirement addresses common PDF text extraction issues where words are concatenated without spaces due to tight kerning or custom font spacing in the source PDF files.
 
 ---
 

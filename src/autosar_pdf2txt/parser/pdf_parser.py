@@ -135,6 +135,7 @@ class PdfParser:
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00007: PDF Backend Support - pdfplumber
+            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
 
         Args:
             pdf_path: Path to the PDF file.
@@ -151,9 +152,27 @@ class PdfParser:
                 text_buffer = StringIO()
 
                 for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:
-                        text_buffer.write(text + "\n")
+                    # Use extract_words() with x_tolerance=1 to properly extract words with spaces
+                    # This fixes the issue where words are concatenated without spaces
+                    words = page.extract_words(x_tolerance=1)
+
+                    if words:
+                        # Reconstruct text from words, preserving line breaks
+                        # Group words by their vertical position (top coordinate)
+                        current_y = None
+                        for word in words:
+                            text = word['text']
+                            top = word['top']
+
+                            # Check if we've moved to a new line
+                            if current_y is not None and abs(top - current_y) > 5:
+                                text_buffer.write("\n")
+
+                            text_buffer.write(text + " ")
+                            current_y = top
+
+                        # Add newline after each page
+                        text_buffer.write("\n")
 
                 full_text = text_buffer.getvalue()
                 class_defs = self._parse_class_text(full_text)
@@ -251,7 +270,10 @@ class PdfParser:
             # Check for package definition
             package_match = self.PACKAGE_PATTERN.match(line)
             if package_match and current_class is not None:
-                current_class.package_path = package_match.group(2).strip()
+                # Include M2 prefix if present to preserve the full package hierarchy
+                m2_prefix = package_match.group(1) or ""
+                package_path = package_match.group(2).strip()
+                current_class.package_path = m2_prefix + package_path
                 continue
 
             # Check for base classes

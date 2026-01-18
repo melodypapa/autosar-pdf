@@ -25,28 +25,29 @@ All existing integration test cases in this document are currently at maturity l
 
 **Maturity**: accept
 
-**Description**: Integration test that parses a real AUTOSAR PDF file and verifies the first extracted class has correct structure including name, abstract flag, base classes, and note.
+**Description**: Integration test that parses a real AUTOSAR PDF file and verifies the first extracted class has correct structure including name, abstract flag, base classes, and note with proper word spacing.
 
 **Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
 
 **Test Steps**:
 1. Create a PdfParser instance
 2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
-3. Find the first class in the extracted packages
+3. Find the first class in the extracted packages (searching through M2 → AUTOSARTemplates → AutosarTopLevelStructure)
 4. Verify the class name is "AUTOSAR"
 5. Verify the class is not abstract (is_abstract=False)
 6. Verify the class has one base class "ARObject" (bases=["ARObject"])
 7. Verify the class has a note containing "AUTOSAR" or "Rootelement"
-8. Verify the class is in the "AutosarTopLevelStructure" package
+8. Verify the class is in the "AutosarTopLevelStructure" package under M2 → AUTOSARTemplates
+9. Verify the note contains proper word spacing (e.g., "Root element" not "Rootelement", "AUTOSAR description" not "AUTOSARdescription")
 
 **Expected Result**: First class is extracted successfully with:
 - Name: "AUTOSAR"
 - Abstract: False
 - Bases: ["ARObject"]
-- Note contains "AUTOSAR" or "Rootelement"
-- Package: "AutosarTopLevelStructure"
+- Note contains "AUTOSAR" or "Rootelement" with proper word spacing
+- Package hierarchy: M2 → AUTOSARTemplates → AutosarTopLevelStructure
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_MODEL_00001
 
 ---
 
@@ -107,3 +108,37 @@ Future integration tests should cover:
 - Error handling across module boundaries
 - Performance testing with large PDFs
 - Writer output verification with real data
+
+---
+
+#### SWIT_00004
+**Title**: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure
+
+**Maturity**: accept
+
+**Description**: Integration test that parses an ECU Configuration PDF and verifies the correct hierarchical package structure, particularly the nested Fibex package hierarchy under M2.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf
+3. Verify there is exactly 1 top-level package (M2)
+4. Find AUTOSARTemplates subpackage under M2
+5. Find SystemTemplate subpackage under AUTOSARTemplates
+6. Find Fibex subpackage under SystemTemplate
+7. Find FibexCore subpackage under Fibex
+8. Find CoreCommunication subpackage under FibexCore
+9. Verify CoreCommunication contains classes
+10. Verify specific Fibex classes exist: Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu
+11. Verify that Fibex, SystemTemplate, FibexCore, and AUTOSARTemplates are NOT top-level packages
+
+**Expected Result**: Package hierarchy is correctly structured as:
+- M2 (top-level)
+  └─ AUTOSARTemplates
+     └─ SystemTemplate
+        └─ Fibex
+           └─ FibexCore
+              └─ CoreCommunication (contains Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu)
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_MODEL_00004

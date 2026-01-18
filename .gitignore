@@ -132,5 +132,8 @@ Desktop.ini
 # Claude Code
 .claude/
 
+# IFlow
+.iflow/
+
 # data
 data

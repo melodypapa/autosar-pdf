@@ -1,11 +1,14 @@
 """PDF parser for extracting AUTOSAR class hierarchies from PDF files."""
 
+import logging
 import re
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Dict, List, Optional, Set, Tuple
 
-from autosar_pdf2txt.models import AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarPackage
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -19,6 +22,7 @@ class ClassDefinition:
         name: The name of the class.
         package_path: Full package path (e.g., "M2::AUTOSARTemplates::BswModuleTemplate::BswBehavior").
         is_abstract: Whether the class is abstract.
+        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
         base_classes: List of base class names.
         subclasses: List of subclass names.
         note: Documentation note extracted from the Note column.
@@ -27,6 +31,7 @@ class ClassDefinition:
     name: str
     package_path: str
     is_abstract: bool
+    atp_type: ATPType = ATPType.NONE
     base_classes: List[str] = field(default_factory=list)
     subclasses: List[str] = field(default_factory=list)
     note: str | None = None
@@ -55,6 +60,9 @@ class PdfParser:
     BASE_PATTERN = re.compile(r"^Base\s+(.+)$")
     SUBCLASS_PATTERN = re.compile(r"^Subclasses\s+(.+)$")
     NOTE_PATTERN = re.compile(r"^Note\s+(.+)$")
+    ATP_MIXED_STRING_PATTERN = re.compile(r"<<atpMixedString>>")
+    ATP_VARIATION_PATTERN = re.compile(r"<<atpVariation>>")
+    ATP_MIXED_PATTERN = re.compile(r"<<atpMixed>>")
 
     def __init__(self) -> None:
         """Initialize the PDF parser.
@@ -186,11 +194,57 @@ class PdfParser:
                 if current_class is not None:
                     class_defs.append(current_class)
 
-                class_name = class_match.group(1).strip()
-                # Determine if abstract: explicitly marked OR name starts with "Abstract"
-                is_abstract = class_match.group(2) is not None or class_name.startswith("Abstract")
+                # Extract raw class name (may contain ATP patterns)
+                raw_class_name = class_match.group(1).strip()
+
+                # Detect ATP patterns
+                has_atp_mixed_string = bool(self.ATP_MIXED_STRING_PATTERN.search(raw_class_name))
+                has_atp_variation = bool(self.ATP_VARIATION_PATTERN.search(raw_class_name))
+                has_atp_mixed = bool(self.ATP_MIXED_PATTERN.search(raw_class_name))
+
+                # Validate: multiple ATP markers on same class is an error
+                atp_markers = []
+                if has_atp_mixed_string:
+                    atp_markers.append("<<atpMixedString>>")
+                if has_atp_variation:
+                    atp_markers.append("<<atpVariation>>")
+                if has_atp_mixed:
+                    atp_markers.append("<<atpMixed>>")
+
+                if len(atp_markers) > 1:
+                    logger.error(
+                        f"Class '{raw_class_name}' has multiple ATP markers: "
+                        f"{', '.join(atp_markers)}. A class cannot have multiple ATP markers."
+                    )
+                    raise ValueError(
+                        f"Class '{raw_class_name}' has multiple ATP markers: "
+                        f"{', '.join(atp_markers)}. A class cannot have multiple ATP markers."
+                    )
+
+                # Determine ATP type
+                if has_atp_mixed_string:
+                    atp_type = ATPType.ATP_MIXED_STRING
+                elif has_atp_variation:
+                    atp_type = ATPType.ATP_VARIATION
+                elif has_atp_mixed:
+                    atp_type = ATPType.ATP_MIXED
+                else:
+                    atp_type = ATPType.NONE
+
+                # Strip ATP patterns from class name
+                clean_class_name = self.ATP_MIXED_STRING_PATTERN.sub("", raw_class_name)
+                clean_class_name = self.ATP_VARIATION_PATTERN.sub("", clean_class_name)
+                clean_class_name = self.ATP_MIXED_PATTERN.sub("", clean_class_name)
+                clean_class_name = clean_class_name.strip()
+
+                # Determine if abstract: explicitly marked OR clean name starts with "Abstract"
+                is_abstract = class_match.group(2) is not None or clean_class_name.startswith("Abstract")
+
                 current_class = ClassDefinition(
-                    name=class_name, package_path="", is_abstract=is_abstract
+                    name=clean_class_name,
+                    package_path="",
+                    is_abstract=is_abstract,
+                    atp_type=atp_type
                 )
                 continue
 
@@ -282,6 +336,7 @@ class PdfParser:
                     autosar_class = AutosarClass(
                         name=class_def.name,
                         is_abstract=class_def.is_abstract,
+                        atp_type=class_def.atp_type,
                         bases=class_def.base_classes.copy(),
                         note=class_def.note
                     )

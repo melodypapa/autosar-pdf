@@ -5,7 +5,7 @@ Test coverage for autosar_models.py targeting 100%.
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarAttribute, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
 
 
 class TestAutosarAttribute:
@@ -413,6 +413,61 @@ class TestAutosarClass:
         cls = AutosarClass(name="MyClass", is_abstract=False)
         cls.note = "Updated note"
         assert cls.note == "Updated note"
+
+    def test_init_default_atp_type_is_none(self) -> None:
+        """Test that ATP type defaults to NONE.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        assert cls.atp_type == ATPType.NONE
+
+    def test_init_with_atp_mixed_string(self) -> None:
+        """Test creating class with atpMixedString type.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_MIXED_STRING)
+        assert cls.atp_type == ATPType.ATP_MIXED_STRING
+
+    def test_init_with_atp_variation(self) -> None:
+        """Test creating class with atpVariation type.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
+        assert cls.atp_type == ATPType.ATP_VARIATION
+
+    def test_repr_includes_atp_type(self) -> None:
+        """Test __repr__ includes ATP type.
+
+        Requirements:
+            SWR_MODEL_00003: AUTOSAR Class String Representation
+        """
+        cls = AutosarClass(
+            name="MyClass",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        result = repr(cls)
+        assert "atp_type=ATP_VARIATION" in result
+
+    def test_repr_with_atp_mixed_string(self) -> None:
+        """Test __repr__ with atpMixedString type.
+
+        Requirements:
+            SWR_MODEL_00003: AUTOSAR Class String Representation
+        """
+        cls = AutosarClass(
+            name="MyClass",
+            is_abstract=False,
+            atp_type=ATPType.ATP_MIXED_STRING
+        )
+        result = repr(cls)
+        assert "atp_type=ATP_MIXED_STRING" in result
 
 
 class TestAutosarPackage:

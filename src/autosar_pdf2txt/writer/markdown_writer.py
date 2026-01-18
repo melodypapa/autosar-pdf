@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from typing import List
 
-from autosar_pdf2txt.models import AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarPackage
 
 
 class MarkdownWriter:
@@ -206,6 +206,7 @@ class MarkdownWriter:
         The markdown file contains:
         - Package name
         - Abstract class indicator
+        - ATP type (if any ATP flags are present)
         - Base classes (if any)
         - Note as description (if present)
         - Attributes list (if any)
@@ -229,6 +230,17 @@ class MarkdownWriter:
         # Write abstract indicator
         output.write("## Type\n\n")
         output.write(f"{'Abstract' if cls.is_abstract else 'Concrete'}\n\n")
+
+        # Write ATP type section if ATP type is not NONE
+        if cls.atp_type != ATPType.NONE:
+            output.write("## ATP Type\n\n")
+            if cls.atp_type == ATPType.ATP_VARIATION:
+                output.write("* atpVariation\n")
+            elif cls.atp_type == ATPType.ATP_MIXED_STRING:
+                output.write("* atpMixedString\n")
+            elif cls.atp_type == ATPType.ATP_MIXED:
+                output.write("* atpMixed\n")
+            output.write("\n")
 
         # Write base classes if present
         if cls.bases:

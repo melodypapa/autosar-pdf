@@ -6,6 +6,7 @@ These tests use real AUTOSAR PDF files to verify end-to-end functionality.
 import os
 import pytest
 
+from autosar_pdf2txt.models import ATPType
 from autosar_pdf2txt.parser import PdfParser
 
 
@@ -169,3 +170,58 @@ class TestPdfIntegration:
             print("\nExample class with note:")
             print(f"  Name: {example.name}")
             print(f"  Note: {example.note}")
+
+    def test_parse_pdf_with_atp_patterns(self, monkeypatch) -> None:
+        """Test end-to-end parsing and writing with ATP patterns.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_MODEL_00001: AUTOSAR Class Representation
+            SWR_WRITER_00005: Directory-Based Class File Output
+        """
+        parser = PdfParser()
+
+        # Mock pdfplumber to return class with ATP patterns
+        class MockPage:
+            def extract_text(self):
+                return "Class MyData <<atpVariation>>\nPackage M2::AUTOSAR::Data\n"
+
+        class MockPdf:
+            pages = [MockPage()]
+
+        def mock_open(path, **kwargs):
+            class MockPdfManager:
+                def __enter__(self):
+                    return MockPdf()
+                def __exit__(self, *args):
+                    pass
+            return MockPdfManager()
+
+        monkeypatch.setattr("pdfplumber.open", mock_open)
+
+        # Parse PDF
+        packages = parser.parse_pdf("dummy.pdf")
+
+        # Verify parsing
+        assert len(packages) == 1
+        data_pkg = packages[0].get_subpackage("Data")
+        assert data_pkg is not None
+        my_data = data_pkg.get_class("MyData")
+        assert my_data is not None
+        assert my_data.atp_type == ATPType.ATP_VARIATION
+
+        # Verify writer output
+        from autosar_pdf2txt.writer import MarkdownWriter
+        import tempfile
+
+        writer = MarkdownWriter()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            from pathlib import Path
+            writer.write_packages_to_files(packages, base_dir=Path(tmp_dir))
+
+            # Check individual file has ATP section
+            class_file = Path(tmp_dir) / "AUTOSAR" / "Data" / "MyData.md"
+            content = class_file.read_text(encoding="utf-8")
+            assert "## ATP Type\n\n" in content
+            assert "* atpVariation\n" in content

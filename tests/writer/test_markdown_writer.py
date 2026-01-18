@@ -5,7 +5,7 @@ Test coverage for markdown_writer.py targeting 100%.
 
 from pathlib import Path
 
-from autosar_pdf2txt.models import AutosarAttribute, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
 from autosar_pdf2txt.writer.markdown_writer import MarkdownWriter
 
 
@@ -893,3 +893,148 @@ class TestMarkdownWriterFiles:
         assert "TestPackage\n\n" in content
         assert "## Type\n\n" in content
         assert "Concrete\n\n" in content
+
+    def test_write_class_with_atp_variation_only(self, tmp_path: Path) -> None:
+        """Test writing class with only atpVariation type.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        assert "## ATP Type\n\n" in content
+        assert "* atpVariation\n" in content
+        # Should not show atpMixedString
+        assert "atpMixedString" not in content
+
+    def test_write_class_with_atp_mixed_string_only(self, tmp_path: Path) -> None:
+        """Test writing class with only atpMixedString type.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_MIXED_STRING)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        assert "## ATP Type\n\n" in content
+        assert "* atpMixedString\n" in content
+        # Should not show atpVariation
+        assert "atpVariation" not in content
+
+    def test_write_class_with_atp_mixed_only(self, tmp_path: Path) -> None:
+        """Test writing class with only atpMixed type.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_MIXED)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        assert "## ATP Type\n\n" in content
+        assert "* atpMixed\n" in content
+        # Should not show atpVariation or atpMixedString
+        assert "atpVariation" not in content
+        assert "atpMixedString" not in content
+
+    def test_write_class_without_atp_type_no_section(self, tmp_path: Path) -> None:
+        """Test that class without ATP type doesn't show ATP section.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Should not have ATP Type section
+        assert "## ATP Type\n\n" not in content
+
+    def test_atp_section_order(self, tmp_path: Path) -> None:
+        """Test that ATP section appears after Type and before Base Classes.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="MyClass",
+            is_abstract=True,
+            atp_type=ATPType.ATP_VARIATION,
+            bases=["BaseClass"]
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Find section positions
+        type_idx = content.find("## Type\n\n")
+        atp_idx = content.find("## ATP Type\n\n")
+        base_idx = content.find("## Base Classes\n\n")
+
+        # Verify order: Type < ATP Type < Base Classes
+        assert type_idx != -1
+        assert atp_idx != -1
+        assert base_idx != -1
+        assert type_idx < atp_idx
+        assert atp_idx < base_idx
+
+    def test_main_hierarchy_no_atp_markers(self) -> None:
+        """Test that main hierarchy output doesn't show ATP markers.
+
+        Requirements:
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+            SWR_WRITER_00003: Markdown Class Output Format
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="MyClass",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        result = writer.write_packages([pkg])
+
+        # Should only show class name, no ATP markers
+        expected = "* TestPackage\n  * MyClass\n"
+        assert result == expected
+        assert "atpVariation" not in result
+        assert "atpMixedString" not in result

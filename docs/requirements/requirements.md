@@ -24,9 +24,16 @@ All existing requirements in this document are currently at maturity level **acc
 **Description**: The system shall provide a data model to represent an AUTOSAR class with the following attributes:
 - `name`: The name of the class (non-empty string)
 - `is_abstract`: Boolean flag indicating whether the class is abstract
+- `atp_type`: ATP marker type enum indicating the AUTOSAR Tool Platform marker (defaults to NONE)
 - `attributes`: Dictionary of AUTOSAR attributes where key is the attribute name and value is the AUTOSAR attribute object
 - `bases`: List of base class names for inheritance tracking (List[str], defaults to empty list)
 - `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
+
+The ATP type enum shall support the following values:
+- `NONE`: No ATP marker present
+- `ATP_MIXED_STRING`: The class has the <<atpMixedString>> marker
+- `ATP_VARIATION`: The class has the <<atpVariation>> marker
+- `ATP_MIXED`: The class has the <<atpMixed>> marker
 
 ---
 
@@ -188,10 +195,19 @@ All existing requirements in this document are currently at maturity level **acc
 
 **Description**: The system shall recognize and parse AUTOSAR class definitions from PDF text using the following patterns:
 - Class definitions: `Class <name> (abstract)`
+- Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>` (extracted from the Base column in class tables)
 - Subclasses: `Subclasses <class_list>`
 - Notes: Extracted from the Note column in class tables as free-form documentation text
+
+The system shall strip ATP marker patterns from the class name and determine the appropriate ATP type enum value based on the detected markers:
+- No markers: `ATPType.NONE`
+- Only <<atpMixedString>>: `ATPType.ATP_MIXED_STRING`
+- Only <<atpVariation>>: `ATPType.ATP_VARIATION`
+- Only <<atpMixed>>: `ATPType.ATP_MIXED`
+
+When multiple ATP markers are detected on the same class, the system shall report a validation error indicating that a class cannot have multiple ATP markers simultaneously.
 
 ---
 
@@ -288,9 +304,15 @@ All existing requirements in this document are currently at maturity level **acc
 - Title: Class name with "(abstract)" suffix for abstract classes
 - Package name: The full package path containing the class
 - Type section: Explicit indicator showing whether the class is "Abstract" or "Concrete"
+- ATP Type section: List of ATP markers based on the ATP type enum value, included only when the ATP type is not NONE
 - Base classes: List of base class names that this class inherits from
 - Note: Class documentation/description extracted from the note field
 - Attributes list: Complete list of class attributes showing name, type, and reference indicator for each attribute
+
+The ATP Type section shall:
+- Be included only when ATP type is ATP_MIXED_STRING or ATP_VARIATION
+- List the applicable marker: atpVariation for ATP_VARIATION, or atpMixedString for ATP_MIXED_STRING
+- Appear immediately after the Type section and before the Base Classes section when present
 
 ---
 

@@ -1,7 +1,30 @@
 """AUTOSAR data models for packages and classes."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict, List
+
+
+class ATPType(Enum):
+    """AUTOSAR Tool Platform marker type.
+
+    Requirements:
+        SWR_MODEL_00001: AUTOSAR Class Representation
+
+    This enum represents the ATP (AUTOSAR Tool Platform) marker type that can be
+    associated with AUTOSAR classes.
+
+    Attributes:
+        NONE: No ATP marker present
+        ATP_MIXED_STRING: The class has the <<atpMixedString>> marker
+        ATP_VARIATION: The class has the <<atpVariation>> marker
+        ATP_MIXED: The class has the <<atpMixed>> marker
+    """
+
+    NONE = "none"
+    ATP_MIXED_STRING = "atpMixedString"
+    ATP_VARIATION = "atpVariation"
+    ATP_MIXED = "atpMixed"
 
 
 @dataclass
@@ -71,6 +94,7 @@ class AutosarClass:
     Attributes:
         name: The name of the class.
         is_abstract: Whether the class is abstract.
+        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
         attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
         bases: List of base class names for inheritance tracking.
         note: Optional documentation or comments about the class.
@@ -82,10 +106,12 @@ class AutosarClass:
         >>> cls_with_attr = AutosarClass("Component", False, {"dataReadPort": attr})
         >>> cls_with_bases = AutosarClass("DerivedClass", False, bases=["BaseClass"])
         >>> cls_with_note = AutosarClass("MyClass", False, note="Documentation note")
+        >>> cls_with_atp = AutosarClass("MyClass", False, atp_type=ATPType.ATP_VARIATION)
     """
 
     name: str
     is_abstract: bool
+    atp_type: ATPType = ATPType.NONE
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     bases: List[str] = field(default_factory=list)
     note: str | None = None
@@ -125,6 +151,7 @@ class AutosarClass:
         note_present = self.note is not None
         return (
             f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
+            f"atp_type={self.atp_type.name}, "
             f"attributes={attrs_count}, bases={bases_count}, note={note_present})"
         )
 

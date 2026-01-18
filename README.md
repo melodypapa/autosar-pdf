@@ -73,7 +73,7 @@ The repository includes sample AUTOSAR specification PDFs in the `examples/pdf/`
 
 ```bash
 # Extract a single AUTOSAR template
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf
 
 # Extract all AUTOSAR templates from the examples directory
 autosar-extract examples/pdf/
@@ -97,10 +97,10 @@ Generate separate markdown files for each AUTOSAR class:
 
 ```bash
 # Extract Software Component Template and create individual class files
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf \
   --write-class-files \
-  -o software_components.md \
-  --class-files-dir output/classes
+  -o data/software_components.md \
+  --class-files-dir data/classes
 ```
 
 ### Example Output

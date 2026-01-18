@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`autosar-pdf2txt` is a Python package for extracting AUTOSAR model hierarchies from PDF files and converting them to markdown format. The project uses a dataclass-based model for representing AUTOSAR packages and classes, a PDF parser for extraction, and a markdown writer for output.
+`autosar-pdf2txt` is a Python package for extracting AUTOSAR model hierarchies from PDF files and converting them to markdown format. The project uses a dataclass-based model for representing AUTOSAR packages and classes with ATP (AUTOSAR Tool Platform) marker support, a PDF parser for extraction using pdfplumber, and a markdown writer for output with support for both consolidated and per-class file generation.
 
 ## Stable Identifiers
 
@@ -134,7 +134,8 @@ src/autosar_pdf2txt/
 ### Core Components
 
 **Models (`models/autosar_models.py`)**
-- `AutosarClass`: Dataclass representing an AUTOSAR class with name, abstract flag, attributes, bases (inheritance), and note (documentation)
+- `ATPType`: Enum representing AUTOSAR Tool Platform marker types (NONE, ATP_MIXED_STRING, ATP_VARIATION)
+- `AutosarClass`: Dataclass representing an AUTOSAR class with name, abstract flag, atp_type, attributes, bases (inheritance), and note (documentation)
 - `AutosarAttribute`: Dataclass representing an AUTOSAR attribute with name, type, and reference flag
 - `AutosarPackage`: Dataclass for hierarchical package structures containing classes and subpackages
 - Validation: All classes validate non-empty names in `__post_init__`
@@ -168,6 +169,9 @@ autosar-extract /path/to/pdfs/
 
 # Verbose mode for detailed debug information
 autosar-extract input.pdf -v
+
+# Create separate markdown files for each class
+autosar-extract input.pdf -o output.md --write-class-files
 ```
 
 ### Logging Levels
@@ -256,6 +260,7 @@ autosar-extract input.pdf -v
 
 ### PDF Parsing Patterns
 - Class definitions: `Class <name> (abstract)`
+- Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>`
 - Subclasses: `Subclasses <class_list>`
@@ -352,7 +357,7 @@ pytest tests/ -v
 As of the latest implementation:
 - **Total Tests**: 126
 - **Test Status**: All passed ✅
-- **Code Coverage**: 97%
+- **Code Coverage**: 97.1%
 - **Test Execution Time**: ~1-2 seconds
 
 ### Quality Gates

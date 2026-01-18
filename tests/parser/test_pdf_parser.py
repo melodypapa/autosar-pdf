@@ -5,6 +5,7 @@ Test coverage for pdf_parser.py targeting PDF parsing functionality.
 
 import pytest
 
+from autosar_pdf2txt.models import ATPType
 from autosar_pdf2txt.parser import PdfParser
 from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
 
@@ -520,5 +521,197 @@ class TestPdfParser:
         assert module is not None
         assert len(module.classes) == 1
         assert module.classes[0].name == "TestClass"
+
+    def test_extract_class_with_atp_variation(self) -> None:
+        """Test extracting class with <<atpVariation>> pattern.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpVariation>>
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "MyClass"
+        assert class_defs[0].atp_type == ATPType.ATP_VARIATION
+
+    def test_extract_class_with_atp_mixed_string(self) -> None:
+        """Test extracting class with <<atpMixedString>> pattern.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpMixedString>>
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "MyClass"
+        assert class_defs[0].atp_type == ATPType.ATP_MIXED_STRING
+
+    def test_extract_class_with_atp_mixed(self) -> None:
+        """Test extracting class with <<atpMixed>> pattern.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpMixed>>
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "MyClass"
+        assert class_defs[0].atp_type == ATPType.ATP_MIXED
+
+    def test_extract_class_with_both_atp_patterns_raises_error(self) -> None:
+        """Test extracting class with both ATP patterns raises validation error.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpVariation>> <<atpMixedString>>
+        Package M2::AUTOSAR
+        """
+        with pytest.raises(ValueError, match="cannot have multiple ATP markers"):
+            parser._parse_class_text(text)
+
+    def test_extract_class_with_atp_patterns_reversed_order_raises_error(self) -> None:
+        """Test extracting class with ATP patterns in reverse order raises validation error.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpMixedString>> <<atpVariation>>
+        Package M2::AUTOSAR
+        """
+        with pytest.raises(ValueError, match="cannot have multiple ATP markers"):
+            parser._parse_class_text(text)
+
+    def test_extract_class_with_atp_mixed_and_variation_raises_error(self) -> None:
+        """Test extracting class with <<atpMixed>> and <<atpVariation>> raises validation error.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpMixed>> <<atpVariation>>
+        Package M2::AUTOSAR
+        """
+        with pytest.raises(ValueError, match="cannot have multiple ATP markers"):
+            parser._parse_class_text(text)
+
+    def test_extract_class_with_atp_mixed_string_and_mixed_raises_error(self) -> None:
+        """Test extracting class with <<atpMixedString>> and <<atpMixed>> raises validation error.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpMixedString>> <<atpMixed>>
+        Package M2::AUTOSAR
+        """
+        with pytest.raises(ValueError, match="cannot have multiple ATP markers"):
+            parser._parse_class_text(text)
+
+    def test_extract_class_with_all_three_atp_patterns_raises_error(self) -> None:
+        """Test extracting class with all three ATP patterns raises validation error.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpMixed>> <<atpVariation>> <<atpMixedString>>
+        Package M2::AUTOSAR
+        """
+        with pytest.raises(ValueError, match="cannot have multiple ATP markers"):
+            parser._parse_class_text(text)
+
+    def test_extract_class_with_atp_and_abstract(self) -> None:
+        """Test extracting class with ATP pattern and abstract marker.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <<atpVariation>> (abstract)
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "MyClass"
+        assert class_defs[0].atp_type == ATPType.ATP_VARIATION
+        assert class_defs[0].is_abstract is True
+
+    def test_extract_class_without_atp_patterns(self) -> None:
+        """Test extracting class without ATP patterns defaults to NONE.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "MyClass"
+        assert class_defs[0].atp_type == ATPType.NONE
+
+    def test_extract_class_malformed_atp_pattern_ignored(self) -> None:
+        """Test that malformed ATP patterns are treated as part of class name.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class MyClass <atpVariation>
+        Package M2::AUTOSAR
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        # Malformed pattern (missing >) is kept in name
+        assert "<atpVariation>" in class_defs[0].name
+        assert class_defs[0].atp_type == ATPType.NONE
+
+    def test_build_packages_with_atp_flags(self) -> None:
+        """Test building package hierarchy with ATP flags.
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="MyClass",
+                package_path="AUTOSAR",
+                is_abstract=False,
+                atp_type=ATPType.ATP_VARIATION
+            )
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        my_class = packages[0].get_class("MyClass")
+        assert my_class is not None
+        assert my_class.atp_type == ATPType.ATP_VARIATION
 
 

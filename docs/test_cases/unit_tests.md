@@ -1953,14 +1953,15 @@ All existing test cases in this document are currently at maturity level **accep
 **Test Steps**:
 1. Create a PdfParser instance
 2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
-3. Find the first class in the extracted packages
+3. Find the first class in the extracted packages (searching through M2 → AUTOSARTemplates → AutosarTopLevelStructure)
 4. Verify the class name is "AUTOSAR"
 5. Verify the class is not abstract
 6. Verify the class has one base class "ARObject"
 7. Verify the class has a note containing "AUTOSAR" or "Rootelement"
-8. Verify the class is in the "AutosarTopLevelStructure" package
+8. Verify the class is in the "AutosarTopLevelStructure" package under M2 → AUTOSARTemplates
+9. Verify the note contains proper word spacing (e.g., "Root element" not "Rootelement")
 
-**Expected Result**: First class is extracted with correct name="AUTOSAR", bases=["ARObject"], and valid note
+**Expected Result**: First class is extracted with correct name="AUTOSAR", bases=["ARObject"], and valid note with proper word spacing, located in package hierarchy M2 → AUTOSARTemplates → AutosarTopLevelStructure
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009
 

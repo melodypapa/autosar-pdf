@@ -24,6 +24,7 @@ class TestPdfIntegration:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         parser = PdfParser()
@@ -44,16 +45,28 @@ class TestPdfIntegration:
         first_package = None
 
         for pkg in packages:
+            # Check M2 top-level package (may not have classes directly)
             if pkg.classes:
                 first_package = pkg
                 first_class = pkg.classes[0]
                 break
 
-            # Check subpackages
+            # Check subpackages (AUTOSARTemplates, MSR, etc.)
             for subpkg in pkg.subpackages:
                 if subpkg.classes:
                     first_package = subpkg
                     first_class = subpkg.classes[0]
+                    break
+
+                # Check nested subpackages (e.g., AutosarTopLevelStructure)
+                for subsubpkg in subpkg.subpackages:
+                    if subsubpkg.classes:
+                        first_package = subsubpkg
+                        first_class = subsubpkg.classes[0]
+                        break
+                    if first_class:
+                        break
+                if first_class:
                     break
             if first_class:
                 break
@@ -90,6 +103,7 @@ class TestPdfIntegration:
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
         """
         parser = PdfParser()
         pdf_path = "examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
@@ -118,7 +132,9 @@ class TestPdfIntegration:
         """Test that classes with bases and notes are parsed correctly.
 
         Requirements:
+            SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         parser = PdfParser()
@@ -234,6 +250,7 @@ class TestPdfIntegration:
             SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00007: Top-Level Package Selection
+            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_MODEL_00004: AUTOSAR Package Representation
         """
         parser = PdfParser()
@@ -246,17 +263,16 @@ class TestPdfIntegration:
         # Parse the PDF
         packages = parser.parse_pdf(pdf_path)
 
-        # Verify we have exactly 2 top-level packages (AUTOSARTemplates and MSR)
-        assert len(packages) == 2, f"Expected 2 top-level packages, got {len(packages)}"
+        # Verify we have exactly 1 top-level package (M2)
+        assert len(packages) == 1, f"Expected 1 top-level package (M2), got {len(packages)}"
 
-        # Find AUTOSARTemplates package
-        autosar_templates_pkg = None
-        for pkg in packages:
-            if pkg.name == "AUTOSARTemplates":
-                autosar_templates_pkg = pkg
-                break
+        # Find M2 package
+        m2_pkg = packages[0]
+        assert m2_pkg.name == "M2", f"Expected top-level package 'M2', got '{m2_pkg.name}'"
 
-        assert autosar_templates_pkg is not None, "AUTOSARTemplates package should exist"
+        # Find AUTOSARTemplates subpackage under M2
+        autosar_templates_pkg = m2_pkg.get_subpackage("AUTOSARTemplates")
+        assert autosar_templates_pkg is not None, "AUTOSARTemplates should be a subpackage of M2"
 
         # Find SystemTemplate subpackage
         system_template_pkg = autosar_templates_pkg.get_subpackage("SystemTemplate")
@@ -292,12 +308,15 @@ class TestPdfIntegration:
             f"SystemTemplate should not be a top-level package. Top-level packages: {top_level_names}"
         assert "FibexCore" not in top_level_names, \
             f"FibexCore should not be a top-level package. Top-level packages: {top_level_names}"
+        assert "AUTOSARTemplates" not in top_level_names, \
+            f"AUTOSARTemplates should not be a top-level package. Top-level packages: {top_level_names}"
 
         # Verify package hierarchy path
         print("\nFibex package hierarchy verified:")
-        print("  Top-level: AUTOSARTemplates")
-        print("    └─ SystemTemplate")
-        print("       └─ Fibex")
-        print("          └─ FibexCore")
-        print(f"             └─ CoreCommunication ({len(core_comm_pkg.classes)} classes)")
-        print(f"                Classes: {', '.join(sorted(fibex_class_names))}")
+        print("  Top-level: M2")
+        print("    └─ AUTOSARTemplates")
+        print("       └─ SystemTemplate")
+        print("          └─ Fibex")
+        print("             └─ FibexCore")
+        print(f"                └─ CoreCommunication ({len(core_comm_pkg.classes)} classes)")
+        print(f"                   Classes: {', '.join(sorted(fibex_class_names))}")

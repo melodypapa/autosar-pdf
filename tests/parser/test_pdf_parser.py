@@ -470,8 +470,14 @@ class TestPdfParser:
 
         # Mock pdfplumber.open to return test data
         class MockPage:
-            def extract_text(self):
-                return "Class TestClass\nPackage AUTOSAR::Module\n"
+            def extract_words(self, x_tolerance=1):
+                # Return words that simulate proper extraction with spaces
+                return [
+                    {'text': 'Class', 'top': 0, 'x0': 0, 'x1': 40},
+                    {'text': 'TestClass', 'top': 0, 'x0': 45, 'x1': 105},
+                    {'text': 'Package', 'top': 20, 'x0': 0, 'x1': 55},
+                    {'text': 'AUTOSAR::Module', 'top': 20, 'x0': 60, 'x1': 160},
+                ]
 
         class MockPdf:
             pages = [MockPage()]

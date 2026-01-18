@@ -209,6 +209,8 @@ The system shall strip ATP marker patterns from the class name and determine the
 
 When multiple ATP markers are detected on the same class, the system shall report a validation error indicating that a class cannot have multiple ATP markers simultaneously.
 
+The system shall filter out class definitions that do not have an associated package path, as these are typically false positives caused by page headers, footers, or other text in the PDF that matches the class pattern but does not represent a valid class definition.
+
 ---
 
 #### SWR_PARSER_00005
@@ -232,9 +234,32 @@ When multiple ATP markers are detected on the same class, the system shall repor
 
 **Description**: The system shall build a hierarchical AUTOSAR package structure from parsed class definitions, creating nested packages based on the package path delimiter ("::").
 
+The system shall:
+1. Parse the package path into individual components using "::" as the delimiter
+2. Create or retrieve package objects for each component in the path
+3. Establish parent-child relationships between packages by adding subpackages to their parent packages
+4. Add classes to the appropriate package based on the full package path
+
 ---
 
 #### SWR_PARSER_00007
+**Title**: Top-Level Package Selection
+
+**Maturity**: accept
+
+**Description**: The system shall correctly identify and return only top-level packages from the package hierarchy.
+
+The system shall:
+1. Return only packages that have no "::" in their full path (indicating they are root-level packages)
+2. Ensure that packages contain either classes or subpackages (or both)
+3. Use proper operator precedence in the selection logic: `if "::" not in path and (pkg.classes or pkg.subpackages)`
+4. Ensure that intermediate packages in the hierarchy (e.g., `AUTOSARTemplates::SystemTemplate::Fibex`) are not returned as top-level packages
+
+This requirement prevents packages that are nested within other packages from being incorrectly returned as root-level packages.
+
+---
+
+#### SWR_PARSER_00008
 **Title**: PDF Backend Support - pdfplumber
 
 **Maturity**: accept

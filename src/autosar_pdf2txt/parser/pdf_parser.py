@@ -291,6 +291,7 @@ class PdfParser:
 
         Requirements:
             SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00007: Top-Level Package Selection
 
         Args:
             class_defs: List of ClassDefinition objects.
@@ -298,13 +299,17 @@ class PdfParser:
         Returns:
             List of top-level AutosarPackage objects.
         """
+        # Filter out class definitions without package paths
+        # These are typically false positives from page headers/footers
+        valid_class_defs = [cd for cd in class_defs if cd.package_path]
+
         # Track all packages by their full path
         package_map: Dict[str, AutosarPackage] = {}
 
         # Track which classes have been added to packages
         processed_classes: Set[Tuple[str, str]] = set()
 
-        for class_def in class_defs:
+        for class_def in valid_class_defs:
             # Parse package path
             package_parts = [p.strip() for p in class_def.package_path.split("::") if p.strip()]
 
@@ -347,7 +352,7 @@ class PdfParser:
         top_level_packages = [
             pkg
             for path, pkg in package_map.items()
-            if "::" not in path and pkg.classes or pkg.subpackages
+            if "::" not in path and (pkg.classes or pkg.subpackages)
         ]
 
         return top_level_packages

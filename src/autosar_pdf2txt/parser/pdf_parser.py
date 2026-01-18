@@ -187,7 +187,8 @@ class PdfParser:
                     class_defs.append(current_class)
 
                 class_name = class_match.group(1).strip()
-                is_abstract = class_match.group(2) is not None
+                # Determine if abstract: explicitly marked OR name starts with "Abstract"
+                is_abstract = class_match.group(2) is not None or class_name.startswith("Abstract")
                 current_class = ClassDefinition(
                     name=class_name, package_path="", is_abstract=is_abstract
                 )

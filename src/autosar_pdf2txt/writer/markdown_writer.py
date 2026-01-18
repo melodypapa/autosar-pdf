@@ -22,7 +22,10 @@ class MarkdownWriter:
     * TopLevelPackage
       * SubPackage
         * Class
-        * Class (abstract)
+        * AnotherClass
+
+    Abstract classes are NOT marked in the main hierarchy output.
+    The abstract status is only shown in individual class files.
     """
 
     def __init__(self) -> None:
@@ -161,10 +164,9 @@ class MarkdownWriter:
             level: Current indentation level.
             output: StringIO buffer to write to.
         """
-        # Write class line
+        # Write class line (without abstract marker)
         indent = "  " * level
-        abstract_suffix = " (abstract)" if cls.is_abstract else ""
-        output.write(f"{indent}* {cls.name}{abstract_suffix}\n")
+        output.write(f"{indent}* {cls.name}\n")
 
     def _write_package_to_files(self, pkg: AutosarPackage, parent_dir: Path) -> None:
         """Write a package to directory structure with class files.

@@ -68,7 +68,7 @@ class TestMarkdownWriter:
         pkg.add_class(AutosarClass(name="AbstractClass", is_abstract=True))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
-        expected = "* TestPackage\n  * AbstractClass (abstract)\n"
+        expected = "* TestPackage\n  * AbstractClass\n"
         assert result == expected
 
     def test_write_package_with_multiple_classes(self) -> None:
@@ -87,7 +87,7 @@ class TestMarkdownWriter:
         expected = (
             "* TestPackage\n"
             "  * Class1\n"
-            "  * Class2 (abstract)\n"
+            "  * Class2\n"
             "  * Class3\n"
         )
         assert result == expected
@@ -123,7 +123,7 @@ class TestMarkdownWriter:
               * BswModuleTemplate
                 * BswBehavior
                   * BswInternalBehavior
-                  * ExecutableEntity (abstract)
+                  * ExecutableEntity
         """
         root = AutosarPackage(name="AUTOSARTemplates")
         bsw = AutosarPackage(name="BswModuleTemplate")
@@ -140,7 +140,7 @@ class TestMarkdownWriter:
             "  * BswModuleTemplate\n"
             "    * BswBehavior\n"
             "      * BswInternalBehavior\n"
-            "      * ExecutableEntity (abstract)\n"
+            "      * ExecutableEntity\n"
         )
         assert result == expected
 
@@ -161,7 +161,7 @@ class TestMarkdownWriter:
             "* Package1\n"
             "  * Class1\n"
             "* Package2\n"
-            "  * Class2 (abstract)\n"
+            "  * Class2\n"
         )
         assert result == expected
 
@@ -216,7 +216,7 @@ class TestMarkdownWriter:
             "* ParentPackage\n"
             "  * DirectClass\n"
             "  * ChildPackage\n"
-            "    * ChildClass (abstract)\n"
+            "    * ChildClass\n"
         )
         assert result == expected
 

@@ -65,6 +65,55 @@ markdown = writer.write_packages(all_packages)
 print(markdown)
 ```
 
+## Examples
+
+### Example: Extracting AUTOSAR Templates
+
+The repository includes sample AUTOSAR specification PDFs in the `examples/pdf/` directory that you can use to test the tool:
+
+```bash
+# Extract a single AUTOSAR template
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf
+
+# Extract all AUTOSAR templates from the examples directory
+autosar-extract examples/pdf/
+
+# Save output to a markdown file
+autosar-extract examples/pdf/ -o autosar_templates.md
+
+# Extract specific templates
+autosar-extract \
+  examples/pdf/AUTOSAR_CP_TPS_SystemTemplate.pdf \
+  examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
+  -o system_and_component.md
+
+# Extract with verbose output to see processing details
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf -v
+```
+
+### Example: Generate Class Files
+
+Generate separate markdown files for each AUTOSAR class:
+
+```bash
+# Extract Software Component Template and create individual class files
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
+  --write-class-files \
+  -o software_components.md \
+  --class-files-dir output/classes
+```
+
+### Example Output
+
+When you run the command above, you'll see output like:
+
+```
+Parsing: examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf
+Found 15 packages
+Writing to: software_components.md
+Writing class files to: output/classes/
+```
+
 ## Requirements
 
 - Python 3.7+

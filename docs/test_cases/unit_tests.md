@@ -1965,3 +1965,190 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009
 
+---
+
+#### SWUT_PARSER_00012
+**Title**: Test Extracting Class with Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that class attributes are extracted from PDF text and converted to AutosarAttribute objects.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition including attribute section
+3. Verify attributes are extracted correctly
+4. Verify attribute names, types, and reference flags are correct
+
+**Expected Result**: Attributes are extracted with correct name, type, and is_ref flag
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_MODEL_00010
+
+---
+
+#### SWUT_PARSER_00013
+**Title**: Test Extracting Class with Reference Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that reference type attributes are correctly identified based on their type names.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class containing reference-type attributes (e.g., PPortPrototype, ModeDeclarationGroup)
+3. Verify is_ref flag is set to True for reference types
+4. Verify is_ref flag is set to False for non-reference types
+
+**Expected Result**: Reference types are correctly identified by checking for patterns like Prototype, Ref, Dependency, Group, etc.
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010
+
+---
+
+#### SWUT_PARSER_00014
+**Title**: Test Building Packages with Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that attributes are transferred from ClassDefinition to AutosarClass objects during package hierarchy building.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create ClassDefinition with attributes
+3. Build package hierarchy
+4. Verify AutosarClass contains the attributes
+
+**Expected Result**: Attributes are correctly transferred to AutosarClass objects
+
+**Requirements Coverage**: SWR_PARSER_00006, SWR_PARSER_00010, SWR_MODEL_00001
+
+---
+
+#### SWUT_PARSER_00015
+**Title**: Test Metadata Filtering in Attribute Extraction
+
+**Maturity**: accept
+
+**Description**: Verify that metadata and formatting information from PDF class tables are filtered out during attribute extraction to ensure only valid AUTOSAR class attributes are extracted.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition including attribute section with metadata lines (e.g., "Stereotypes: : atpSplitable;", "287 : of", "Specification : of", "AUTOSAR : CP")
+3. Verify that only valid attributes are extracted (e.g., adminData, arPackage, fileInfo, Comment)
+4. Verify that metadata lines are NOT parsed as attributes
+5. Verify that attribute names containing special characters (:) or (;) are filtered out
+6. Verify that attribute names starting with numbers are filtered out
+7. Verify that attribute types matching metadata indicators (:, of, CP, atpSplitable) are filtered out
+
+**Expected Result**: Only valid AUTOSAR attributes are extracted; metadata lines are correctly filtered out
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00011
+
+---
+
+#### SWUT_PARSER_00016
+**Title**: Test Multi-Line Attribute Handling
+
+**Maturity**: accept
+
+**Description**: Verify that multi-line attribute definitions in PDF class tables are handled correctly to prevent broken or split attributes from being incorrectly parsed as separate attributes.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition including attributes that may span multiple lines in the PDF (e.g., "isStructWithOptionalElement", "dynamicArraySizeProfile")
+3. Verify that complete attribute names are correctly extracted (e.g., "isStructWithOptionalElement" not "isStructWith")
+4. Verify that complete attribute types are correctly extracted (e.g., "dynamicArraySizeProfile" not "dynamicArray")
+5. Verify that partial attribute fragments are NOT treated as complete attributes
+6. Verify that broken lines from table formatting are filtered out, including:
+   - Continuation types: "data", "If", "has", "to"
+   - Fragment names: "Element", "SizeProfile", "intention", "ImplementationDataType"
+   - Partial attribute names: "dynamicArray", "isStructWith"
+7. Verify that only valid, complete attributes remain after filtering
+
+**Expected Result**: Only complete, valid attribute definitions are extracted; multi-line attributes are properly reconstructed; broken fragments are filtered out
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00012
+
+---
+
+#### SWUT_PARSER_00017
+**Title**: Test Recognition of Primitive Class Definition Pattern
+
+**Maturity**: accept
+
+**Description**: Verify that the parser correctly recognizes class definitions that use the "Primitive" prefix.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a "Primitive <classname>" definition followed by a package path (e.g., "Primitive Limit" followed by "Package M2::AUTOSARTTemplates::...")
+3. Verify that the primitive class is recognized as a valid class definition
+4. Verify that attributes following the primitive class definition are assigned to the primitive class, not the previous class
+5. Verify that the primitive class name is extracted correctly (e.g., "Limit" from "Primitive Limit")
+6. Verify that the primitive class is marked as non-abstract (primitive types are concrete)
+
+**Expected Result**: Primitive class definitions are correctly recognized and parsed; attributes are assigned to the correct class
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00013
+
+---
+
+#### SWUT_PARSER_00018
+**Title**: Test Recognition of Enumeration Class Definition Pattern
+
+**Maturity**: accept
+
+**Description**: Verify that the parser correctly recognizes class definitions that use the "Enumeration" prefix.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing an "Enumeration <classname>" definition followed by a package path (e.g., "Enumeration IntervalTypeEnum" followed by "Package M2::AUTOSARTTemplates::...")
+3. Verify that the enumeration class is recognized as a valid class definition
+4. Verify that the enumeration class name is extracted correctly (e.g., "IntervalTypeEnum" from "Enumeration IntervalTypeEnum")
+5. Verify that the enumeration class is marked as non-abstract
+6. Verify that any attributes following the enumeration definition belong to the enumeration class, not the previous class
+
+**Expected Result**: Enumeration class definitions are correctly recognized and parsed; attributes are assigned to the correct class
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00013
+
+---
+
+#### SWUT_PARSER_00019
+**Title**: Test Prevention of Attribute Bleed Between Class Definitions
+
+**Maturity**: accept
+
+**Description**: Verify that when different class definition patterns (Class, Primitive, Enumeration) appear sequentially, each class receives only its own attributes and not attributes from subsequent classes.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing multiple class definitions using different patterns:
+   - "Class ImplementationDataType" with attributes (dynamicArray, isStructWithOptionalElement, etc.)
+   - "Primitive Limit" with attributes (intervalType, etc.)
+   - "Enumeration IntervalTypeEnum" with literals (closed, open, etc.)
+3. Verify that each class is recognized as a separate class definition
+4. Verify that ImplementationDataType has only its own attributes (dynamicArray, isStructWithOptionalElement, subElement, symbolProps, typeEmitter)
+5. Verify that Limit has only its own attributes (intervalType)
+6. Verify that IntervalTypeEnum has its own literals (closed, open)
+7. Verify that attributes are not "bleeding" from one class to another (e.g., intervalType is NOT in ImplementationDataType)
+
+**Expected Result**: Each class receives only its own attributes; no attribute bleed occurs between classes with different definition patterns
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00013
+

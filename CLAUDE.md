@@ -68,12 +68,18 @@ When adding new items, always use the next available number in the sequence. Nev
 
 ### Installation
 ```bash
+# Install in editable mode for development
 pip install -e .
+
+# Install with all development dependencies
+pip install -e ".[dev]"  # If dev extras are defined
+# Or manually:
+pip install pytest pytest-cov ruff mypy pdfplumber
 ```
 
 ### Running Tests
 ```bash
-# Run all tests (generates coverage report automatically)
+# Run all tests (generates coverage report automatically to scripts/report/coverage.md)
 python scripts/run_tests.py --all
 
 # Run only unit tests
@@ -85,30 +91,37 @@ python scripts/run_tests.py --integration
 # Run specific test file
 pytest tests/models/test_autosar_models.py -v
 
+# Run specific test with verbose output
+pytest tests/models/test_autosar_models.py::TestAutosarClass::test_init_concrete_class -v
+
 # Run with coverage manually (if needed)
-pytest tests/ -v --cov=src/autosar_pdf2txt --cov-report=term
+pytest tests/ -v --cov=autosar_pdf2txt --cov-report=term
 ```
+
+**Note**: The test runner automatically generates coverage reports at `scripts/report/coverage.md` after tests complete.
 
 ### Linting and Type Checking
 ```bash
 # Lint with ruff
 ruff check src/ tests/
 
+# Auto-fix linting issues where possible
+ruff check --fix src/ tests/
+
 # Type check with mypy
 mypy src/autosar_pdf2txt/
+
+# Run both linting and type checking
+ruff check src/ tests/ && mypy src/autosar_pdf2txt/
 ```
 
 ### Running Full CI Pipeline
 ```bash
-# Install dev dependencies
-pip install pytest pytest-cov ruff mypy pdfplumber
-
-# Run all checks using test runner
+# Quick check - run unit tests only
 python scripts/run_tests.py --unit
 
-# Individual checks
-ruff check src/ tests/
-mypy src/autosar_pdf2txt/
+# Full validation - all tests + quality checks
+python scripts/run_tests.py --all && ruff check src/ tests/ && mypy src/autosar_pdf2txt/
 ```
 
 ## Code Architecture
@@ -131,10 +144,48 @@ src/autosar_pdf2txt/
     └── autosar_cli.py       # Command-line interface
 ```
 
+### Data Flow Architecture
+
+The project follows a **pipeline architecture** with clear separation of concerns:
+
+```
+PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → Markdown Output
+```
+
+1. **Input Layer (CLI)**: `autosar_cli.py`
+   - Accepts file/directory paths
+   - Validates inputs
+   - Orchestrates the pipeline
+
+2. **Parsing Layer**: `pdf_parser.py`
+   - Reads PDF files using pdfplumber
+   - Extracts text line-by-line
+   - Recognizes AUTOSAR patterns (Class, Package, Attributes, etc.)
+   - Builds `ClassDefinition` intermediate objects
+   - Constructs `AutosarPackage` hierarchy with nested `AutosarClass` objects
+
+3. **Model Layer**: `autosar_models.py`
+   - Immutable dataclasses with validation
+   - `AutosarPackage`: Hierarchical package structure
+   - `AutosarClass`: Class representation with attributes, inheritance, ATP markers
+   - `AutosarAttribute`: Attribute details with reference type tracking
+   - Duplicate prevention at model level
+
+4. **Output Layer**: `markdown_writer.py`
+   - Traverses package hierarchy
+   - Generates markdown with proper indentation
+   - Supports both consolidated output and per-class file generation
+
+**Key Design Principles:**
+- **Separation of Concerns**: Each layer has a single responsibility
+- **Dataclass-Based Models**: Immutable, validated data structures
+- **Model-Level Validation**: All validation happens in `__post_init__`, not in the parser
+- **No Writer-Level Deduplication**: Parser ensures uniqueness through model validation
+
 ### Core Components
 
 **Models (`models/autosar_models.py`)**
-- `ATPType`: Enum representing AUTOSAR Tool Platform marker types (NONE, ATP_MIXED_STRING, ATP_VARIATION)
+- `ATPType`: Enum representing AUTOSAR Tool Platform marker types (NONE, ATP_MIXED_STRING, ATP_VARIATION, ATP_MIXED)
 - `AutosarClass`: Dataclass representing an AUTOSAR class with name, abstract flag, atp_type, attributes, bases (inheritance), and note (documentation)
 - `AutosarAttribute`: Dataclass representing an AUTOSAR attribute with name, type, and reference flag
 - `AutosarPackage`: Dataclass for hierarchical package structures containing classes and subpackages
@@ -144,15 +195,19 @@ src/autosar_pdf2txt/
 
 **Parser (`parser/pdf_parser.py`)**
 - `PdfParser`: Extracts AUTOSAR hierarchies from PDF files using pdfplumber
-- Pattern recognition: Identifies class definitions, package paths, base classes, and subclasses
+- Pattern recognition: Identifies class definitions, package paths, base classes, and subclasses using regex patterns
 - Hierarchy building: Constructs nested package structures from parsed data
-- Default PDF engine: pdfplumber (no backend selection)
+- Default PDF engine: pdfplumber (no backend selection - this is fixed)
+- Key intermediate class: `ClassDefinition` (internal to parser) for building parsed data before creating model objects
 
 **Writer (`writer/markdown_writer.py`)**
 - `MarkdownWriter`: Class-based API for writing package hierarchies to markdown
 - Output format: Asterisk-based hierarchy with indentation (2 spaces per level)
 - Classes indented 1 level deeper than their parent package
 - No writer-level deduplication (relies on model-level duplicate prevention)
+- Supports two output modes:
+  - Consolidated: All packages and classes in single markdown file
+  - Per-class: Individual markdown files for each class (with `--write-class-files`)
 
 ## CLI Usage
 
@@ -232,8 +287,9 @@ autosar-extract input.pdf -o output.md --write-class-files
 - All test docstrings must be in English
 
 ### Coverage Goals
-- Target 100% coverage for all modules
+- Target 100% coverage for all modules (currently at 97%+)
 - Tests cover success paths, error paths, and edge cases
+- Coverage reports automatically generated at `scripts/report/coverage.md`
 - Example test scenarios in `tests/writer/test_markdown_writer.py`:
   - Nested hierarchies
   - Empty inputs
@@ -326,23 +382,34 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
 
 Before committing changes, run the following quality checks to ensure code quality:
 
-### Linting
+### Quality Gate Workflow
+```bash
+# Run all quality checks in sequence
+python scripts/run_tests.py --unit && ruff check src/ tests/ && mypy src/autosar_pdf2txt/
+```
+
+### Individual Quality Checks
+
+**Linting:**
 ```bash
 # Run ruff linter
 ruff check src/ tests/
+
+# Auto-fix issues where possible
+ruff check --fix src/ tests/
 ```
 
 **Expected Result**: All checks pass with no errors or warnings.
 
-### Type Checking
+**Type Checking:**
 ```bash
 # Run mypy type checker
 mypy src/autosar_pdf2txt/
 ```
 
-**Expected Result**: Success: no issues found in 9 source files.
+**Expected Result**: Success: no issues found in source files.
 
-### Testing
+**Testing:**
 ```bash
 # Run all unit tests with coverage
 python scripts/run_tests.py --unit
@@ -351,14 +418,7 @@ python scripts/run_tests.py --unit
 pytest tests/ -v
 ```
 
-**Expected Result**: All tests pass (126 tests) with 97%+ coverage.
-
-### Test Results Summary
-As of the latest implementation:
-- **Total Tests**: 126
-- **Test Status**: All passed ✅
-- **Code Coverage**: 97.1%
-- **Test Execution Time**: ~1-2 seconds
+**Expected Result**: All tests pass with 97%+ coverage.
 
 ### Quality Gates
 All of the following must pass before committing:
@@ -367,7 +427,7 @@ All of the following must pass before committing:
 3. ✅ Pytest: All tests pass
 4. ✅ Coverage: ≥95%
 
-**Example:**
+**Example with Requirements Traceability:**
 ```python
 def __init__(self) -> None:
     """Initialize the PDF parser.
@@ -380,3 +440,151 @@ def __init__(self) -> None:
         ImportError: If pdfplumber is not installed.
     """
 ```
+
+## Documentation Structure
+
+The project maintains comprehensive documentation in the `docs/` directory:
+
+- `docs/requirements/requirements.md` - Complete software requirements specification with stable IDs
+- `docs/development/coding_rules.md` - Detailed coding standards combining PEP 8 with project-specific rules
+- `docs/models/` - Model-specific documentation
+- `docs/test_cases/` - Test case documentation with traceability to requirements
+- `scripts/report/coverage.md` - Auto-generated coverage reports (updated after each test run)
+
+## Common Development Tasks
+
+### Adding a New Requirement
+
+When implementing new features, follow this workflow:
+
+1. **Add the requirement** to `docs/requirements/requirements.md`:
+   - Use the next available ID in the sequence (e.g., `SWR_MODEL_00014`)
+   - Set maturity to `draft`
+   - Include description and acceptance criteria
+
+2. **Implement the feature** in the appropriate module:
+   - Add requirement ID to all relevant docstrings
+   - Follow coding standards in `docs/development/coding_rules.md`
+   - Include type hints and Google-style docstrings
+
+3. **Add tests** to the appropriate test file:
+   - Use the next available test ID (e.g., `SWUT_MODEL_00014`)
+   - Test success paths, error paths, and edge cases
+   - Include requirement ID in test docstrings
+
+4. **Update maturity levels**:
+   - Change requirement maturity from `draft` to `accept`
+   - Change test maturity from `draft` to `accept`
+
+5. **Run quality checks**:
+   ```bash
+   python scripts/run_tests.py --unit && ruff check src/ tests/ && mypy src/autosar_pdf2txt/
+   ```
+
+### Debugging PDF Parsing Issues
+
+If the parser is not extracting classes correctly from a PDF:
+
+1. **Enable verbose mode** to see detailed parsing information:
+   ```bash
+   autosar-extract input.pdf -v
+   ```
+
+2. **Check the PDF text extraction** by inspecting what pdfplumber extracts:
+   ```python
+   import pdfplumber
+
+   with pdfplumber.open("input.pdf") as pdf:
+       for page in pdf.pages:
+           print(page.extract_text())
+   ```
+
+3. **Verify regex patterns** in `pdf_parser.py` match the PDF format:
+   - Class definitions: `CLASS_PATTERN`
+   - Package paths: `PACKAGE_PATTERN`
+   - Attributes: `ATTRIBUTE_PATTERN`
+
+4. **Check for M2 package prefixes** which affect hierarchy building
+
+### Understanding Package Hierarchy
+
+The parser builds package hierarchies from path strings like `"M2::AUTOSAR::DataTypes"`:
+
+- `M2::` prefix is stripped during parsing
+- `::` separator indicates nesting levels
+- Each level becomes a nested `AutosarPackage`
+- Classes are added to the deepest package level
+
+Example:
+```
+Package: M2::AUTOSAR::DataTypes
+
+Creates hierarchy:
+AutosarPackage("AUTOSAR")
+  └── AutosarPackage("DataTypes")
+        └── AutosarClass(...)
+```
+
+### Test-Driven Development Workflow
+
+When fixing bugs or adding features:
+
+1. **Write a failing test** first that reproduces the issue
+2. **Run the test** to confirm it fails:
+   ```bash
+   pytest tests/parser/test_pdf_parser.py::TestPdfParser::test_new_feature -v
+   ```
+3. **Implement the fix** in the source code
+4. **Run the test** again to confirm it passes
+5. **Run all tests** to ensure no regressions:
+   ```bash
+   python scripts/run_tests.py --unit
+   ```
+6. **Check coverage** to ensure new code is covered
+
+## Troubleshooting
+
+### Issue: Import Error for pdfplumber
+
+**Error**: `ImportError: pdfplumber is not installed`
+
+**Solution**:
+```bash
+pip install pdfplumber
+```
+
+### Issue: Type Checking Failures
+
+**Error**: Mypy reports type errors
+
+**Common causes**:
+- Missing type hints on function parameters or return values
+- Using `list[T]` instead of `List[T]` from typing
+- Missing forward reference strings for circular dependencies
+
+**Solution**: Add proper type hints following the coding standards in `docs/development/coding_rules.md`
+
+### Issue: Tests Failing Due to Missing Requirements IDs
+
+**Error**: Test or function missing requirement traceability
+
+**Solution**: Add "Requirements:" section to docstrings with relevant requirement IDs:
+```python
+def parse_pdf(self, pdf_path: str) -> List[AutosarPackage]:
+    """Parse a PDF file and extract the package hierarchy.
+
+    Requirements:
+        SWR_PARSER_00003: PDF File Parsing
+        SWR_PARSER_00006: Package Hierarchy Building
+    """
+```
+
+### Issue: Coverage Below 95%
+
+**Solution**:
+1. Check coverage report: `scripts/report/coverage.md`
+2. Identify uncovered lines in specific files
+3. Add tests for uncovered code paths
+4. Re-run tests: `python scripts/run_tests.py --unit`
+
+

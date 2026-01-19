@@ -287,6 +287,89 @@ This requirement addresses common PDF text extraction issues where words are con
 
 ---
 
+#### SWR_PARSER_00010
+**Title**: Attribute Extraction from PDF
+
+**Maturity**: accept
+
+**Description**: The system shall extract class attributes from PDF files and convert them to AutosarAttribute objects.
+
+The system shall:
+1. Recognize the attribute section in PDF class tables (identified by "Attribute Type Mult. Kind Note" header)
+2. Parse each attribute line with the format: `<name> <type> <multiplicity> <kind> <description>`
+3. Create AutosarAttribute objects with the extracted name and type
+4. Determine if an attribute is a reference type based on the attribute type (e.g., types ending with "Prototype", "Ref", or other reference indicators)
+5. Store attributes in a dictionary keyed by attribute name in the ClassDefinition
+6. Transfer attributes to the AutosarClass object during package hierarchy building
+
+This requirement ensures that class attributes are properly extracted and stored, enabling complete documentation of AUTOSAR class structures including their properties.
+
+---
+
+#### SWR_PARSER_00011
+**Title**: Metadata Filtering in Attribute Extraction
+
+**Maturity**: accept
+
+**Description**: The system shall filter out metadata and formatting information from PDF class tables during attribute extraction to ensure only valid AUTOSAR class attributes are extracted.
+
+The system shall:
+1. Track when parsing is within the attribute section (after the "Attribute Type Mult. Kind Note" header)
+2. Validate attribute names to exclude lines containing special characters like `:` or `;`
+3. Validate attribute names to exclude lines that start with a number
+4. Validate attribute types to exclude metadata indicators such as `:`, `of`, `CP`, or `atpSplitable`
+5. Only parse attribute lines when within the attribute section to prevent false positives from other sections of the PDF
+
+This requirement prevents metadata lines (e.g., "Stereotypes: : atpSplitable;", "287 : of", "Specification : of", "AUTOSAR : CP") from being incorrectly parsed as class attributes, ensuring the extracted attributes match the official AUTOSAR metamodel specification.
+
+---
+
+#### SWR_PARSER_00012
+**Title**: Multi-Line Attribute Handling
+
+**Maturity**: accept
+
+**Description**: The system shall handle multi-line attribute definitions in PDF class tables to prevent broken or split attributes from being incorrectly parsed as separate attributes.
+
+The system shall:
+1. Detect when attribute names or types span multiple lines in the PDF due to table formatting
+2. Properly reconstruct complete attribute names that may be split across lines (e.g., "isStructWithOptionalElement" split as "isStructWith" on one line and "OptionalElement" on another)
+3. Properly reconstruct complete attribute types that may be split across lines (e.g., "dynamicArraySizeProfile" split as "dynamicArray" on one line and "SizeProfile" on another)
+4. Prevent partial attribute fragments from being treated as complete attributes
+5. Ensure that only complete, valid attribute definitions are extracted
+6. Filter out common continuation words and fragment names that appear in broken attribute lines, including:
+   - Continuation types: "data", "If", "has", "to"
+   - Fragment names: "Element", "SizeProfile", "intention", "ImplementationDataType"
+   - Partial attribute names: "dynamicArray" (should be "dynamicArraySizeProfile"), "isStructWith" (should be "isStructWithOptionalElement")
+
+This requirement addresses PDF table formatting issues where attribute names or types may wrap across multiple lines, preventing incorrect extraction of partial attributes like "SizeProfile", "Element", "ImplementationDataType", and "intention" as separate attributes when they are actually part of a larger attribute definition or continuation of previous content. The system filters out these broken fragments to ensure only valid, complete attributes are extracted.
+
+---
+
+#### SWR_PARSER_00013
+**Title**: Recognition of Primitive and Enumeration Class Definition Patterns
+
+**Maturity**: accept
+
+**Description**: The system shall recognize and correctly parse AUTOSAR class definitions that use "Primitive" and "Enumeration" prefixes in addition to the standard "Class" prefix.
+
+The system shall:
+1. Recognize the pattern `Primitive <classname>` as a valid class definition for primitive type classes (e.g., "Primitive Limit")
+2. Recognize the pattern `Enumeration <classname>` as a valid class definition for enumeration type classes (e.g., "Enumeration IntervalTypeEnum")
+3. Recognize the pattern `Class <classname>` as a valid class definition for regular classes (e.g., "Class ImplementationDataType")
+4. Apply the same validation rules to all three patterns (require package path within 5 lines to avoid page header false positives)
+5. Treat all three patterns as class definition markers that end the attribute section of the previous class
+6. Properly assign attributes to the correct class based on which definition they follow
+
+This requirement ensures that the parser correctly handles the three types of class definitions used in AUTOSAR PDF specification documents:
+- Regular classes: `Class ImplementationDataType`
+- Primitive types: `Primitive Limit`
+- Enumeration types: `Enumeration IntervalTypeEnum`
+
+Without this requirement, the parser would fail to recognize when a new class starts after "Primitive" or "Enumeration" definitions, causing attributes from subsequent classes to be incorrectly added to the previous class. For example, without recognizing "Primitive Limit" as a new class, the `intervalType` attribute from the Limit class would be incorrectly added to the ImplementationDataType class.
+
+---
+
 ### 3. Writer
 
 #### SWR_WRITER_00001

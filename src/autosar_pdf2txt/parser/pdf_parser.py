@@ -4,7 +4,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
 
@@ -36,7 +36,7 @@ class ClassDefinition:
     atp_type: ATPType = ATPType.NONE
     base_classes: List[str] = field(default_factory=list)
     subclasses: List[str] = field(default_factory=list)
-    note: str | None = None
+    note: Optional[str] = None
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
 
 
@@ -604,7 +604,7 @@ class PdfParser:
 
             # Create/get packages in hierarchy
             current_path = ""
-            parent_package: AutosarPackage | None = None
+            parent_package: Optional[AutosarPackage] = None
 
             for part in package_parts:
                 if current_path:

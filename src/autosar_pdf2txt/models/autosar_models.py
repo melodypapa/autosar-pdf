@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class ATPType(Enum):
@@ -114,7 +114,7 @@ class AutosarClass:
     atp_type: ATPType = ATPType.NONE
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     bases: List[str] = field(default_factory=list)
-    note: str | None = None
+    note: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Validate the class fields.
@@ -225,7 +225,7 @@ class AutosarPackage:
             raise ValueError(f"Subpackage '{pkg.name}' already exists in package '{self.name}'")
         self.subpackages.append(pkg)
 
-    def get_class(self, name: str) -> AutosarClass | None:
+    def get_class(self, name: str) -> Optional[AutosarClass]:
         """Get a class by name.
 
         Requirements:
@@ -242,7 +242,7 @@ class AutosarPackage:
                 return cls
         return None
 
-    def get_subpackage(self, name: str) -> "AutosarPackage | None":
+    def get_subpackage(self, name: str) -> Optional["AutosarPackage"]:
         """Get a subpackage by name.
 
         Requirements:

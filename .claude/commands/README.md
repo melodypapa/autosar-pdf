@@ -19,6 +19,17 @@ Automates the complete GitHub workflow:
 /gh-workflow feature: Add support for base class extraction
 ```
 
+### `/merge-pr` - Merge Pull Request
+Check pull request status, merge it, and return to master branch.
+
+**Usage:**
+```
+/merge-pr                # Merge current branch's PR
+/merge-pr 36             # Merge PR #36
+/merge-pr --no-cleanup   # Merge but keep feature branch
+/merge-pr --force        # Merge even if CI is not passing
+```
+
 ### `/test` - Test Runner
 Run the project test suite with comprehensive reporting.
 

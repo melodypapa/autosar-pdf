@@ -130,7 +130,8 @@ Desktop.ini
 # Note: requirements.txt is NOT ignored - it's needed for setup.py
 
 # Claude Code
-.claude/
+#.claude/
+.claude/settings.local.json
 
 # IFlow
 .iflow/

@@ -97,10 +97,7 @@ Generate separate markdown files for each AUTOSAR class:
 
 ```bash
 # Extract Software Component Template and create individual class files
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf \
-  --write-class-files \
-  -o data/software_components.md \
-  --class-files-dir data/classes
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf --write-class-files -o data/software_components.md
 ```
 
 ### Example Output

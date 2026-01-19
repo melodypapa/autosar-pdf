@@ -3,7 +3,7 @@
 import re
 from io import StringIO
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Union
 
 from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarPackage
 
@@ -36,7 +36,7 @@ class MarkdownWriter:
         """
 
     def write_packages_to_files(
-        self, packages: List[AutosarPackage], output_path: str | Path | None = None, base_dir: str | Path | None = None
+        self, packages: List[AutosarPackage], output_path: Optional[Union[str, Path]] = None, base_dir: Optional[Union[str, Path]] = None
     ) -> None:
         """Write packages to separate markdown files organized in directory structure.
 

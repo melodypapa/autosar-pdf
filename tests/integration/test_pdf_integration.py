@@ -20,6 +20,8 @@ class TestPdfIntegration:
     def test_parse_bsw_module_template_pdf_first_class(self) -> None:
         """Test parsing real AUTOSAR BSW Module Template PDF and verify first class.
 
+        SWIT_00001: Test Parsing Real AUTOSAR PDF and Verifying First Class
+
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -100,6 +102,8 @@ class TestPdfIntegration:
     def test_parse_bsw_module_template_pdf_multiple_classes(self) -> None:
         """Test that multiple classes are parsed from real AUTOSAR PDF.
 
+        SWIT_00002: Test Parsing Real AUTOSAR PDF Extracts Multiple Classes
+
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00006: Package Hierarchy Building
@@ -115,12 +119,16 @@ class TestPdfIntegration:
         # Parse the PDF
         packages = parser.parse_pdf(pdf_path)
 
-        # Count total classes
+        # Count total classes recursively
+        def count_classes(pkg):
+            count = len(pkg.classes)
+            for subpkg in pkg.subpackages:
+                count += count_classes(subpkg)
+            return count
+
         total_classes = 0
         for pkg in packages:
-            total_classes += len(pkg.classes)
-            for subpkg in pkg.subpackages:
-                total_classes += len(subpkg.classes)
+            total_classes += count_classes(pkg)
 
         # Should have extracted many classes from the AUTOSAR template
         assert total_classes > 10, f"Expected to extract many classes, got {total_classes}"
@@ -129,7 +137,9 @@ class TestPdfIntegration:
         print(f"Total packages: {len(packages)}")
 
     def test_parse_bsw_module_template_pdf_has_bases_and_notes(self) -> None:
-        """Test that classes with bases and notes are parsed correctly.
+        """Test parsing real AUTOSAR PDF has bases and notes.
+
+        SWIT_00003: Test Parsing Real AUTOSAR PDF Has Bases and Notes
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
@@ -147,23 +157,21 @@ class TestPdfIntegration:
         # Parse the PDF
         packages = parser.parse_pdf(pdf_path)
 
-        # Find classes with bases and notes
+        # Find classes with bases and notes recursively
         classes_with_bases = []
         classes_with_notes = []
 
-        for pkg in packages:
+        def collect_classes(pkg):
             for cls in pkg.classes:
                 if cls.bases:
                     classes_with_bases.append(cls)
                 if cls.note:
                     classes_with_notes.append(cls)
-
             for subpkg in pkg.subpackages:
-                for cls in subpkg.classes:
-                    if cls.bases:
-                        classes_with_bases.append(cls)
-                    if cls.note:
-                        classes_with_notes.append(cls)
+                collect_classes(subpkg)
+
+        for pkg in packages:
+            collect_classes(pkg)
 
         # Verify we have classes with bases
         assert len(classes_with_bases) > 0, "Should find classes with base classes"
@@ -190,6 +198,8 @@ class TestPdfIntegration:
     def test_parse_pdf_with_atp_patterns(self, monkeypatch) -> None:
         """Test end-to-end parsing and writing with ATP patterns.
 
+        SWIT_00005: Test End-to-End Parsing and Writing with ATP Patterns
+
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -200,8 +210,15 @@ class TestPdfIntegration:
 
         # Mock pdfplumber to return class with ATP patterns
         class MockPage:
-            def extract_text(self):
-                return "Class MyData <<atpVariation>>\nPackage M2::AUTOSAR::Data\n"
+            def extract_words(self, x_tolerance=1):
+                # Return word data structure with 'text' and 'top' keys
+                return [
+                    {'text': 'Class', 'top': 0},
+                    {'text': 'MyData', 'top': 0},
+                    {'text': '<<atpVariation>>', 'top': 0},
+                    {'text': 'Package', 'top': 10},
+                    {'text': 'M2::AUTOSAR::Data', 'top': 10},
+                ]
 
         class MockPdf:
             pages = [MockPage()]
@@ -221,7 +238,11 @@ class TestPdfIntegration:
 
         # Verify parsing
         assert len(packages) == 1
-        data_pkg = packages[0].get_subpackage("Data")
+        m2_pkg = packages[0]
+        assert m2_pkg.name == "M2"
+        autosar_pkg = m2_pkg.get_subpackage("AUTOSAR")
+        assert autosar_pkg is not None
+        data_pkg = autosar_pkg.get_subpackage("Data")
         assert data_pkg is not None
         my_data = data_pkg.get_class("MyData")
         assert my_data is not None
@@ -237,13 +258,15 @@ class TestPdfIntegration:
             writer.write_packages_to_files(packages, base_dir=Path(tmp_dir))
 
             # Check individual file has ATP section
-            class_file = Path(tmp_dir) / "AUTOSAR" / "Data" / "MyData.md"
+            class_file = Path(tmp_dir) / "M2" / "AUTOSAR" / "Data" / "MyData.md"
             content = class_file.read_text(encoding="utf-8")
             assert "## ATP Type\n\n" in content
             assert "* atpVariation\n" in content
 
     def test_parse_ecu_configuration_pdf_fibex_package_structure(self) -> None:
-        """Test parsing ECU Configuration PDF and verify Fibex package structure.
+        """Test parsing ECU Configuration PDF and verify Fibex package structure and ImplementationDataType attributes.
+
+        SWIT_00004: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
@@ -251,6 +274,9 @@ class TestPdfIntegration:
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00007: Top-Level Package Selection
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00011: Metadata Filtering in Attribute Extraction
+            SWR_PARSER_00012: Multi-Line Attribute Handling
             SWR_MODEL_00004: AUTOSAR Package Representation
         """
         parser = PdfParser()
@@ -320,3 +346,39 @@ class TestPdfIntegration:
         print("             └─ FibexCore")
         print(f"                └─ CoreCommunication ({len(core_comm_pkg.classes)} classes)")
         print(f"                   Classes: {', '.join(sorted(fibex_class_names))}")
+
+        # Find CommonStructure subpackage under AUTOSARTemplates
+        common_structure_pkg = autosar_templates_pkg.get_subpackage("CommonStructure")
+        assert common_structure_pkg is not None, "CommonStructure should be a subpackage of AUTOSARTemplates"
+
+        # Find ImplementationDataTypes subpackage under CommonStructure
+        impl_data_types_pkg = common_structure_pkg.get_subpackage("ImplementationDataTypes")
+        assert impl_data_types_pkg is not None, "ImplementationDataTypes should be a subpackage of CommonStructure"
+
+        # Find ImplementationDataType class
+        impl_data_type = impl_data_types_pkg.get_class("ImplementationDataType")
+        assert impl_data_type is not None, "ImplementationDataType class should exist in ImplementationDataTypes"
+
+        # Verify ImplementationDataType has exactly 5 attributes
+        assert len(impl_data_type.attributes) == 5, \
+            f"ImplementationDataType should have 5 attributes, got {len(impl_data_type.attributes)}"
+
+        # Verify the expected attributes exist
+        expected_attributes = {
+            "dynamicArray": "String",
+            "isStructWithOptionalElement": "Boolean",
+            "subElement": "ImplementationData",
+            "symbolProps": "SymbolProps",
+            "typeEmitter": "NameToken"
+        }
+
+        for attr_name, expected_type in expected_attributes.items():
+            assert attr_name in impl_data_type.attributes, \
+                f"Expected attribute '{attr_name}' not found. Found: {list(impl_data_type.attributes.keys())}"
+            assert impl_data_type.attributes[attr_name].type == expected_type, \
+                f"Attribute '{attr_name}' should have type '{expected_type}', got '{impl_data_type.attributes[attr_name].type}'"
+
+        print("\nImplementationDataType attributes verified:")
+        print(f"  Total attributes: {len(impl_data_type.attributes)}")
+        for attr_name, attr in impl_data_type.attributes.items():
+            print(f"    - {attr_name}: {attr.type} (ref: {attr.is_ref})")

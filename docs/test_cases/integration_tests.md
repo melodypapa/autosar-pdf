@@ -112,11 +112,13 @@ Future integration tests should cover:
 ---
 
 #### SWIT_00004
-**Title**: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure
+**Title**: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
 
 **Maturity**: accept
 
-**Description**: Integration test that parses an ECU Configuration PDF and verifies the correct hierarchical package structure, particularly the nested Fibex package hierarchy under M2.
+**Description**: Integration test that parses an ECU Configuration PDF and verifies:
+1. The correct hierarchical package structure, particularly the nested Fibex package hierarchy under M2
+2. The ImplementationDataType class has correct attributes (not broken fragments from multi-line PDF table formatting)
 
 **Precondition**: File examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf exists
 
@@ -132,13 +134,36 @@ Future integration tests should cover:
 9. Verify CoreCommunication contains classes
 10. Verify specific Fibex classes exist: Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu
 11. Verify that Fibex, SystemTemplate, FibexCore, and AUTOSARTemplates are NOT top-level packages
+12. Find CommonStructure subpackage under AUTOSARTemplates
+13. Find ImplementationDataTypes subpackage under CommonStructure
+14. Find ImplementationDataType class in ImplementationDataTypes
+15. Verify ImplementationDataType attributes are correct:
+    - Should have `dynamicArraySizeProfile: String` attribute
+    - Should have `isStructWithOptionalElement: Boolean` attribute
+    - Should NOT have broken fragment attributes like:
+      - `dynamicArray: String` (partial name)
+      - `SizeProfile: data` (continuation fragment)
+      - `isStructWith: Boolean` (partial name)
+      - `Element: If` (continuation fragment)
+      - `ImplementationDataType: has` (continuation fragment)
+      - `intention: to` (continuation fragment)
 
-**Expected Result**: Package hierarchy is correctly structured as:
-- M2 (top-level)
-  └─ AUTOSARTemplates
-     └─ SystemTemplate
-        └─ Fibex
-           └─ FibexCore
-              └─ CoreCommunication (contains Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu)
+**Expected Result**: 
+1. Package hierarchy is correctly structured as:
+   - M2 (top-level)
+     └─ AUTOSARTemplates
+        ├─ SystemTemplate
+        │  └─ Fibex
+        │     └─ FibexCore
+        │        └─ CoreCommunication (contains Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu)
+        └─ CommonStructure
+           └─ ImplementationDataTypes
+              └─ ImplementationDataType (with correct attributes)
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_MODEL_00004
+2. ImplementationDataType has exactly 2 attributes:
+   - `dynamicArraySizeProfile: String`
+   - `isStructWithOptionalElement: Boolean`
+
+3. Broken attribute fragments are filtered out and not present
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_PARSER_00011, SWR_PARSER_00012, SWR_MODEL_00004

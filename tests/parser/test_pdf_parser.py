@@ -406,11 +406,11 @@ class TestPdfParser:
         # Should have Module1 and Module2 as subpackages
         module1 = packages[0].get_subpackage("Module1")
         assert module1 is not None
-        assert len(module1.classes) == 2  # Class1 and Class2
+        assert len(module1.types) == 2  # Class1 and Class2
 
         module2 = packages[0].get_subpackage("Module2")
         assert module2 is not None
-        assert len(module2.classes) == 1  # Class3
+        assert len(module2.types) == 1  # Class3
 
     def test_build_package_handles_duplicate_classes(self) -> None:
         """Test that _build_package_hierarchy handles duplicate classes gracefully.
@@ -563,8 +563,8 @@ class TestPdfParser:
         # Module should be created as subpackage
         module = packages[0].get_subpackage("Module")
         assert module is not None
-        assert len(module.classes) == 1
-        assert module.classes[0].name == "TestClass"
+        assert len(module.types) == 1
+        assert module.types[0].name == "TestClass"
 
     def test_extract_class_with_atp_variation(self) -> None:
         """Test extracting class with <<atpVariation>> pattern.

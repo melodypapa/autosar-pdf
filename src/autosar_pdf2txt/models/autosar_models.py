@@ -1,8 +1,9 @@
 """AUTOSAR data models for packages and classes."""
 
+from abc import ABC
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 
 class ATPType(Enum):
@@ -25,6 +26,116 @@ class ATPType(Enum):
     ATP_MIXED_STRING = "atpMixedString"
     ATP_VARIATION = "atpVariation"
     ATP_MIXED = "atpMixed"
+
+
+@dataclass
+class AutosarEnumLiteral:
+    """Represents an enumeration literal value.
+
+    Requirements:
+        SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+
+    Attributes:
+        name: The name of the enumeration literal.
+        index: The optional index of the literal (e.g., atp.EnumerationLiteralIndex=0).
+        description: Optional description of the literal.
+
+    Examples:
+        >>> literal = AutosarEnumLiteral("leafOfTargetContainer", 0, "Elements directly owned by target container")
+        >>> literal_no_index = AutosarEnumLiteral("targetContainer", description="Target container")
+    """
+
+    name: str
+    index: Optional[int] = None
+    description: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        """Validate the literal fields.
+
+        Requirements:
+            SWR_MODEL_00015: AUTOSAR Enumeration Literal Name Validation
+
+        Raises:
+            ValueError: If name is empty or contains only whitespace.
+        """
+        if not self.name or not self.name.strip():
+            raise ValueError("Enumeration literal name cannot be empty")
+
+    def __str__(self) -> str:
+        """Return string representation of the literal.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+
+        Returns:
+            Literal name with index suffix if present.
+        """
+        suffix = f" (index={self.index})" if self.index is not None else ""
+        return f"{self.name}{suffix}"
+
+    def __repr__(self) -> str:
+        """Return detailed representation for debugging.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        return (
+            f"AutosarEnumLiteral(name='{self.name}', "
+            f"index={self.index}, description={self.description is not None})"
+        )
+
+
+@dataclass
+class AutosarType(ABC):
+    """Abstract base class for AUTOSAR type definitions.
+
+    Requirements:
+        SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+
+    This abstract class encapsulates common properties shared by all AUTOSAR type
+    definitions, including regular classes and enumerations.
+
+    Attributes:
+        name: The name of the type.
+        is_abstract: Whether the type is abstract.
+        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
+        bases: List of base type names for inheritance tracking.
+        note: Optional documentation or comments about the type.
+
+    Examples:
+        >>> type_obj = AutosarType("MyType", False)  # This would fail - can't instantiate abstract class
+        >>> # Instead, use AutosarClass or AutosarEnumeration
+    """
+
+    name: str
+    is_abstract: bool
+    atp_type: ATPType = ATPType.NONE
+    bases: List[str] = field(default_factory=list)
+    note: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        """Validate the type fields.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+
+        Raises:
+            ValueError: If name is empty or contains only whitespace.
+        """
+        if not self.name or not self.name.strip():
+            raise ValueError("Type name cannot be empty")
+
+    def __str__(self) -> str:
+        """Return string representation of the type.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+
+        Returns:
+            Type name with '(abstract)' suffix if abstract.
+        """
+        suffix = " (abstract)" if self.is_abstract else ""
+        return f"{self.name}{suffix}"
 
 
 @dataclass
@@ -85,19 +196,23 @@ class AutosarAttribute:
 
 
 @dataclass
-class AutosarClass:
+class AutosarClass(AutosarType):
     """Represents an AUTOSAR class.
 
     Requirements:
         SWR_MODEL_00001: AUTOSAR Class Representation
+        SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+
+    Inherits from AutosarType to provide common type properties (name, is_abstract,
+    atp_type, bases, note) and adds class-specific attributes.
 
     Attributes:
-        name: The name of the class.
-        is_abstract: Whether the class is abstract.
-        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
+        name: The name of the class (inherited from AutosarType).
+        is_abstract: Whether the class is abstract (inherited from AutosarType).
+        atp_type: ATP marker type enum (inherited from AutosarType).
         attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
-        bases: List of base class names for inheritance tracking.
-        note: Optional documentation or comments about the class.
+        bases: List of base class names for inheritance tracking (inherited from AutosarType).
+        note: Optional documentation or comments (inherited from AutosarType).
 
     Examples:
         >>> cls = AutosarClass("RunnableEntity", False)
@@ -109,36 +224,7 @@ class AutosarClass:
         >>> cls_with_atp = AutosarClass("MyClass", False, atp_type=ATPType.ATP_VARIATION)
     """
 
-    name: str
-    is_abstract: bool
-    atp_type: ATPType = ATPType.NONE
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
-    bases: List[str] = field(default_factory=list)
-    note: Optional[str] = None
-
-    def __post_init__(self) -> None:
-        """Validate the class fields.
-
-        Requirements:
-            SWR_MODEL_00002: AUTOSAR Class Name Validation
-
-        Raises:
-            ValueError: If name is empty or contains only whitespace.
-        """
-        if not self.name or not self.name.strip():
-            raise ValueError("Class name cannot be empty")
-
-    def __str__(self) -> str:
-        """Return string representation of the class.
-
-        Requirements:
-            SWR_MODEL_00003: AUTOSAR Class String Representation
-
-        Returns:
-            Class name with '(abstract)' suffix if abstract.
-        """
-        suffix = " (abstract)" if self.is_abstract else ""
-        return f"{self.name}{suffix}"
 
     def __repr__(self) -> str:
         """Return detailed representation for debugging.
@@ -157,26 +243,78 @@ class AutosarClass:
 
 
 @dataclass
+class AutosarEnumeration(AutosarType):
+    """Represents an AUTOSAR enumeration type.
+
+    Requirements:
+        SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+
+    Inherits from AutosarType to provide common type properties (name, is_abstract,
+    atp_type, bases, note) and adds enumeration-specific literals.
+
+    Attributes:
+        name: The name of the enumeration (inherited from AutosarType).
+        is_abstract: Whether the enumeration is abstract (inherited from AutosarType).
+        atp_type: ATP marker type enum (inherited from AutosarType).
+        enumeration_literals: List of enumeration literal values.
+        bases: List of base type names for inheritance tracking (inherited from AutosarType).
+        note: Optional documentation or comments (inherited from AutosarType).
+
+    Examples:
+        >>> enum = AutosarEnumeration("EcucDestinationUriNestingContractEnum", False)
+        >>> enum_with_literals = AutosarEnumeration(
+        ...     "MyEnum",
+        ...     False,
+        ...     enumeration_literals=[
+        ...         AutosarEnumLiteral("VALUE1", 0, "First value"),
+        ...         AutosarEnumLiteral("VALUE2", 1, "Second value")
+        ...     ]
+        ... )
+        >>> enum_abstract = AutosarEnumeration("AbstractEnum", True)
+    """
+
+    enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
+
+    def __repr__(self) -> str:
+        """Return detailed representation for debugging.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        literals_count = len(self.enumeration_literals)
+        bases_count = len(self.bases)
+        note_present = self.note is not None
+        return (
+            f"AutosarEnumeration(name='{self.name}', is_abstract={self.is_abstract}, "
+            f"atp_type={self.atp_type.name}, "
+            f"enumeration_literals={literals_count}, bases={bases_count}, note={note_present})"
+        )
+
+
+@dataclass
 class AutosarPackage:
-    """Represents an AUTOSAR package containing classes and subpackages.
+    """Represents an AUTOSAR package containing types and subpackages.
 
     Requirements:
         SWR_MODEL_00004: AUTOSAR Package Representation
+        SWR_MODEL_00020: AUTOSAR Package Type Support
 
     Attributes:
         name: The name of the package.
-        classes: List of classes in this package.
+        types: List of types (AutosarClass or AutosarEnumeration) in this package.
         subpackages: List of subpackages in this package.
 
     Examples:
         >>> pkg = AutosarPackage("BswBehavior")
-        >>> pkg.add_class(AutosarClass("BswInternalBehavior", False))
+        >>> pkg.add_type(AutosarClass("BswInternalBehavior", False))
+        >>> pkg.add_type(AutosarEnumeration("MyEnum", False))
         >>> subpkg = AutosarPackage("SubBehavior")
         >>> pkg.add_subpackage(subpkg)
     """
 
     name: str
-    classes: List[AutosarClass] = field(default_factory=list)
+    types: List[Union[AutosarClass, AutosarEnumeration]] = field(default_factory=list)
     subpackages: List["AutosarPackage"] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -191,22 +329,55 @@ class AutosarPackage:
         if not self.name or not self.name.strip():
             raise ValueError("Package name cannot be empty")
 
+    def add_type(self, typ: Union[AutosarClass, AutosarEnumeration]) -> None:
+        """Add a type (class or enumeration) to the package.
+
+        Requirements:
+            SWR_MODEL_00006: Add Class to Package
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            typ: The AutosarClass or AutosarEnumeration to add.
+
+        Raises:
+            ValueError: If a type with the same name already exists.
+        """
+        type_names = {t.name for t in self.types}
+        if typ.name in type_names:
+            raise ValueError(f"Type '{typ.name}' already exists in package '{self.name}'")
+        self.types.append(typ)
+
     def add_class(self, cls: AutosarClass) -> None:
         """Add a class to the package.
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
+            SWR_MODEL_00020: AUTOSAR Package Type Support
 
         Args:
             cls: The AutosarClass to add.
 
         Raises:
             ValueError: If a class with the same name already exists.
+
+        Note:
+            This method is maintained for backward compatibility and delegates to add_type().
         """
-        class_names = {c.name for c in self.classes}
-        if cls.name in class_names:
-            raise ValueError(f"Class '{cls.name}' already exists in package '{self.name}'")
-        self.classes.append(cls)
+        self.add_type(cls)
+
+    def add_enumeration(self, enum: AutosarEnumeration) -> None:
+        """Add an enumeration to the package.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            enum: The AutosarEnumeration to add.
+
+        Raises:
+            ValueError: If an enumeration with the same name already exists.
+        """
+        self.add_type(enum)
 
     def add_subpackage(self, pkg: "AutosarPackage") -> None:
         """Add a subpackage to this package.
@@ -225,21 +396,60 @@ class AutosarPackage:
             raise ValueError(f"Subpackage '{pkg.name}' already exists in package '{self.name}'")
         self.subpackages.append(pkg)
 
+    def get_type(self, name: str) -> Optional[Union[AutosarClass, AutosarEnumeration]]:
+        """Get a type (class or enumeration) by name.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            name: The name of the type to find.
+
+        Returns:
+            The AutosarClass or AutosarEnumeration if found, None otherwise.
+        """
+        for typ in self.types:
+            if typ.name == name:
+                return typ
+        return None
+
     def get_class(self, name: str) -> Optional[AutosarClass]:
         """Get a class by name.
 
         Requirements:
             SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
 
         Args:
             name: The name of the class to find.
 
         Returns:
             The AutosarClass if found, None otherwise.
+
+        Note:
+            This method is maintained for backward compatibility and returns only AutosarClass instances.
         """
-        for cls in self.classes:
-            if cls.name == name:
-                return cls
+        for typ in self.types:
+            if isinstance(typ, AutosarClass) and typ.name == name:
+                return typ
+        return None
+
+    def get_enumeration(self, name: str) -> Optional[AutosarEnumeration]:
+        """Get an enumeration by name.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            name: The name of the enumeration to find.
+
+        Returns:
+            The AutosarEnumeration if found, None otherwise.
+        """
+        for typ in self.types:
+            if isinstance(typ, AutosarEnumeration) and typ.name == name:
+                return typ
         return None
 
     def get_subpackage(self, name: str) -> Optional["AutosarPackage"]:
@@ -259,19 +469,52 @@ class AutosarPackage:
                 return pkg
         return None
 
+    def has_type(self, name: str) -> bool:
+        """Check if a type (class or enumeration) exists in the package.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            name: The name of the type to check.
+
+        Returns:
+            True if the type exists, False otherwise.
+        """
+        return any(typ.name == name for typ in self.types)
+
     def has_class(self, name: str) -> bool:
         """Check if a class exists in the package.
 
         Requirements:
             SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
 
         Args:
             name: The name of the class to check.
 
         Returns:
             True if the class exists, False otherwise.
+
+        Note:
+            This method is maintained for backward compatibility and checks only for AutosarClass instances.
         """
-        return any(cls.name == name for cls in self.classes)
+        return any(isinstance(typ, AutosarClass) and typ.name == name for typ in self.types)
+
+    def has_enumeration(self, name: str) -> bool:
+        """Check if an enumeration exists in the package.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            name: The name of the enumeration to check.
+
+        Returns:
+            True if the enumeration exists, False otherwise.
+        """
+        return any(isinstance(typ, AutosarEnumeration) and typ.name == name for typ in self.types)
 
     def has_subpackage(self, name: str) -> bool:
         """Check if a subpackage exists in the package.
@@ -292,10 +535,11 @@ class AutosarPackage:
 
         Requirements:
             SWR_MODEL_00009: Package String Representation
+            SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         parts = [f"Package '{self.name}'"]
-        if self.classes:
-            parts.append(f"{len(self.classes)} classes")
+        if self.types:
+            parts.append(f"{len(self.types)} types")
         if self.subpackages:
             parts.append(f"{len(self.subpackages)} subpackages")
         return " (".join(parts) + ")"
@@ -305,8 +549,9 @@ class AutosarPackage:
 
         Requirements:
             SWR_MODEL_00009: Package String Representation
+            SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         return (
             f"AutosarPackage(name='{self.name}', "
-            f"classes={len(self.classes)}, subpackages={len(self.subpackages)})"
+            f"types={len(self.types)}, subpackages={len(self.subpackages)})"
         )

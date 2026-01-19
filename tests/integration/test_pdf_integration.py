@@ -48,23 +48,23 @@ class TestPdfIntegration:
 
         for pkg in packages:
             # Check M2 top-level package (may not have classes directly)
-            if pkg.classes:
+            if pkg.types:
                 first_package = pkg
-                first_class = pkg.classes[0]
+                first_class = pkg.types[0]
                 break
 
             # Check subpackages (AUTOSARTemplates, MSR, etc.)
             for subpkg in pkg.subpackages:
-                if subpkg.classes:
+                if subpkg.types:
                     first_package = subpkg
-                    first_class = subpkg.classes[0]
+                    first_class = subpkg.types[0]
                     break
 
                 # Check nested subpackages (e.g., AutosarTopLevelStructure)
                 for subsubpkg in subpkg.subpackages:
-                    if subsubpkg.classes:
+                    if subsubpkg.types:
                         first_package = subsubpkg
-                        first_class = subsubpkg.classes[0]
+                        first_class = subsubpkg.types[0]
                         break
                     if first_class:
                         break
@@ -121,7 +121,7 @@ class TestPdfIntegration:
 
         # Count total classes recursively
         def count_classes(pkg):
-            count = len(pkg.classes)
+            count = len(pkg.types)
             for subpkg in pkg.subpackages:
                 count += count_classes(subpkg)
             return count
@@ -162,7 +162,7 @@ class TestPdfIntegration:
         classes_with_notes = []
 
         def collect_classes(pkg):
-            for cls in pkg.classes:
+            for cls in pkg.types:
                 if cls.bases:
                     classes_with_bases.append(cls)
                 if cls.note:
@@ -317,10 +317,10 @@ class TestPdfIntegration:
         assert core_comm_pkg is not None, "CoreCommunication should be a subpackage of FibexCore"
 
         # Verify CoreCommunication has classes
-        assert len(core_comm_pkg.classes) > 0, "CoreCommunication should contain classes"
+        assert len(core_comm_pkg.types) > 0, "CoreCommunication should contain classes"
 
         # Verify specific Fibex classes exist
-        fibex_class_names = [cls.name for cls in core_comm_pkg.classes]
+        fibex_class_names = [cls.name for cls in core_comm_pkg.types]
         expected_classes = ["Frame", "NPdu", "Pdu", "PduTriggering", "UserDefinedPdu"]
         for expected_class in expected_classes:
             assert expected_class in fibex_class_names, \
@@ -344,7 +344,7 @@ class TestPdfIntegration:
         print("       └─ SystemTemplate")
         print("          └─ Fibex")
         print("             └─ FibexCore")
-        print(f"                └─ CoreCommunication ({len(core_comm_pkg.classes)} classes)")
+        print(f"                └─ CoreCommunication ({len(core_comm_pkg.types)} classes)")
         print(f"                   Classes: {', '.join(sorted(fibex_class_names))}")
 
         # Find CommonStructure subpackage under AUTOSARTemplates

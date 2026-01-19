@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Optional, Union
 
-from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarEnumeration, AutosarPackage
 
 
 class MarkdownWriter:
@@ -138,9 +138,12 @@ class MarkdownWriter:
         indent = "  " * level
         output.write(f"{indent}* {pkg.name}\n")
 
-        # Write classes at one level deeper than their parent package
-        for cls in pkg.classes:
-            self._write_class(cls, parent_path + [pkg.name], level + 1, output)
+        # Write types (classes and enumerations) at one level deeper than their parent package
+        for typ in pkg.types:
+            if isinstance(typ, AutosarClass):
+                self._write_class(typ, parent_path + [pkg.name], level + 1, output)
+            elif isinstance(typ, AutosarEnumeration):
+                self._write_enumeration(typ, parent_path + [pkg.name], level + 1, output)
 
         # Write subpackages at one level deeper than their parent package
         for subpkg in pkg.subpackages:
@@ -188,9 +191,12 @@ class MarkdownWriter:
         pkg_dir = parent_dir / pkg.name
         pkg_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write each class to a separate file
-        for cls in pkg.classes:
-            self._write_class_to_file(cls, pkg_dir, pkg.name)
+        # Write each type to a separate file
+        for typ in pkg.types:
+            if isinstance(typ, AutosarClass):
+                self._write_class_to_file(typ, pkg_dir, pkg.name)
+            elif isinstance(typ, AutosarEnumeration):
+                self._write_enumeration_to_file(typ, pkg_dir, pkg.name)
 
         # Recursively write subpackages
         for subpkg in pkg.subpackages:
@@ -264,6 +270,96 @@ class MarkdownWriter:
 
         # Write to file with sanitized filename
         sanitized_name = self._sanitize_filename(cls.name)
+        file_path = pkg_dir / f"{sanitized_name}.md"
+        file_path.write_text(output.getvalue(), encoding="utf-8")
+
+    def _write_enumeration(
+        self,
+        enum: AutosarEnumeration,
+        parent_path: List[str],
+        level: int,
+        output: StringIO,
+    ) -> None:
+        """Write an enumeration to the output stream.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Args:
+            enum: The enumeration to write.
+            parent_path: List of parent package names.
+            level: Current indentation level.
+            output: StringIO buffer to write to.
+        """
+        indent = "  " * level
+        abstract_suffix = " (abstract)" if enum.is_abstract else ""
+        output.write(f"{indent}* {enum.name}{abstract_suffix}\n")
+
+    def _write_enumeration_to_file(
+        self, enum: AutosarEnumeration, pkg_dir: Path, package_name: str
+    ) -> None:
+        """Write a single enumeration to its own markdown file.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+
+        Args:
+            enum: The enumeration to write.
+            pkg_dir: Directory path for the package.
+            package_name: Name of the parent package.
+
+        Raises:
+            OSError: If file writing fails.
+        """
+        output = StringIO()
+
+        # Write package name
+        output.write(f"# Package: {package_name}\n\n")
+
+        # Write enumeration name
+        if enum.is_abstract:
+            output.write("## Enumeration (abstract)\n\n")
+        else:
+            output.write("## Enumeration\n\n")
+        output.write(f"**{enum.name}**\n\n")
+
+        # Write ATP type section if ATP type is not NONE
+        if enum.atp_type != ATPType.NONE:
+            output.write("## ATP Type\n\n")
+            if enum.atp_type == ATPType.ATP_VARIATION:
+                output.write("* atpVariation\n")
+            elif enum.atp_type == ATPType.ATP_MIXED_STRING:
+                output.write("* atpMixedString\n")
+            elif enum.atp_type == ATPType.ATP_MIXED:
+                output.write("* atpMixed\n")
+            output.write("\n")
+
+        # Write base classes if present
+        if enum.bases:
+            output.write("## Base Classes\n\n")
+            for base in enum.bases:
+                output.write(f"* {base}\n")
+            output.write("\n")
+
+        # Write note if present
+        if enum.note:
+            output.write("## Note\n\n")
+            output.write(f"{enum.note}\n\n")
+
+        # Write enumeration literals if present
+        if enum.enumeration_literals:
+            output.write("## Enumeration Literals\n\n")
+            for literal in enum.enumeration_literals:
+                index_suffix = f" (index={literal.index})" if literal.index is not None else ""
+                output.write(f"* {literal.name}{index_suffix}\n")
+                if literal.description:
+                    output.write(f"  * {literal.description}\n")
+            output.write("\n")
+
+        # Write to file with sanitized filename
+        sanitized_name = self._sanitize_filename(enum.name)
         file_path = pkg_dir / f"{sanitized_name}.md"
         file_path.write_text(output.getvalue(), encoding="utf-8")
 

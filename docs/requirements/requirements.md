@@ -159,6 +159,120 @@ The ATP type enum shall support the following values:
 
 ---
 
+#### SWR_MODEL_00014
+**Title**: AUTOSAR Enumeration Literal Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide a data model to represent an AUTOSAR enumeration literal with the following attributes:
+- `name`: The name of the enumeration literal (non-empty string)
+- `index`: The optional index of the literal (int | None, defaults to None)
+- `description`: Optional description of the literal (str | None, defaults to None)
+
+---
+
+#### SWR_MODEL_00015
+**Title**: AUTOSAR Enumeration Literal Name Validation
+
+**Maturity**: accept
+
+**Description**: The system shall validate that enumeration literal names are non-empty and do not contain only whitespace upon initialization.
+
+---
+
+#### SWR_MODEL_00016
+**Title**: AUTOSAR Enumeration Literal String Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide string representations of enumeration literals, including:
+- A user-friendly string showing literal name with "(index=<n>)" suffix if index is present
+- A debug representation showing all attributes (name, index, description)
+
+---
+
+#### SWR_MODEL_00017
+**Title**: AUTOSAR Class Enumeration Literal Support
+
+**Maturity**: invalid
+
+**Description**: This requirement has been superseded by SWR_MODEL_00019 (AUTOSAR Enumeration Type Representation).
+
+The original approach of adding enumeration literals to AutosarClass has been replaced with a dedicated AutosarEnumeration class that inherits from AutosarType. This provides better type separation and clearer domain modeling.
+
+**Superseded by**: SWR_MODEL_00019
+
+---
+
+#### SWR_MODEL_00018
+**Title**: AUTOSAR Type Abstract Base Class
+
+**Maturity**: accept
+
+**Description**: The system shall provide an abstract base class (`AutosarType`) that encapsulates common properties shared by all AUTOSAR type definitions, including regular classes and enumerations.
+
+The abstract base class shall include the following attributes:
+- `name`: The name of the type (non-empty string)
+- `is_abstract`: Whether the type is abstract (boolean)
+- `atp_type`: ATP marker type enum indicating the AUTOSAR Tool Platform marker (defaults to NONE)
+- `bases`: List of base type names for inheritance tracking (List[str], defaults to empty list)
+- `note`: Optional documentation or comments about the type (str | None, defaults to None)
+
+The abstract base class shall provide:
+- Name validation in `__post_init__` to ensure non-empty names
+- String representation with "(abstract)" suffix for abstract types
+- Common initialization logic for all derived types
+
+This requirement enables a proper inheritance hierarchy where both `AutosarClass` and `AutosarEnumeration` inherit from `AutosarType`, eliminating code duplication and ensuring consistent behavior across all AUTOSAR type definitions.
+
+---
+
+#### SWR_MODEL_00019
+**Title**: AUTOSAR Enumeration Type Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide a dedicated data model (`AutosarEnumeration`) to represent AUTOSAR enumeration types, inheriting from the `AutosarType` abstract base class.
+
+The `AutosarEnumeration` class shall include:
+- All inherited attributes from `AutosarType` (name, is_abstract, atp_type, bases, note)
+- `enumeration_literals`: List of enumeration literal values (List[AutosarEnumLiteral], defaults to empty list)
+
+The class shall:
+- Inherit validation and string representation logic from `AutosarType`
+- Provide a debug representation showing all attributes including enumeration literals count
+- Support abstract enumerations (is_abstract=True) for enumeration metamodels
+
+This allows the system to properly represent enumeration types like `EcucDestinationUriNestingContractEnum` from AUTOSAR CP TPS ECUConfiguration as a distinct type from regular classes, improving type safety and code clarity.
+
+---
+
+#### SWR_MODEL_00020
+**Title**: AUTOSAR Package Type Support
+
+**Maturity**: accept
+
+**Description**: The system shall update the `AutosarPackage` data model to support both classes and enumerations through a unified `types` collection.
+
+The `AutosarPackage` class shall:
+- Replace the `classes` attribute with `types`: List[Union[AutosarClass, AutosarEnumeration]]
+- Provide the following methods:
+  - `add_type(typ)`: Add any type (class or enumeration) to the package
+  - `add_class(cls)`: Add a class to the package (backward compatibility)
+  - `add_enumeration(enum)`: Add an enumeration to the package
+  - `get_type(name)`: Get any type by name
+  - `get_class(name)`: Get a class by name (returns only AutosarClass instances)
+  - `get_enumeration(name)`: Get an enumeration by name (returns only AutosarEnumeration instances)
+  - `has_type(name)`: Check if any type exists
+  - `has_class(name)`: Check if a class exists
+  - `has_enumeration(name)`: Check if an enumeration exists
+- Prevent duplicate type names across all types (both classes and enumerations)
+- Update string representation to show "X types" instead of "X classes"
+
+This requirement provides a unified interface for managing both classes and enumerations while maintaining backward compatibility through the `add_class()` method.
+
+---
+
 ### 2. Parser
 
 #### SWR_PARSER_00001
@@ -367,6 +481,60 @@ This requirement ensures that the parser correctly handles the three types of cl
 - Enumeration types: `Enumeration IntervalTypeEnum`
 
 Without this requirement, the parser would fail to recognize when a new class starts after "Primitive" or "Enumeration" definitions, causing attributes from subsequent classes to be incorrectly added to the previous class. For example, without recognizing "Primitive Limit" as a new class, the `intervalType` attribute from the Limit class would be incorrectly added to the ImplementationDataType class.
+
+---
+
+#### SWR_PARSER_00014
+**Title**: Enumeration Literal Header Recognition
+
+**Maturity**: accept
+
+**Description**: The system shall recognize enumeration literal table headers in PDF files to identify when enumeration literals should be extracted.
+
+The system shall:
+1. Recognize the "Literal Description" header pattern that indicates the start of an enumeration literal table
+2. Track when parsing is within the enumeration literal section
+3. Initialize enumeration literal parsing state when the header is detected
+
+---
+
+#### SWR_PARSER_00015
+**Title**: Enumeration Literal Extraction from PDF
+
+**Maturity**: accept
+
+**Description**: The system shall extract enumeration literals from PDF files and convert them to AutosarEnumLiteral objects.
+
+The system shall:
+1. Parse enumeration literal lines with the format: `<literal_name> <description>`
+2. Extract the literal name (must start with a letter and contain alphanumeric characters or underscores)
+3. Extract the literal description (free-form text after the literal name)
+4. Extract enumeration literal indices from description tags (e.g., "atp.EnumerationLiteralIndex=0")
+5. Create AutosarEnumLiteral objects with the extracted name, index, and description
+6. Store enumeration literals in a list in the ClassDefinition
+7. Transfer enumeration literals to the AutosarClass object during package hierarchy building
+
+This requirement ensures that enumeration literals are properly extracted for enumeration classes like `EcucDestinationUriNestingContractEnum` from AUTOSAR CP TPS ECUConfiguration, which contains literals such as:
+- `leafOfTargetContainer` (index=0, description="EcucDestinationUriPolicy describes elements directly owned by the target container")
+- `targetContainer` (index=1, description="EcucDestinationUriPolicy describes the target container of EcucUriReferenceDef")
+- `vertexOfTargetContainer` (index=2, description="EcucDestinationUriPolicy describes elements of the target container which can be defined in arbitrary nested subContainer structure")
+
+---
+
+#### SWR_PARSER_00016
+**Title**: Enumeration Literal Section Termination
+
+**Maturity**: accept
+
+**Description**: The system shall properly detect the end of enumeration literal sections in PDF files to prevent incorrect extraction of non-literal content.
+
+The system shall:
+1. Terminate the enumeration literal section when encountering new class definitions (Class, Primitive, or Enumeration patterns)
+2. Terminate the enumeration literal section when encountering new table headers (e.g., "Table X.Y:")
+3. Ensure that only valid enumeration literals are extracted and stored
+4. Prevent false positives from other sections of the PDF
+
+This requirement ensures that enumeration literal extraction is scoped correctly to the enumeration literal table, preventing extraction of unrelated text content as enumeration literals.
 
 ---
 

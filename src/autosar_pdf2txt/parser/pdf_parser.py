@@ -668,7 +668,7 @@ class PdfParser:
         top_level_packages = [
             pkg
             for path, pkg in package_map.items()
-            if "::" not in path and (pkg.classes or pkg.subpackages)
+            if "::" not in path and (pkg.types or pkg.subpackages)
         ]
 
         return top_level_packages

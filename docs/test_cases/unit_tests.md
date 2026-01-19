@@ -1205,6 +1205,242 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_MODEL_00034
+**Title**: Test AutosarType Abstract Base Class Properties
+
+**Maturity**: accept
+
+**Description**: Verify that the AutosarType abstract base class provides common properties for all AUTOSAR types.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass (which inherits from AutosarType)
+2. Verify the name attribute is set correctly
+3. Verify the is_abstract attribute is set correctly
+4. Verify the atp_type attribute defaults to ATPType.NONE
+5. Verify the bases attribute is an empty list by default
+6. Verify the note attribute is None by default
+
+**Expected Result**: All inherited properties from AutosarType are correctly initialized
+
+**Requirements Coverage**: SWR_MODEL_00018
+
+---
+
+#### SWUT_MODEL_00035
+**Title**: Test AutosarType Name Validation
+
+**Maturity**: accept
+
+**Description**: Verify that AutosarType validates non-empty names.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Attempt to create an AutosarClass with name="" (empty string)
+2. Verify ValueError is raised with message "Type name cannot be empty"
+3. Attempt to create an AutosarClass with name="   " (whitespace only)
+4. Verify ValueError is raised with message "Type name cannot be empty"
+
+**Expected Result**: ValueError is raised for empty or whitespace-only names
+
+**Requirements Coverage**: SWR_MODEL_00018
+
+---
+
+#### SWUT_MODEL_00036
+**Title**: Test AutosarType String Representation
+
+**Maturity**: accept
+
+**Description**: Verify that AutosarType provides proper string representation with abstract suffix.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass" and is_abstract=False
+2. Verify str(cls) returns "MyClass"
+3. Create an AutosarClass with name="AbstractClass" and is_abstract=True
+4. Verify str(cls) returns "AbstractClass (abstract)"
+
+**Expected Result**: String representation includes "(abstract)" suffix for abstract types
+
+**Requirements Coverage**: SWR_MODEL_00018
+
+---
+
+#### SWUT_MODEL_00037
+**Title**: Test AutosarEnumeration Initialization
+
+**Maturity**: accept
+
+**Description**: Verify that an AUTOSAR enumeration can be created with proper initialization.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumeration with name="MyEnum" and is_abstract=False
+2. Verify the name attribute is set to "MyEnum"
+3. Verify the is_abstract attribute is set to False
+4. Verify the enumeration_literals attribute is an empty list
+5. Verify that AutosarEnumeration inherits from AutosarType
+
+**Expected Result**: Enumeration is created with all attributes properly initialized
+
+**Requirements Coverage**: SWR_MODEL_00018, SWR_MODEL_00019
+
+---
+
+#### SWUT_MODEL_00038
+**Title**: Test AutosarEnumeration with Literals
+
+**Maturity**: accept
+
+**Description**: Verify that enumeration literals can be added to an AutosarEnumeration.
+
+**Precondition**: AutosarEnumLiteral instances exist
+
+**Test Steps**:
+1. Create two AutosarEnumLiteral instances:
+   - literal1 with name="VALUE1", index=0, description="First value"
+   - literal2 with name="VALUE2", index=1, description="Second value"
+2. Create an AutosarEnumeration with enumeration_literals=[literal1, literal2]
+3. Verify len(enum.enumeration_literals) == 2
+4. Verify enum.enumeration_literals[0].name == "VALUE1"
+5. Verify enum.enumeration_literals[0].index == 0
+6. Verify enum.enumeration_literals[1].name == "VALUE2"
+7. Verify enum.enumeration_literals[1].index == 1
+
+**Expected Result**: Enumeration literals are properly stored and accessible
+
+**Requirements Coverage**: SWR_MODEL_00019
+
+---
+
+#### SWUT_MODEL_00039
+**Title**: Test AutosarPackage add_type Method
+
+**Maturity**: accept
+
+**Description**: Verify that the add_type method can add both classes and enumerations to a package.
+
+**Precondition**: AutosarClass and AutosarEnumeration instances exist
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarClass with name="MyClass"
+3. Create an AutosarEnumeration with name="MyEnum"
+4. Call pkg.add_type(cls)
+5. Call pkg.add_type(enum)
+6. Verify len(pkg.types) == 2
+7. Verify pkg.types[0].name == "MyClass"
+8. Verify pkg.types[1].name == "MyEnum"
+
+**Expected Result**: Both class and enumeration are added to the package's types list
+
+**Requirements Coverage**: SWR_MODEL_00020
+
+---
+
+#### SWUT_MODEL_00040
+**Title**: Test AutosarPackage add_enumeration Method
+
+**Maturity**: accept
+
+**Description**: Verify that the add_enumeration method adds an enumeration to the package.
+
+**Precondition**: AutosarEnumeration instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarEnumeration with name="MyEnum"
+3. Call pkg.add_enumeration(enum)
+4. Verify len(pkg.types) == 1
+5. Verify pkg.types[0].name == "MyEnum"
+6. Verify isinstance(pkg.types[0], AutosarEnumeration) is True
+
+**Expected Result**: Enumeration is added to the package
+
+**Requirements Coverage**: SWR_MODEL_00020
+
+---
+
+#### SWUT_MODEL_00041
+**Title**: Test AutosarPackage get_enumeration Method
+
+**Maturity**: accept
+
+**Description**: Verify that the get_enumeration method retrieves enumerations by name.
+
+**Precondition**: Package with both class and enumeration exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Add an AutosarClass with name="MyClass"
+3. Add an AutosarEnumeration with name="MyEnum"
+4. Call pkg.get_enumeration("MyEnum")
+5. Verify the result is an AutosarEnumeration instance
+6. Verify the result.name == "MyEnum"
+7. Call pkg.get_enumeration("MyClass")
+8. Verify the result is None (MyClass is not an enumeration)
+
+**Expected Result**: get_enumeration returns only AutosarEnumeration instances
+
+**Requirements Coverage**: SWR_MODEL_00020
+
+---
+
+#### SWUT_MODEL_00042
+**Title**: Test AutosarPackage has_enumeration Method
+
+**Maturity**: accept
+
+**Description**: Verify that the has_enumeration method checks for enumeration existence.
+
+**Precondition**: Package with both class and enumeration exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Add an AutosarClass with name="MyClass"
+3. Add an AutosarEnumeration with name="MyEnum"
+4. Call pkg.has_enumeration("MyEnum")
+5. Verify the result is True
+6. Call pkg.has_enumeration("MyClass")
+7. Verify the result is False (MyClass is not an enumeration)
+8. Call pkg.has_enumeration("NonExistent")
+9. Verify the result is False
+
+**Expected Result**: has_enumeration correctly identifies enumeration existence
+
+**Requirements Coverage**: SWR_MODEL_00020
+
+---
+
+#### SWUT_MODEL_00043
+**Title**: Test AutosarPackage Unified Type Management
+
+**Maturity**: accept
+
+**Description**: Verify that the unified types collection prevents duplicate names across classes and enumerations.
+
+**Precondition**: AutosarClass and AutosarEnumeration instances exist
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarClass with name="MyType"
+3. Create an AutosarEnumeration with name="MyType" (same name)
+4. Add the class to the package
+5. Attempt to add the enumeration to the package
+6. Verify ValueError is raised with message "Type 'MyType' already exists in package 'TestPackage'"
+7. Verify len(pkg.types) == 1 (only the class was added)
+
+**Expected Result**: Duplicate type names are prevented across all types
+
+**Requirements Coverage**: SWR_MODEL_00020
+
+---
+
 ### 2. Writer Tests
 
 #### SWUT_WRITER_00001

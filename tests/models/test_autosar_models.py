@@ -1,11 +1,156 @@
-"""Tests for AutosarAttribute, AutosarClass and AutosarPackage models.
+"""Tests for AutosarAttribute, AutosarClass, AutosarEnumeration, AutosarEnumLiteral, AutosarPackage and AutosarType models.
 
 Test coverage for autosar_models.py targeting 100%.
 """
 
 import pytest
 
-from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import (
+    ATPType,
+    AutosarAttribute,
+    AutosarClass,
+    AutosarEnumLiteral,
+    AutosarEnumeration,
+    AutosarPackage,
+)
+
+
+class TestAutosarEnumLiteral:
+    """Tests for AutosarEnumLiteral class.
+
+    Requirements:
+        SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        SWR_MODEL_00015: AUTOSAR Enumeration Literal Name Validation
+        SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+    """
+
+    def test_init_with_all_fields(self) -> None:
+        """Test initialization with all fields.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(
+            name="leafOfTargetContainer", index=0, description="Elements directly owned"
+        )
+        assert literal.name == "leafOfTargetContainer"
+        assert literal.index == 0
+        assert literal.description == "Elements directly owned"
+
+    def test_init_with_name_only(self) -> None:
+        """Test initialization with only name field.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="targetContainer")
+        assert literal.name == "targetContainer"
+        assert literal.index is None
+        assert literal.description is None
+
+    def test_init_with_name_and_description(self) -> None:
+        """Test initialization with name and description.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="vertexOfTargetContainer", description="Nested elements")
+        assert literal.name == "vertexOfTargetContainer"
+        assert literal.description == "Nested elements"
+        assert literal.index is None
+
+    def test_init_with_name_and_index(self) -> None:
+        """Test initialization with name and index.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="VALUE1", index=1)
+        assert literal.name == "VALUE1"
+        assert literal.index == 1
+        assert literal.description is None
+
+    def test_post_init_valid_name(self) -> None:
+        """Test valid name is accepted.
+
+        Requirements:
+            SWR_MODEL_00015: AUTOSAR Enumeration Literal Name Validation
+        """
+        literal = AutosarEnumLiteral(name="validLiteral")
+        assert literal.name == "validLiteral"
+
+    def test_post_init_empty_name(self) -> None:
+        """Test empty name raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00015: AUTOSAR Enumeration Literal Name Validation
+        """
+        with pytest.raises(ValueError, match="Enumeration literal name cannot be empty"):
+            AutosarEnumLiteral(name="")
+
+    def test_post_init_whitespace_name(self) -> None:
+        """Test whitespace-only name raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00015: AUTOSAR Enumeration Literal Name Validation
+        """
+        with pytest.raises(ValueError, match="Enumeration literal name cannot be empty"):
+            AutosarEnumLiteral(name="   ")
+
+    def test_str_without_index(self) -> None:
+        """Test string representation without index.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="MyLiteral")
+        assert str(literal) == "MyLiteral"
+
+    def test_str_with_index(self) -> None:
+        """Test string representation with index.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="MyLiteral", index=0)
+        assert str(literal) == "MyLiteral (index=0)"
+        literal2 = AutosarEnumLiteral(name="AnotherLiteral", index=5)
+        assert str(literal2) == "AnotherLiteral (index=5)"
+
+    def test_repr(self) -> None:
+        """Test debug representation.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="TestLiteral", index=1, description="Test description")
+        result = repr(literal)
+        assert "AutosarEnumLiteral" in result
+        assert "name='TestLiteral'" in result
+        assert "index=1" in result
+        assert "description=True" in result
+
+    def test_repr_without_description(self) -> None:
+        """Test debug representation without description.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="TestLiteral")
+        result = repr(literal)
+        assert "AutosarEnumLiteral" in result
+        assert "name='TestLiteral'" in result
+        assert "description=False" in result
+
+    def test_index_zero(self) -> None:
+        """Test that index can be zero.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="FirstValue", index=0)
+        assert literal.index == 0
+        assert str(literal) == "FirstValue (index=0)"
 
 
 class TestAutosarAttribute:
@@ -170,7 +315,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00002: AUTOSAR Class Name Validation
         """
-        with pytest.raises(ValueError, match="Class name cannot be empty"):
+        with pytest.raises(ValueError, match="Type name cannot be empty"):
             AutosarClass(name="", is_abstract=False)
 
     def test_post_init_whitespace_name(self) -> None:
@@ -179,7 +324,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00002: AUTOSAR Class Name Validation
         """
-        with pytest.raises(ValueError, match="Class name cannot be empty"):
+        with pytest.raises(ValueError, match="Type name cannot be empty"):
             AutosarClass(name="   ", is_abstract=False)
 
     def test_str_concrete_class(self) -> None:
@@ -470,6 +615,202 @@ class TestAutosarClass:
         assert "atp_type=ATP_MIXED_STRING" in result
 
 
+class TestAutosarEnumeration:
+    """Tests for AutosarEnumeration class.
+
+    Requirements:
+        SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+    """
+
+    def test_init_concrete_enumeration(self) -> None:
+        """Test creating a concrete enumeration.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        assert enum.name == "MyEnum"
+        assert enum.is_abstract is False
+        assert enum.enumeration_literals == []
+
+    def test_init_abstract_enumeration(self) -> None:
+        """Test creating an abstract enumeration.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        enum = AutosarEnumeration(name="AbstractEnum", is_abstract=True)
+        assert enum.name == "AbstractEnum"
+        assert enum.is_abstract is True
+
+    def test_init_with_literals(self) -> None:
+        """Test creating enumeration with literals.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        literals = [
+            AutosarEnumLiteral("VALUE1", 0, "First value"),
+            AutosarEnumLiteral("VALUE2", 1, "Second value"),
+        ]
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False, enumeration_literals=literals)
+        assert enum.name == "MyEnum"
+        assert len(enum.enumeration_literals) == 2
+        assert enum.enumeration_literals[0].name == "VALUE1"
+        assert enum.enumeration_literals[1].name == "VALUE2"
+
+    def test_init_with_bases(self) -> None:
+        """Test creating enumeration with base classes.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        enum = AutosarEnumeration(name="DerivedEnum", is_abstract=False, bases=["BaseEnum"])
+        assert enum.bases == ["BaseEnum"]
+
+    def test_init_with_note(self) -> None:
+        """Test creating enumeration with note.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False, note="Documentation note")
+        assert enum.note == "Documentation note"
+
+    def test_init_with_atp_variation(self) -> None:
+        """Test creating enumeration with ATP variation type.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
+        assert enum.atp_type == ATPType.ATP_VARIATION
+
+    def test_init_with_all_fields(self) -> None:
+        """Test creating enumeration with all fields.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        literals = [
+            AutosarEnumLiteral("VALUE1", 0),
+            AutosarEnumLiteral("VALUE2", 1),
+        ]
+        enum = AutosarEnumeration(
+            name="CompleteEnum",
+            is_abstract=False,
+            atp_type=ATPType.ATP_MIXED,
+            bases=["BaseEnum"],
+            note="Complete enumeration",
+            enumeration_literals=literals
+        )
+        assert enum.name == "CompleteEnum"
+        assert enum.is_abstract is False
+        assert enum.atp_type == ATPType.ATP_MIXED
+        assert enum.bases == ["BaseEnum"]
+        assert enum.note == "Complete enumeration"
+        assert len(enum.enumeration_literals) == 2
+
+    def test_str_concrete_enumeration(self) -> None:
+        """Test string representation of concrete enumeration.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        assert str(enum) == "MyEnum"
+
+    def test_str_abstract_enumeration(self) -> None:
+        """Test string representation of abstract enumeration.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        enum = AutosarEnumeration(name="AbstractEnum", is_abstract=True)
+        assert str(enum) == "AbstractEnum (abstract)"
+
+    def test_repr_without_literals(self) -> None:
+        """Test debug representation without literals.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        result = repr(enum)
+        assert "AutosarEnumeration" in result
+        assert "name='MyEnum'" in result
+        assert "is_abstract=False" in result
+        assert "enumeration_literals=0" in result
+
+    def test_repr_with_literals(self) -> None:
+        """Test debug representation with literals.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        literals = [
+            AutosarEnumLiteral("VALUE1", 0),
+            AutosarEnumLiteral("VALUE2", 1),
+        ]
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False, enumeration_literals=literals)
+        result = repr(enum)
+        assert "enumeration_literals=2" in result
+
+    def test_repr_with_all_fields(self) -> None:
+        """Test debug representation with all fields.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        literals = [AutosarEnumLiteral("VALUE1", 0)]
+        enum = AutosarEnumeration(
+            name="CompleteEnum",
+            is_abstract=True,
+            atp_type=ATPType.ATP_VARIATION,
+            bases=["BaseEnum"],
+            note="Note",
+            enumeration_literals=literals
+        )
+        result = repr(enum)
+        assert "name='CompleteEnum'" in result
+        assert "is_abstract=True" in result
+        assert "atp_type=ATP_VARIATION" in result
+        assert "enumeration_literals=1" in result
+        assert "bases=1" in result
+        assert "note=True" in result
+
+    def test_literals_mutation(self) -> None:
+        """Test that enumeration_literals list can be mutated.
+
+        Requirements:
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        enum.enumeration_literals.append(AutosarEnumLiteral("VALUE1", 0))
+        assert len(enum.enumeration_literals) == 1
+        enum.enumeration_literals.append(AutosarEnumLiteral("VALUE2", 1))
+        assert len(enum.enumeration_literals) == 2
+
+    def test_inheritance_from_autosar_type(self) -> None:
+        """Test that AutosarEnumeration inherits from AutosarType.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        # Check inherited attributes
+        assert hasattr(enum, 'name')
+        assert hasattr(enum, 'is_abstract')
+        assert hasattr(enum, 'atp_type')
+        assert hasattr(enum, 'bases')
+        assert hasattr(enum, 'note')
+        # Check enumeration-specific attribute
+        assert hasattr(enum, 'enumeration_literals')
+
+
 class TestAutosarPackage:
     """Tests for AutosarPackage class.
 
@@ -490,7 +831,7 @@ class TestAutosarPackage:
         """
         pkg = AutosarPackage(name="TestPackage")
         assert pkg.name == "TestPackage"
-        assert len(pkg.classes) == 0
+        assert len(pkg.types) == 0
         assert len(pkg.subpackages) == 0
 
     def test_init_with_classes(self) -> None:
@@ -501,10 +842,10 @@ class TestAutosarPackage:
         """
         cls1 = AutosarClass(name="Class1", is_abstract=False)
         cls2 = AutosarClass(name="Class2", is_abstract=True)
-        pkg = AutosarPackage(name="TestPackage", classes=[cls1, cls2])
-        assert len(pkg.classes) == 2
-        assert pkg.classes[0].name == "Class1"
-        assert pkg.classes[1].name == "Class2"
+        pkg = AutosarPackage(name="TestPackage", types=[cls1, cls2])
+        assert len(pkg.types) == 2
+        assert pkg.types[0].name == "Class1"
+        assert pkg.types[1].name == "Class2"
 
     def test_init_with_subpackages(self) -> None:
         """Test creating a package with subpackages.
@@ -553,8 +894,8 @@ class TestAutosarPackage:
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="NewClass", is_abstract=False)
         pkg.add_class(cls)
-        assert len(pkg.classes) == 1
-        assert pkg.classes[0] == cls
+        assert len(pkg.types) == 1
+        assert pkg.types[0] == cls
 
     def test_add_class_duplicate(self) -> None:
         """Test adding duplicate class raises ValueError.
@@ -691,7 +1032,7 @@ class TestAutosarPackage:
         pkg.add_class(AutosarClass(name="Class2", is_abstract=True))
         result = str(pkg)
         assert "TestPackage" in result
-        assert "2 classes" in result
+        assert "2 types" in result
 
     def test_str_package_with_subpackages_only(self) -> None:
         """Test string representation of package with only subpackages.
@@ -717,7 +1058,7 @@ class TestAutosarPackage:
         pkg.add_subpackage(AutosarPackage(name="Sub1"))
         result = str(pkg)
         assert "TestPackage" in result
-        assert "1 classes" in result
+        assert "1 types" in result
         assert "1 subpackages" in result
 
     def test_str_empty_package(self) -> None:
@@ -742,7 +1083,7 @@ class TestAutosarPackage:
         result = repr(pkg)
         assert "AutosarPackage" in result
         assert "name='TestPackage'" in result
-        assert "classes=1" in result
+        assert "types=1" in result
         assert "subpackages=1" in result
 
     def test_nested_packages(self) -> None:
@@ -762,3 +1103,268 @@ class TestAutosarPackage:
         assert len(root.subpackages) == 1
         assert root.get_subpackage("Child") == child
         assert child.get_subpackage("Grandchild") == grandchild
+
+    def test_add_type_with_class(self) -> None:
+        """Test add_type method with a class.
+
+        Requirements:
+            SWR_MODEL_00006: Add Class to Package
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_type(cls)
+        assert len(pkg.types) == 1
+        assert pkg.types[0].name == "MyClass"
+
+    def test_add_type_with_enumeration(self) -> None:
+        """Test add_type method with an enumeration.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        pkg.add_type(enum)
+        assert len(pkg.types) == 1
+        assert pkg.types[0].name == "MyEnum"
+
+    def test_add_type_duplicate(self) -> None:
+        """Test add_type method rejects duplicate type names.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyType", is_abstract=False)
+        enum = AutosarEnumeration(name="MyType", is_abstract=False)
+
+        pkg.add_type(cls)
+        with pytest.raises(ValueError, match="Type 'MyType' already exists"):
+            pkg.add_type(enum)
+
+    def test_add_enumeration(self) -> None:
+        """Test add_enumeration method.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        pkg.add_enumeration(enum)
+        assert len(pkg.types) == 1
+        assert isinstance(pkg.types[0], AutosarEnumeration)
+
+    def test_get_type_found(self) -> None:
+        """Test get_type method when type exists.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_type(cls)
+        result = pkg.get_type("MyClass")
+        assert result is not None
+        assert result.name == "MyClass"
+
+    def test_get_type_not_found(self) -> None:
+        """Test get_type method when type doesn't exist.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        result = pkg.get_type("NonExistent")
+        assert result is None
+
+    def test_get_type_from_mixed_types(self) -> None:
+        """Test get_type can retrieve both classes and enumerations.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        pkg.add_type(cls)
+        pkg.add_type(enum)
+
+        cls_result = pkg.get_type("MyClass")
+        enum_result = pkg.get_type("MyEnum")
+
+        assert isinstance(cls_result, AutosarClass)
+        assert isinstance(enum_result, AutosarEnumeration)
+
+    def test_get_enumeration_found(self) -> None:
+        """Test get_enumeration method when enumeration exists.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        pkg.add_enumeration(enum)
+        result = pkg.get_enumeration("MyEnum")
+        assert result is not None
+        assert result.name == "MyEnum"
+        assert isinstance(result, AutosarEnumeration)
+
+    def test_get_enumeration_not_found(self) -> None:
+        """Test get_enumeration method when enumeration doesn't exist.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        result = pkg.get_enumeration("NonExistent")
+        assert result is None
+
+    def test_get_enumeration_returns_none_for_class(self) -> None:
+        """Test get_enumeration returns None for classes.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_class(cls)
+        result = pkg.get_enumeration("MyClass")
+        assert result is None
+
+    def test_has_type_true(self) -> None:
+        """Test has_type returns True when type exists.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_type(cls)
+        assert pkg.has_type("MyClass") is True
+
+    def test_has_type_false(self) -> None:
+        """Test has_type returns False when type doesn't exist.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        assert pkg.has_type("NonExistent") is False
+
+    def test_has_enumeration_true(self) -> None:
+        """Test has_enumeration returns True when enumeration exists.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+        pkg.add_enumeration(enum)
+        assert pkg.has_enumeration("MyEnum") is True
+
+    def test_has_enumeration_false_for_class(self) -> None:
+        """Test has_enumeration returns False for classes.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_class(cls)
+        assert pkg.has_enumeration("MyClass") is False
+
+    def test_has_enumeration_false_not_found(self) -> None:
+        """Test has_enumeration returns False when not found.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        assert pkg.has_enumeration("NonExistent") is False
+
+    def test_unified_type_management(self) -> None:
+        """Test that types collection unifies classes and enumerations.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+
+        pkg.add_type(cls)
+        pkg.add_type(enum)
+
+        assert len(pkg.types) == 2
+        assert pkg.has_type("MyClass") is True
+        assert pkg.has_type("MyEnum") is True
+
+    def test_duplicate_prevention_across_type_kinds(self) -> None:
+        """Test duplicate names prevented across classes and enumerations.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyType", is_abstract=False)
+        enum = AutosarEnumeration(name="MyType", is_abstract=False)
+
+        pkg.add_type(cls)
+        with pytest.raises(ValueError, match="Type 'MyType' already exists"):
+            pkg.add_type(enum)
+
+        assert len(pkg.types) == 1
+        assert isinstance(pkg.types[0], AutosarClass)
+
+    def test_add_class_backward_compatibility(self) -> None:
+        """Test add_class method still works.
+
+        Requirements:
+            SWR_MODEL_00006: Add Class to Package
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        pkg.add_class(cls)
+        assert len(pkg.types) == 1
+        assert pkg.has_class("MyClass") is True
+
+    def test_get_class_returns_only_classes(self) -> None:
+        """Test get_class returns only classes, not enumerations.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+
+        pkg.add_type(cls)
+        pkg.add_type(enum)
+
+        cls_result = pkg.get_class("MyClass")
+        enum_result = pkg.get_class("MyEnum")
+
+        assert isinstance(cls_result, AutosarClass)
+        assert enum_result is None
+
+    def test_has_class_returns_true_only_for_classes(self) -> None:
+        """Test has_class returns True only for classes.
+
+        Requirements:
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", is_abstract=False)
+
+        pkg.add_type(cls)
+        pkg.add_type(enum)
+
+        assert pkg.has_class("MyClass") is True
+        assert pkg.has_class("MyEnum") is False

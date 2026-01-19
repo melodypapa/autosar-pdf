@@ -2,11 +2,11 @@
 COVERAGE REPORT - MARKDOWN FORMAT
 ======================================================================
 
-## Overall Coverage: 86.1%
+## Overall Coverage: 86.8%
 
-**Total Statements**: 598
+**Total Statements**: 628
 
-**Statements Covered**: 515
+**Statements Covered**: 545
 
 **Statements Missing**: 83
 
@@ -20,7 +20,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 | ✓ `src\autosar_pdf2txt\models\__init__.py` | 2 | 2 | 0 | 100.0% |
 | ✓ `src\autosar_pdf2txt\models\autosar_models.py` | 125 | 125 | 0 | 100.0% |
 | ✓ `src\autosar_pdf2txt\parser\__init__.py` | 2 | 2 | 0 | 100.0% |
-| ✗ `src\autosar_pdf2txt\parser\pdf_parser.py` | 261 | 229 | 32 | 87.7% |
+| ✗ `src\autosar_pdf2txt\parser\pdf_parser.py` | 291 | 259 | 32 | 89.0% |
 | ✓ `src\autosar_pdf2txt\writer\__init__.py` | 2 | 2 | 0 | 100.0% |
 | ✗ `src\autosar_pdf2txt\writer\markdown_writer.py` | 131 | 90 | 41 | 68.7% |
 
@@ -29,7 +29,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 | Source File | Coverage | Missing Statements |
 |-------------|----------|-------------------|
 | `src\autosar_pdf2txt\cli\autosar_cli.py` | 85.3% (58/68) | 10 stmts (14.7%) |
-| `src\autosar_pdf2txt\parser\pdf_parser.py` | 87.7% (229/261) | 32 stmts (12.3%) |
+| `src\autosar_pdf2txt\parser\pdf_parser.py` | 89.0% (259/291) | 32 stmts (11.0%) |
 | `src\autosar_pdf2txt\writer\markdown_writer.py` | 68.7% (90/131) | 41 stmts (31.3%) |
 
 ======================================================================

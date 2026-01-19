@@ -4,9 +4,16 @@ import logging
 import re
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
-from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import (
+    ATPType,
+    AutosarAttribute,
+    AutosarClass,
+    AutosarEnumLiteral,
+    AutosarEnumeration,
+    AutosarPackage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +25,22 @@ class ClassDefinition:
     Requirements:
         SWR_PARSER_00005: Class Definition Data Model
         SWR_PARSER_00010: Attribute Extraction from PDF
+        SWR_PARSER_00014: Enumeration Literal Header Recognition
+        SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
 
     Attributes:
-        name: The name of the class.
+        name: The name of the class or enumeration.
         package_path: Full package path (e.g., "M2::AUTOSARTemplates::BswModuleTemplate::BswBehavior").
-        is_abstract: Whether the class is abstract.
+        is_abstract: Whether the type is abstract.
         atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
         base_classes: List of base class names.
         subclasses: List of subclass names.
         note: Documentation note extracted from the Note column.
         attributes: Dictionary of class attributes (key: attribute name, value: AutosarAttribute).
+        is_enumeration: Whether this is an enumeration type (True) or a class type (False).
+        enumeration_literals: List of enumeration literals (for enumeration types only).
     """
 
     name: str
@@ -38,6 +51,8 @@ class ClassDefinition:
     subclasses: List[str] = field(default_factory=list)
     note: Optional[str] = None
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
+    is_enumeration: bool = False
+    enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
 
 
 class PdfParser:
@@ -61,6 +76,7 @@ class PdfParser:
     # SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
     # SWR_PARSER_00010: Attribute Extraction from PDF
     # SWR_PARSER_00012: Multi-Line Attribute Handling
+    # SWR_PARSER_00014: Enumeration Literal Header Recognition
     CLASS_PATTERN = re.compile(r"^Class\s+(.+?)(?:\s*\((abstract)\))?\s*$")
     PRIMITIVE_PATTERN = re.compile(r"^Primitive\s+(.+)$")
     ENUMERATION_PATTERN = re.compile(r"^Enumeration\s+(.+)$")
@@ -69,6 +85,8 @@ class PdfParser:
     SUBCLASS_PATTERN = re.compile(r"^Subclasses\s+(.+)$")
     NOTE_PATTERN = re.compile(r"^Note\s+(.+)$")
     ATTRIBUTE_HEADER_PATTERN = re.compile(r"^Attribute\s+Type\s+Mult\.\s+Kind\s+Note$")
+    ENUMERATION_LITERAL_HEADER_PATTERN = re.compile(r"^Literal\s+Description$")
+    ENUMERATION_LITERAL_PATTERN = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\s+(.*)$")
     ATTRIBUTE_PATTERN = re.compile(r"^(\S+)\s+(\S+)\s+.*$")
     ATP_MIXED_STRING_PATTERN = re.compile(r"<<atpMixedString>>")
     ATP_VARIATION_PATTERN = re.compile(r"<<atpVariation>>")
@@ -271,6 +289,10 @@ class PdfParser:
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00012: Multi-Line Attribute Handling
+            SWR_PARSER_00014: Enumeration Literal Header Recognition
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
 
         Args:
             text: The extracted text from PDF.
@@ -283,6 +305,7 @@ class PdfParser:
 
         current_class: Optional[ClassDefinition] = None
         in_attribute_section = False
+        in_enumeration_literal_section = False
         class_definition_complete = False
         pending_attr_name: Optional[str] = None
         pending_attr_type: Optional[str] = None
@@ -301,6 +324,7 @@ class PdfParser:
 
             if class_match or primitive_match or enumeration_match:
                 # Determine which pattern matched and extract class name
+                is_enumeration = False
                 if class_match:
                     raw_class_name = class_match.group(1).strip()
                     is_abstract = class_match.group(2) is not None
@@ -312,6 +336,7 @@ class PdfParser:
                     assert enumeration_match is not None  # Help mypy type checker
                     raw_class_name = enumeration_match.group(1).strip()
                     is_abstract = False
+                    is_enumeration = True
 
                 # Finalize any pending attribute from the previous class
                 # This must be done BEFORE checking if this is a valid class,
@@ -398,10 +423,12 @@ class PdfParser:
                         name=clean_class_name,
                         package_path="",
                         is_abstract=is_abstract,
-                        atp_type=atp_type
+                        atp_type=atp_type,
+                        is_enumeration=is_enumeration
                     )
                     # Reset attribute section flag and pending attributes when starting a new class
                     in_attribute_section = False
+                    in_enumeration_literal_section = False
                     class_definition_complete = False
                     pending_attr_name = None
                     pending_attr_type = None
@@ -448,6 +475,46 @@ class PdfParser:
                 pending_attr_name = None
                 pending_attr_type = None
                 continue
+
+            # Check for enumeration literal header
+            # SWR_PARSER_00014: Enumeration Literal Header Recognition
+            enum_literal_header_match = self.ENUMERATION_LITERAL_HEADER_PATTERN.match(line)
+            if enum_literal_header_match and current_class is not None and current_class.is_enumeration:
+                # Enumeration literal section starts, parse subsequent lines as enumeration literals
+                in_enumeration_literal_section = True
+                continue
+
+            # Check for enumeration literal line
+            # SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            if in_enumeration_literal_section and current_class is not None and current_class.is_enumeration:
+                # Check if this line ends the enumeration literal section
+                # SWR_PARSER_00016: Enumeration Literal Section Termination
+                if line.startswith("Table ") or line.startswith("Class ") or line.startswith("Primitive ") or line.startswith("Enumeration "):
+                    in_enumeration_literal_section = False
+                    class_definition_complete = True
+                    continue
+
+                # Try to match enumeration literal pattern
+                enum_literal_match = self.ENUMERATION_LITERAL_PATTERN.match(line)
+                if enum_literal_match:
+                    literal_name = enum_literal_match.group(1)
+                    description = enum_literal_match.group(2).strip()
+
+                    # Extract index from description if present (e.g., "atp.EnumerationLiteralIndex=0")
+                    index = None
+                    index_match = re.search(r"atp\.EnumerationLiteralIndex=(\d+)", description)
+                    if index_match:
+                        index = int(index_match.group(1))
+                        # Remove the index tag from description
+                        description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+\s*", "", description).strip()
+
+                    # Create enumeration literal
+                    literal = AutosarEnumLiteral(
+                        name=literal_name,
+                        index=index,
+                        description=description if description else None
+                    )
+                    current_class.enumeration_literals.append(literal)
 
             # Check for attribute (only if we're in the attribute section)
             if in_attribute_section and current_class is not None and line and " " in line:
@@ -649,19 +716,33 @@ class PdfParser:
 
                 parent_package = package_map[current_path]
 
-            # Add class to the last package
+            # Add class or enumeration to the last package
             if parent_package is not None:
                 class_key = (parent_package.name, class_def.name)
                 if class_key not in processed_classes:
-                    autosar_class = AutosarClass(
-                        name=class_def.name,
-                        is_abstract=class_def.is_abstract,
-                        atp_type=class_def.atp_type,
-                        bases=class_def.base_classes.copy(),
-                        note=class_def.note,
-                        attributes=class_def.attributes.copy()
-                    )
-                    parent_package.add_class(autosar_class)
+                    # SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+                    # SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+                    # Create AutosarEnumeration for enumeration types, AutosarClass for class types
+                    autosar_type: Union[AutosarClass, AutosarEnumeration]
+                    if class_def.is_enumeration:
+                        autosar_type = AutosarEnumeration(
+                            name=class_def.name,
+                            is_abstract=class_def.is_abstract,
+                            atp_type=class_def.atp_type,
+                            bases=class_def.base_classes.copy(),
+                            note=class_def.note,
+                            enumeration_literals=class_def.enumeration_literals.copy()
+                        )
+                    else:
+                        autosar_type = AutosarClass(
+                            name=class_def.name,
+                            is_abstract=class_def.is_abstract,
+                            atp_type=class_def.atp_type,
+                            bases=class_def.base_classes.copy(),
+                            note=class_def.note,
+                            attributes=class_def.attributes.copy()
+                        )
+                    parent_package.add_type(autosar_type)
                     processed_classes.add(class_key)
 
         # Return top-level packages (those with no "::" in path)

@@ -1,13 +1,18 @@
 """Integration tests for AUTOSAR PDF parsing.
 
 These tests use real AUTOSAR PDF files to verify end-to-end functionality.
-"""
 
-import os
-import pytest
+Performance optimization: Tests use session-scoped fixtures defined in conftest.py
+to cache parsed PDF data. Each PDF is parsed only once per test session, with
+results shared across all tests that need them.
+"""
 
 from autosar_pdf2txt.models import ATPType
 from autosar_pdf2txt.parser import PdfParser
+
+
+# Import helper functions from conftest
+from tests.integration.conftest import find_first_class, count_classes
 
 
 class TestPdfIntegration:
@@ -17,7 +22,7 @@ class TestPdfIntegration:
     Tests are skipped if files are not available (for CI/CD environments).
     """
 
-    def test_parse_bsw_module_template_pdf_first_class(self) -> None:
+    def test_parse_bsw_module_template_pdf_first_class(self, bsw_template_pdf: list) -> None:
         """Test parsing real AUTOSAR BSW Module Template PDF and verify first class.
 
         SWIT_00001: Test Parsing Real AUTOSAR PDF and Verifying First Class
@@ -28,50 +33,17 @@ class TestPdfIntegration:
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_MODEL_00001: AUTOSAR Class Representation
+
+        Args:
+            bsw_template_pdf: Cached parsed BSW Module Template PDF data.
         """
-        parser = PdfParser()
-        pdf_path = "examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
-
-        # Skip test if PDF doesn't exist (for CI/CD environments)
-        if not os.path.exists(pdf_path):
-            pytest.skip(f"PDF file not found: {pdf_path}")
-
-        # Parse the PDF
-        packages = parser.parse_pdf(pdf_path)
+        packages = bsw_template_pdf
 
         # Verify we got some packages
         assert len(packages) > 0, "Should extract at least one package from PDF"
 
-        # Find the first class with actual data
-        first_class = None
-        first_package = None
-
-        for pkg in packages:
-            # Check M2 top-level package (may not have classes directly)
-            if pkg.types:
-                first_package = pkg
-                first_class = pkg.types[0]
-                break
-
-            # Check subpackages (AUTOSARTemplates, MSR, etc.)
-            for subpkg in pkg.subpackages:
-                if subpkg.types:
-                    first_package = subpkg
-                    first_class = subpkg.types[0]
-                    break
-
-                # Check nested subpackages (e.g., AutosarTopLevelStructure)
-                for subsubpkg in subpkg.subpackages:
-                    if subsubpkg.types:
-                        first_package = subsubpkg
-                        first_class = subsubpkg.types[0]
-                        break
-                    if first_class:
-                        break
-                if first_class:
-                    break
-            if first_class:
-                break
+        # Find the first class with actual data (using cached helper)
+        first_package, first_class = find_first_class(packages)
 
         assert first_class is not None, "Should find at least one class in the PDF"
         assert first_package is not None, "Should find the package containing the class"
@@ -99,7 +71,7 @@ class TestPdfIntegration:
         print(f"  Note: {first_class.note}")
         print(f"  Package: {first_package.name}")
 
-    def test_parse_bsw_module_template_pdf_multiple_classes(self) -> None:
+    def test_parse_bsw_module_template_pdf_multiple_classes(self, bsw_template_pdf: list) -> None:
         """Test that multiple classes are parsed from real AUTOSAR PDF.
 
         SWIT_00002: Test Parsing Real AUTOSAR PDF Extracts Multiple Classes
@@ -108,27 +80,14 @@ class TestPdfIntegration:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+
+        Args:
+            bsw_template_pdf: Cached parsed BSW Module Template PDF data.
         """
-        parser = PdfParser()
-        pdf_path = "examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+        packages = bsw_template_pdf
 
-        # Skip test if PDF doesn't exist
-        if not os.path.exists(pdf_path):
-            pytest.skip(f"PDF file not found: {pdf_path}")
-
-        # Parse the PDF
-        packages = parser.parse_pdf(pdf_path)
-
-        # Count total classes recursively
-        def count_classes(pkg):
-            count = len(pkg.types)
-            for subpkg in pkg.subpackages:
-                count += count_classes(subpkg)
-            return count
-
-        total_classes = 0
-        for pkg in packages:
-            total_classes += count_classes(pkg)
+        # Count total classes recursively (using cached helper)
+        total_classes = count_classes(packages)
 
         # Should have extracted many classes from the AUTOSAR template
         assert total_classes > 10, f"Expected to extract many classes, got {total_classes}"
@@ -136,7 +95,7 @@ class TestPdfIntegration:
         print(f"\nTotal classes extracted: {total_classes}")
         print(f"Total packages: {len(packages)}")
 
-    def test_parse_bsw_module_template_pdf_has_bases_and_notes(self) -> None:
+    def test_parse_bsw_module_template_pdf_has_bases_and_notes(self, bsw_template_pdf: list) -> None:
         """Test parsing real AUTOSAR PDF has bases and notes.
 
         SWIT_00003: Test Parsing Real AUTOSAR PDF Has Bases and Notes
@@ -146,16 +105,11 @@ class TestPdfIntegration:
             SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_MODEL_00001: AUTOSAR Class Representation
+
+        Args:
+            bsw_template_pdf: Cached parsed BSW Module Template PDF data.
         """
-        parser = PdfParser()
-        pdf_path = "examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
-
-        # Skip test if PDF doesn't exist
-        if not os.path.exists(pdf_path):
-            pytest.skip(f"PDF file not found: {pdf_path}")
-
-        # Parse the PDF
-        packages = parser.parse_pdf(pdf_path)
+        packages = bsw_template_pdf
 
         # Find classes with bases and notes recursively
         classes_with_bases = []
@@ -198,7 +152,7 @@ class TestPdfIntegration:
     def test_parse_pdf_with_atp_patterns(self, monkeypatch) -> None:
         """Test end-to-end parsing and writing with ATP patterns.
 
-        SWIT_00005: Test End-to-End Parsing and Writing with ATP Patterns
+        SWIT_00004: Test End-to-End Parsing and Writing with ATP Patterns
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
@@ -263,10 +217,10 @@ class TestPdfIntegration:
             assert "## ATP Type\n\n" in content
             assert "* atpVariation\n" in content
 
-    def test_parse_ecu_configuration_pdf_fibex_package_structure(self) -> None:
+    def test_parse_ecu_configuration_pdf_fibex_package_structure(self, ecu_configuration_pdf: list) -> None:
         """Test parsing ECU Configuration PDF and verify Fibex package structure and ImplementationDataType attributes.
 
-        SWIT_00004: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
+        SWIT_00005: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
@@ -278,16 +232,11 @@ class TestPdfIntegration:
             SWR_PARSER_00011: Metadata Filtering in Attribute Extraction
             SWR_PARSER_00012: Multi-Line Attribute Handling
             SWR_MODEL_00004: AUTOSAR Package Representation
+
+        Args:
+            ecu_configuration_pdf: Cached parsed ECU Configuration PDF data.
         """
-        parser = PdfParser()
-        pdf_path = "examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf"
-
-        # Skip test if PDF doesn't exist
-        if not os.path.exists(pdf_path):
-            pytest.skip(f"PDF file not found: {pdf_path}")
-
-        # Parse the PDF
-        packages = parser.parse_pdf(pdf_path)
+        packages = ecu_configuration_pdf
 
         # Verify we have exactly 1 top-level package (M2)
         assert len(packages) == 1, f"Expected 1 top-level package (M2), got {len(packages)}"

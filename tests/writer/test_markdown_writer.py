@@ -21,7 +21,7 @@ class TestMarkdownWriter:
     """
 
     def test_init_default(self) -> None:
-        """Test initialization with default settings.
+        """SWUT_WRITER_00001: Test initialization with default settings.
 
         Requirements:
             SWR_WRITER_00001: Markdown Writer Initialization
@@ -31,7 +31,7 @@ class TestMarkdownWriter:
         assert writer is not None
 
     def test_write_single_empty_package(self) -> None:
-        """Test writing a single empty package.
+        """SWUT_WRITER_00002: Test writing a single empty package.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -44,7 +44,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_package_with_class(self) -> None:
-        """Test writing a package with a class.
+        """SWUT_WRITER_00003: Test writing a package with a class.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -58,7 +58,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_package_with_abstract_class(self) -> None:
-        """Test writing a package with an abstract class.
+        """SWUT_WRITER_00004: Test writing a package with an abstract class.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -72,7 +72,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_package_with_multiple_classes(self) -> None:
-        """Test writing a package with multiple classes.
+        """SWUT_WRITER_00005: Test writing a package with multiple classes.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -93,7 +93,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_nested_packages(self) -> None:
-        """Test writing nested packages.
+        """SWUT_WRITER_00006: Test writing nested packages.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -112,7 +112,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_complex_hierarchy(self) -> None:
-        """Test writing complex nested hierarchy.
+        """SWUT_WRITER_00007: Test writing complex nested hierarchy.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -145,7 +145,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_multiple_top_level_packages(self) -> None:
-        """Test writing multiple top-level packages.
+        """SWUT_WRITER_00008: Test writing multiple top-level packages.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -166,7 +166,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_deeply_nested_hierarchy(self) -> None:
-        """Test writing deeply nested package structure.
+        """SWUT_WRITER_00009: Test writing deeply nested package structure.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -188,7 +188,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_empty_package_list(self) -> None:
-        """Test writing an empty package list.
+        """SWUT_WRITER_00010: Test writing an empty package list.
 
         Requirements:
             SWR_WRITER_00004: Bulk Package Writing
@@ -199,7 +199,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_package_with_both_classes_and_subpackages(self) -> None:
-        """Test writing package with both classes and subpackages.
+        """SWUT_WRITER_00011: Test writing package with both classes and subpackages.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -221,7 +221,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_multiple_writes_same_structure(self) -> None:
-        """Test that multiple writes of the same structure produce identical output.
+        """SWUT_WRITER_00012: Test that multiple writes of the same structure produce identical output.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -241,7 +241,7 @@ class TestMarkdownWriter:
         assert result2 == expected
 
     def test_model_level_duplicate_prevention(self) -> None:
-        """Test that model-level duplicate prevention works with writer.
+        """SWUT_WRITER_00013: Test that model-level duplicate prevention works with writer.
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
@@ -265,7 +265,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_write_multiple_packages_same_name_different_content(self) -> None:
-        """Test writing multiple packages with same name but different content.
+        """SWUT_WRITER_00014: Test writing multiple packages with same name but different content.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output
@@ -289,7 +289,7 @@ class TestMarkdownWriter:
         assert result == expected
 
     def test_nested_same_class_names_different_packages(self) -> None:
-        """Test that same class names in different packages are both written.
+        """SWUT_WRITER_00015: Test that same class names in different packages are both written.
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
@@ -322,7 +322,7 @@ class TestMarkdownWriterFiles:
     """
 
     def test_write_single_class_to_file(self, tmp_path: Path) -> None:
-        """Test writing a single class to a file.
+        """SWUT_WRITER_00016: Test writing a single class to a file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -351,7 +351,7 @@ class TestMarkdownWriterFiles:
         assert "Concrete\n\n" in content
 
     def test_write_abstract_class_to_file(self, tmp_path: Path) -> None:
-        """Test writing an abstract class to a file.
+        """SWUT_WRITER_00017: Test writing an abstract class to a file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -372,7 +372,7 @@ class TestMarkdownWriterFiles:
         assert "Abstract\n\n" in content
 
     def test_write_multiple_classes_to_files(self, tmp_path: Path) -> None:
-        """Test writing multiple classes to separate files.
+        """SWUT_WRITER_00018: Test writing multiple classes to separate files.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -392,7 +392,7 @@ class TestMarkdownWriterFiles:
         assert (pkg_dir / "Class3.md").is_file()
 
     def test_write_nested_packages_to_files(self, tmp_path: Path) -> None:
-        """Test writing nested packages to directory structure.
+        """SWUT_WRITER_00019: Test writing nested packages to directory structure.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -414,7 +414,7 @@ class TestMarkdownWriterFiles:
         assert class_file.is_file()
 
     def test_write_class_with_attributes(self, tmp_path: Path) -> None:
-        """Test writing a class with attributes to file.
+        """SWUT_WRITER_00020: Test writing a class with attributes to file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -441,7 +441,7 @@ class TestMarkdownWriterFiles:
         assert "* attr2 : Integer (ref)\n" in content
 
     def test_write_class_with_base_classes(self, tmp_path: Path) -> None:
-        """Test writing a class with base classes to file.
+        """SWUT_WRITER_00021: Test writing a class with base classes to file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -467,7 +467,7 @@ class TestMarkdownWriterFiles:
         assert "* BaseClass2\n" in content
 
     def test_write_class_with_note(self, tmp_path: Path) -> None:
-        """Test writing a class with a note to file.
+        """SWUT_WRITER_00022: Test writing a class with a note to file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -492,7 +492,7 @@ class TestMarkdownWriterFiles:
         assert "This is a documentation note." in content
 
     def test_write_complete_class_to_file(self, tmp_path: Path) -> None:
-        """Test writing a class with all fields to file.
+        """SWUT_WRITER_00023: Test writing a class with all fields to file.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -525,7 +525,7 @@ class TestMarkdownWriterFiles:
         assert "Complete documentation." in content
 
     def test_class_file_content_structure(self, tmp_path: Path) -> None:
-        """Test that class file content follows SWR_WRITER_00006 structure.
+        """SWUT_WRITER_00024: Test that class file content follows SWR_WRITER_00006 structure.
 
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
@@ -593,7 +593,7 @@ class TestMarkdownWriterFiles:
         assert "* swDataDefProps : SwDataDefProps (ref)\n" in content
 
     def test_concrete_class_type_indicator(self, tmp_path: Path) -> None:
-        """Test that concrete classes have correct type indicator.
+        """SWUT_WRITER_00025: Test that concrete classes have correct type indicator.
 
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
@@ -616,7 +616,7 @@ class TestMarkdownWriterFiles:
         assert "Abstract\n\n" not in content
 
     def test_write_empty_package_to_files(self, tmp_path: Path) -> None:
-        """Test writing an empty package creates directory but no files.
+        """SWUT_WRITER_00026: Test writing an empty package creates directory but no files.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -634,7 +634,7 @@ class TestMarkdownWriterFiles:
         assert len(list(pkg_dir.glob("*.md"))) == 0
 
     def test_write_multiple_top_level_packages_to_files(self, tmp_path: Path) -> None:
-        """Test writing multiple top-level packages to files.
+        """SWUT_WRITER_00027: Test writing multiple top-level packages to files.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -657,7 +657,7 @@ class TestMarkdownWriterFiles:
         assert (tmp_path / "Package2" / "Class2.md").is_file()
 
     def test_write_packages_with_pathlib_path(self, tmp_path: Path) -> None:
-        """Test writing packages with pathlib.Path object.
+        """SWUT_WRITER_00028: Test writing packages with pathlib.Path object.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -673,7 +673,7 @@ class TestMarkdownWriterFiles:
         assert class_file.is_file()
 
     def test_write_packages_with_output_path(self, tmp_path: Path) -> None:
-        """Test writing packages with output_path parameter.
+        """SWUT_WRITER_00029: Test writing packages with output_path parameter.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -695,7 +695,7 @@ class TestMarkdownWriterFiles:
         assert class_file.is_file()
 
     def test_write_packages_with_output_path_nested(self, tmp_path: Path) -> None:
-        """Test writing packages with output_path in subdirectory.
+        """SWUT_WRITER_00030: Test writing packages with output_path in subdirectory.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -721,7 +721,7 @@ class TestMarkdownWriterFiles:
         assert class_file.is_file()
 
     def test_write_packages_invalid_both_parameters(self) -> None:
-        """Test that providing both output_path and base_dir raises ValueError.
+        """SWUT_WRITER_00031: Test that providing both output_path and base_dir raises ValueError.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -739,7 +739,7 @@ class TestMarkdownWriterFiles:
             assert "both" in str(e).lower() or "cannot specify both" in str(e).lower()
 
     def test_write_packages_invalid_neither_parameter(self) -> None:
-        """Test that providing neither output_path nor base_dir raises ValueError.
+        """SWUT_WRITER_00032: Test that providing neither output_path nor base_dir raises ValueError.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -757,7 +757,7 @@ class TestMarkdownWriterFiles:
             assert "must specify" in str(e).lower() or "either" in str(e).lower()
 
     def test_write_packages_invalid_base_dir(self) -> None:
-        """Test that invalid base directory raises ValueError.
+        """SWUT_WRITER_00033: Test that invalid base directory raises ValueError.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -775,7 +775,7 @@ class TestMarkdownWriterFiles:
             assert "base_dir" in str(e).lower()
 
     def test_write_packages_invalid_output_path(self) -> None:
-        """Test that invalid output path raises ValueError.
+        """SWUT_WRITER_00034: Test that invalid output path raises ValueError.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -793,7 +793,7 @@ class TestMarkdownWriterFiles:
             assert "output_path" in str(e).lower()
 
     def test_write_deeply_nested_packages_to_files(self, tmp_path: Path) -> None:
-        """Test writing deeply nested package structure.
+        """SWUT_WRITER_00035: Test writing deeply nested package structure.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -817,7 +817,7 @@ class TestMarkdownWriterFiles:
         assert class_file.is_file()
 
     def test_sanitize_filename_normal_name(self) -> None:
-        """Test sanitizing a normal class name.
+        """SWUT_WRITER_00036: Test sanitizing a normal class name.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -827,7 +827,7 @@ class TestMarkdownWriterFiles:
         assert result == "NormalClass"
 
     def test_sanitize_filename_invalid_chars(self) -> None:
-        """Test sanitizing class name with invalid characters.
+        """SWUT_WRITER_00037: Test sanitizing class name with invalid characters.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -850,7 +850,7 @@ class TestMarkdownWriterFiles:
         assert result == "Class_________Name"
 
     def test_sanitize_filename_leading_trailing_spaces(self) -> None:
-        """Test sanitizing class name with leading/trailing spaces and dots.
+        """SWUT_WRITER_00038: Test sanitizing class name with leading/trailing spaces and dots.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -860,7 +860,7 @@ class TestMarkdownWriterFiles:
         assert result == "ClassName"
 
     def test_sanitize_filename_empty_result(self) -> None:
-        """Test sanitizing class name that becomes empty.
+        """SWUT_WRITER_00039: Test sanitizing class name that becomes empty.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -870,7 +870,7 @@ class TestMarkdownWriterFiles:
         assert result == "UnnamedClass"
 
     def test_write_class_with_invalid_filename_chars(self, tmp_path: Path) -> None:
-        """Test writing a class with invalid filename characters.
+        """SWUT_WRITER_00040: Test writing a class with invalid filename characters.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -895,7 +895,7 @@ class TestMarkdownWriterFiles:
         assert "Concrete\n\n" in content
 
     def test_write_class_with_atp_variation_only(self, tmp_path: Path) -> None:
-        """Test writing class with only atpVariation type.
+        """SWUT_WRITER_00041: Test writing class with only atpVariation type.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -917,7 +917,7 @@ class TestMarkdownWriterFiles:
         assert "atpMixedString" not in content
 
     def test_write_class_with_atp_mixed_string_only(self, tmp_path: Path) -> None:
-        """Test writing class with only atpMixedString type.
+        """SWUT_WRITER_00042: Test writing class with only atpMixedString type.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -939,7 +939,7 @@ class TestMarkdownWriterFiles:
         assert "atpVariation" not in content
 
     def test_write_class_with_atp_mixed_only(self, tmp_path: Path) -> None:
-        """Test writing class with only atpMixed type.
+        """SWUT_WRITER_00043: Test writing class with only atpMixed type.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -962,7 +962,7 @@ class TestMarkdownWriterFiles:
         assert "atpMixedString" not in content
 
     def test_write_class_without_atp_type_no_section(self, tmp_path: Path) -> None:
-        """Test that class without ATP type doesn't show ATP section.
+        """SWUT_WRITER_00044: Test that class without ATP type doesn't show ATP section.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -982,7 +982,7 @@ class TestMarkdownWriterFiles:
         assert "## ATP Type\n\n" not in content
 
     def test_atp_section_order(self, tmp_path: Path) -> None:
-        """Test that ATP section appears after Type and before Base Classes.
+        """SWUT_WRITER_00045: Test that ATP section appears after Type and before Base Classes.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
@@ -1016,7 +1016,7 @@ class TestMarkdownWriterFiles:
         assert atp_idx < base_idx
 
     def test_main_hierarchy_no_atp_markers(self) -> None:
-        """Test that main hierarchy output doesn't show ATP markers.
+        """SWUT_WRITER_00046: Test that main hierarchy output doesn't show ATP markers.
 
         Requirements:
             SWR_WRITER_00002: Markdown Package Hierarchy Output

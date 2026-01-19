@@ -26,7 +26,7 @@ class TestAutosarCli:
     """
 
     def test_main_entry_point(self) -> None:
-        """Test that main function exists and returns exit code.
+        """SWUT_CLI_00001: Test that main function exists and returns exit code.
 
         Requirements:
             SWR_CLI_00001: CLI Entry Point
@@ -37,7 +37,7 @@ class TestAutosarCli:
     @patch("sys.argv", ["autosar-extract", "nonexistent.pdf"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_non_existent_path_error(self, mock_path: MagicMock) -> None:
-        """Test CLI handles non-existent paths with error.
+        """SWUT_CLI_00002: Test CLI handles non-existent paths with error.
 
         Requirements:
             SWR_CLI_00006: CLI Input Validation
@@ -52,7 +52,7 @@ class TestAutosarCli:
     @patch("sys.argv", ["autosar-extract", "test.txt"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_non_pdf_file_warning(self, mock_path: MagicMock) -> None:
-        """Test CLI warns about non-PDF files.
+        """SWUT_CLI_00003: Test CLI warns about non-PDF files.
 
         Requirements:
             SWR_CLI_00006: CLI Input Validation
@@ -80,7 +80,7 @@ class TestAutosarCli:
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_verbose_mode_flag(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
-        """Test CLI verbose mode enables detailed logging.
+        """SWUT_CLI_00004: Test CLI verbose mode enables detailed logging.
 
         Requirements:
             SWR_CLI_00005: CLI Verbose Mode
@@ -115,7 +115,7 @@ class TestAutosarCli:
     @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md", "--write-class-files"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_output_file_option_with_class_files(self, mock_path: MagicMock) -> None:
-        """Test CLI writes output to specified file and creates class files when flag is set.
+        """SWUT_CLI_00005: Test CLI writes output to specified file and creates class files when flag is set.
 
         Requirements:
             SWR_CLI_00004: CLI Output File Option
@@ -155,7 +155,7 @@ class TestAutosarCli:
     @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_output_file_option_without_class_files(self, mock_path: MagicMock) -> None:
-        """Test CLI writes output to specified file but does not create class files when flag is not set.
+        """SWUT_CLI_00006: Test CLI writes output to specified file but does not create class files when flag is not set.
 
         Requirements:
             SWR_CLI_00004: CLI Output File Option
@@ -194,7 +194,7 @@ class TestAutosarCli:
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_logging_configuration_info(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
-        """Test CLI logging is configured correctly in normal mode.
+        """SWUT_CLI_00007: Test CLI logging is configured correctly in normal mode.
 
         Requirements:
             SWR_CLI_00008: CLI Logging
@@ -228,7 +228,7 @@ class TestAutosarCli:
     @patch("sys.argv", ["autosar-extract", "test.pdf"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_error_handling_with_exception(self, mock_path: MagicMock) -> None:
-        """Test CLI handles exceptions gracefully.
+        """SWUT_CLI_00008: Test CLI handles exceptions gracefully.
 
         Requirements:
             SWR_CLI_00009: CLI Error Handling
@@ -260,7 +260,7 @@ class TestAutosarCli:
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_verbose_mode_exception_traceback(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
-        """Test CLI shows exception traceback in verbose mode.
+        """SWUT_CLI_00009: Test CLI shows exception traceback in verbose mode.
 
         Requirements:
             SWR_CLI_00005: CLI Verbose Mode
@@ -292,7 +292,7 @@ class TestAutosarCli:
             mock_logging.exception.assert_called()
 
     def test_directory_input_support(self) -> None:
-        """Test CLI supports directory input for PDF discovery.
+        """SWUT_CLI_00010: Test CLI supports directory input for PDF discovery.
 
         Requirements:
             SWR_CLI_00003: CLI Directory Input Support
@@ -309,7 +309,7 @@ class TestAutosarCli:
     @patch("sys.argv", ["autosar-extract", "test.pdf"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_success_exit_code(self, mock_path: MagicMock) -> None:
-        """Test CLI returns success exit code.
+        """SWUT_CLI_00011: Test CLI returns success exit code.
 
         Requirements:
             SWR_CLI_00009: CLI Error Handling

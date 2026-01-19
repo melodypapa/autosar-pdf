@@ -1097,4 +1097,249 @@ class TestPdfParser:
         # Verify IntervalTypeEnum exists
         assert interval_enum is not None
 
+    def test_extract_enumeration_with_literals(self) -> None:
+        """Test extracting enumeration with enumeration literals.
+
+        SWUT_PARSER_00040: Test Extracting Enumeration with Enumeration Literals
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+            SWR_PARSER_00014: Enumeration Literal Header Recognition
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        """
+        parser = PdfParser()
+        text = """
+        Enumeration EcucDestinationUriNestingContractEnum
+        Package M2::AUTOSAR::DataTypes
+        Note This enumerator specifies the type of an interval
+        Literal Description
+        leafOfTargetContainer EcucDestinationUriPolicy describes elements directly owned by the target container
+        targetContainer EcucDestinationUriPolicy describes the target container of EcucUriReferenceDef
+        vertexOfTargetContainer EcucDestinationUriPolicy describes elements of the target container
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+
+        enum_def = class_defs[0]
+        assert enum_def.name == "EcucDestinationUriNestingContractEnum"
+        assert enum_def.is_enumeration is True
+        assert len(enum_def.enumeration_literals) == 3
+
+        # Check first literal
+        literal1 = enum_def.enumeration_literals[0]
+        assert literal1.name == "leafOfTargetContainer"
+        assert "EcucDestinationUriPolicy describes elements directly owned" in literal1.description
+
+        # Check second literal
+        literal2 = enum_def.enumeration_literals[1]
+        assert literal2.name == "targetContainer"
+        assert "EcucDestinationUriPolicy describes the target container" in literal2.description
+
+        # Check third literal
+        literal3 = enum_def.enumeration_literals[2]
+        assert literal3.name == "vertexOfTargetContainer"
+        assert "EcucDestinationUriPolicy describes elements of the target container" in literal3.description
+
+    def test_extract_enumeration_literal_with_index(self) -> None:
+        """Test extracting enumeration literal with index.
+
+        SWUT_PARSER_00041: Test Extracting Enumeration Literal with Index
+
+        Requirements:
+            SWR_PARSER_00014: Enumeration Literal Header Recognition
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+        text = """
+        Enumeration TestEnum
+        Package M2::AUTOSAR::DataTypes
+        Literal Description
+        VALUE1 First value atp.EnumerationLiteralIndex=0
+        VALUE2 Second value atp.EnumerationLiteralIndex=1
+        VALUE3 Third value atp.EnumerationLiteralIndex=2
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+
+        enum_def = class_defs[0]
+        assert enum_def.is_enumeration is True
+        assert len(enum_def.enumeration_literals) == 3
+
+        # Check indices are extracted correctly
+        assert enum_def.enumeration_literals[0].index == 0
+        assert enum_def.enumeration_literals[0].name == "VALUE1"
+        assert enum_def.enumeration_literals[0].description == "First value"
+
+        assert enum_def.enumeration_literals[1].index == 1
+        assert enum_def.enumeration_literals[1].name == "VALUE2"
+        assert enum_def.enumeration_literals[1].description == "Second value"
+
+        assert enum_def.enumeration_literals[2].index == 2
+        assert enum_def.enumeration_literals[2].name == "VALUE3"
+        assert enum_def.enumeration_literals[2].description == "Third value"
+
+    def test_enumeration_literal_section_termination(self) -> None:
+        """Test that enumeration literal section terminates on new class definition.
+
+        SWUT_PARSER_00042: Test Enumeration Literal Section Termination
+
+        Requirements:
+            SWR_PARSER_00014: Enumeration Literal Header Recognition
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+        """
+        parser = PdfParser()
+        text = """
+        Enumeration FirstEnum
+        Package M2::AUTOSAR::DataTypes
+        Literal Description
+        VALUE1 First value
+        VALUE2 Second value
+
+        Class SecondClass
+        Package M2::AUTOSAR::Other
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 2
+
+        # First definition should be enumeration with 2 literals
+        enum_def = class_defs[0]
+        assert enum_def.name == "FirstEnum"
+        assert enum_def.is_enumeration is True
+        assert len(enum_def.enumeration_literals) == 2
+
+        # Second definition should be class without literals
+        class_def = class_defs[1]
+        assert class_def.name == "SecondClass"
+        assert class_def.is_enumeration is False
+        assert len(class_def.enumeration_literals) == 0
+
+    def test_enumeration_literal_section_termination_on_table(self) -> None:
+        """Test that enumeration literal section terminates on table header.
+
+        SWUT_PARSER_00043: Test Enumeration Literal Section Termination on Table Header
+
+        Requirements:
+            SWR_PARSER_00014: Enumeration Literal Header Recognition
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+        """
+        parser = PdfParser()
+        text = """
+        Enumeration TestEnum
+        Package M2::AUTOSAR::DataTypes
+        Literal Description
+        VALUE1 First value
+        VALUE2 Second value
+        Table F.18: Test Table
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+
+        enum_def = class_defs[0]
+        assert enum_def.is_enumeration is True
+        assert len(enum_def.enumeration_literals) == 2
+
+        # Should only have 2 literals (the table header should stop the enumeration literal section)
+        assert enum_def.enumeration_literals[0].name == "VALUE1"
+        assert enum_def.enumeration_literals[1].name == "VALUE2"
+
+    def test_build_package_creates_enumeration_object(self) -> None:
+        """Test that _build_package_hierarchy creates AutosarEnumeration for enumeration types.
+
+        SWUT_PARSER_00044: Test Building Package Creates Enumeration Object
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        parser = PdfParser()
+        from autosar_pdf2txt.models import AutosarEnumLiteral, AutosarEnumeration
+
+        class_defs = [
+            ClassDefinition(
+                name="MyEnum",
+                package_path="AUTOSAR::DataTypes",
+                is_abstract=False,
+                is_enumeration=True,
+                enumeration_literals=[
+                    AutosarEnumLiteral("VALUE1", 0, "First value"),
+                    AutosarEnumLiteral("VALUE2", 1, "Second value")
+                ]
+            )
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        # Check that the package contains an AutosarEnumeration, not an AutosarClass
+        pkg = packages[0]
+        assert pkg.name == "AUTOSAR"
+
+        data_types_pkg = pkg.get_subpackage("DataTypes")
+        assert data_types_pkg is not None
+
+        # Verify it's an enumeration
+        enum = data_types_pkg.get_enumeration("MyEnum")
+        assert enum is not None
+        assert isinstance(enum, AutosarEnumeration)
+        assert enum.name == "MyEnum"
+        assert enum.is_abstract is False
+        assert len(enum.enumeration_literals) == 2
+        assert enum.enumeration_literals[0].name == "VALUE1"
+        assert enum.enumeration_literals[0].index == 0
+        assert enum.enumeration_literals[1].name == "VALUE2"
+        assert enum.enumeration_literals[1].index == 1
+
+    def test_build_package_mixed_classes_and_enumerations(self) -> None:
+        """Test that _build_package_hierarchy handles both classes and enumerations.
+
+        SWUT_PARSER_00045: Test Building Package with Mixed Classes and Enumerations
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00020: AUTOSAR Package Type Support
+        """
+        parser = PdfParser()
+        from autosar_pdf2txt.models import AutosarClass, AutosarEnumeration
+
+        class_defs = [
+            ClassDefinition(
+                name="MyClass",
+                package_path="AUTOSAR::DataTypes",
+                is_abstract=False,
+                is_enumeration=False
+            ),
+            ClassDefinition(
+                name="MyEnum",
+                package_path="AUTOSAR::DataTypes",
+                is_abstract=False,
+                is_enumeration=True,
+                enumeration_literals=[]
+            )
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        data_types_pkg = pkg.get_subpackage("DataTypes")
+        assert data_types_pkg is not None
+
+        # Check that both class and enumeration are in the types list
+        assert len(data_types_pkg.types) == 2
+
+        # Verify first is a class
+        assert isinstance(data_types_pkg.types[0], AutosarClass)
+        assert data_types_pkg.types[0].name == "MyClass"
+
+        # Verify second is an enumeration
+        assert isinstance(data_types_pkg.types[1], AutosarEnumeration)
+        assert data_types_pkg.types[1].name == "MyEnum"
 

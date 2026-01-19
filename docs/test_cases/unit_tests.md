@@ -2030,7 +2030,317 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_PARSER_00015
+#### SWUT_PARSER_00020
+**Title**: Test Extracting Class with ATP Variation
+
+**Maturity**: accept
+
+**Description**: Verify that the parser correctly recognizes and extracts the <<atpVariation>> ATP marker from class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with <<atpVariation>> marker (e.g., "Class MyClass <<atpVariation>>")
+3. Verify that the class is extracted
+4. Verify that the atp_type is set to ATP_VARIATION
+
+**Expected Result**: Class with <<atpVariation>> marker is extracted with correct ATP type
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00021
+**Title**: Test Extracting Class with ATP Mixed String
+
+**Maturity**: accept
+
+**Description**: Verify that the parser correctly recognizes and extracts the <<atpMixedString>> ATP marker from class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with <<atpMixedString>> marker (e.g., "Class MyClass <<atpMixedString>>")
+3. Verify that the class is extracted
+4. Verify that the atp_type is set to ATP_MIXED_STRING
+
+**Expected Result**: Class with <<atpMixedString>> marker is extracted with correct ATP type
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00022
+**Title**: Test Extracting Class with ATP Mixed
+
+**Maturity**: accept
+
+**Description**: Verify that the parser correctly recognizes and extracts the <<atpMixed>> ATP marker from class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with <<atpMixed>> marker (e.g., "Class MyClass <<atpMixed>>")
+3. Verify that the class is extracted
+4. Verify that the atp_type is set to ATP_MIXED
+
+**Expected Result**: Class with <<atpMixed>> marker is extracted with correct ATP type
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00023
+**Title**: Test Extracting Class with Both ATP Patterns Raises Error
+
+**Maturity**: accept
+
+**Description**: Verify that attempting to parse a class with multiple ATP markers raises a ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with two ATP markers (e.g., "Class MyClass <<atpVariation>> <<atpMixedString>>")
+3. Verify that a ValueError is raised with message "cannot have multiple ATP markers"
+
+**Expected Result**: ValueError is raised when class has multiple ATP markers
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00024
+**Title**: Test Extracting Class with ATP Patterns in Reverse Order Raises Error
+
+**Maturity**: accept
+
+**Description**: Verify that attempting to parse a class with multiple ATP markers in reverse order raises a ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with two ATP markers in reverse order (e.g., "Class MyClass <<atpMixedString>> <<atpVariation>>")
+3. Verify that a ValueError is raised with message "cannot have multiple ATP markers"
+
+**Expected Result**: ValueError is raised when class has multiple ATP markers in any order
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00025
+**Title**: Test Extracting Class with ATP Mixed and Variation Raises Error
+
+**Maturity**: accept
+
+**Description**: Verify that attempting to parse a class with <<atpMixed>> and <<atpVariation>> markers raises a ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with <<atpMixed>> and <<atpVariation>> markers
+3. Verify that a ValueError is raised
+
+**Expected Result**: ValueError is raised when class has both <<atpMixed>> and <<atpVariation>> markers
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00026
+**Title**: Test Extracting Class with ATP Mixed String and Mixed Raises Error
+
+**Maturity**: accept
+
+**Description**: Verify that attempting to parse a class with <<atpMixedString>> and <<atpMixed>> markers raises a ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with <<atpMixedString>> and <<atpMixed>> markers
+3. Verify that a ValueError is raised
+
+**Expected Result**: ValueError is raised when class has both <<atpMixedString>> and <<atpMixed>> markers
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00027
+**Title**: Test Extracting Class with All Three ATP Patterns Raises Error
+
+**Maturity**: accept
+
+**Description**: Verify that attempting to parse a class with all three ATP markers raises a ValueError.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with all three ATP markers
+3. Verify that a ValueError is raised
+
+**Expected Result**: ValueError is raised when class has all three ATP markers
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00028
+**Title**: Test Extracting Class with ATP and Abstract
+
+**Maturity**: accept
+
+**Description**: Verify that a class can have both an ATP marker and be marked as abstract.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing an abstract class definition with ATP marker (e.g., "Class MyClass (abstract) <<atpVariation>>")
+3. Verify that the class is extracted
+4. Verify that the class is marked as abstract
+5. Verify that the atp_type is set correctly
+
+**Expected Result**: Abstract class with ATP marker is extracted with both properties set correctly
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00029
+**Title**: Test Extracting Class without ATP Patterns
+
+**Maturity**: accept
+
+**Description**: Verify that classes without ATP markers are parsed correctly with ATP type set to NONE.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition without ATP markers
+3. Verify that the class is extracted
+4. Verify that the atp_type is set to ATPType.NONE
+
+**Expected Result**: Class without ATP markers is extracted with atp_type=NONE
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00030
+**Title**: Test Extracting Class with Malformed ATP Pattern
+
+**Maturity**: accept
+
+**Description**: Verify that malformed ATP patterns are ignored and do not prevent class parsing.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing a class definition with malformed ATP pattern (e.g., "Class MyClass <<atpMixedString")
+3. Verify that the class is extracted
+4. Verify that the atp_type is set to ATPType.NONE (malformed pattern ignored)
+
+**Expected Result**: Class is extracted with malformed ATP pattern ignored
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00031
+**Title**: Test Building Packages with ATP Flags
+
+**Maturity**: accept
+
+**Description**: Verify that ATP flags are correctly transferred from ClassDefinition to AutosarClass during package hierarchy building.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create ClassDefinition instances with various ATP types
+2. Call parser._build_package_hierarchy()
+3. Verify that AutosarClass instances have correct ATP types
+
+**Expected Result**: ATP flags are correctly transferred to AutosarClass objects
+
+**Requirements Coverage**: SWR_PARSER_00006
+
+---
+
+#### SWUT_PARSER_00032
+**Title**: Test Extracting Class with Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that class attributes are extracted from PDF text and converted to AutosarAttribute objects.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition including attribute section
+3. Verify attributes are extracted correctly
+4. Verify attribute names, types, and reference flags are correct
+
+**Expected Result**: Attributes are extracted with correct name, type, and is_ref flag
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010
+
+---
+
+#### SWUT_PARSER_00033
+**Title**: Test Extracting Class with Reference Attribute
+
+**Maturity**: accept
+
+**Description**: Verify that reference type attributes are correctly identified based on their type names.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class containing reference-type attributes (e.g., PPortPrototype, ModeDeclarationGroup)
+3. Verify is_ref flag is set to True for reference types
+4. Verify is_ref flag is set to False for non-reference types
+
+**Expected Result**: Reference types are correctly identified by checking for patterns like Prototype, Ref, Dependency, Group, etc.
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010
+
+---
+
+#### SWUT_PARSER_00034
+**Title**: Test Building Packages with Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that attributes are transferred from ClassDefinition to AutosarClass objects during package hierarchy building.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create ClassDefinition instances with attributes
+2. Call parser._build_package_hierarchy()
+3. Verify that AutosarClass instances have attributes dictionaries
+4. Verify that attributes are AutosarAttribute objects with correct properties
+
+**Expected Result**: Attributes are correctly transferred from ClassDefinition to AutosarClass
+
+**Requirements Coverage**: SWR_PARSER_00006
+
+---
+
+#### SWUT_PARSER_00035
 **Title**: Test Metadata Filtering in Attribute Extraction
 
 **Maturity**: accept
@@ -2041,47 +2351,41 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Parse text with class definition including attribute section with metadata lines (e.g., "Stereotypes: : atpSplitable;", "287 : of", "Specification : of", "AUTOSAR : CP")
-3. Verify that only valid attributes are extracted (e.g., adminData, arPackage, fileInfo, Comment)
-4. Verify that metadata lines are NOT parsed as attributes
-5. Verify that attribute names containing special characters (:) or (;) are filtered out
-6. Verify that attribute names starting with numbers are filtered out
-7. Verify that attribute types matching metadata indicators (:, of, CP, atpSplitable) are filtered out
+2. Parse text containing attribute section with metadata lines like "Stereotypes: : atpSplitable;", "287 : of", "Specification : of", "AUTOSAR : CP"
+3. Verify that these metadata lines are NOT parsed as attributes
+4. Verify that only valid attributes are extracted
 
-**Expected Result**: Only valid AUTOSAR attributes are extracted; metadata lines are correctly filtered out
+**Expected Result**: Metadata lines are filtered out and not incorrectly parsed as attributes
 
 **Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00011
 
 ---
 
-#### SWUT_PARSER_00016
+#### SWUT_PARSER_00036
 **Title**: Test Multi-Line Attribute Handling
 
 **Maturity**: accept
 
-**Description**: Verify that multi-line attribute definitions in PDF class tables are handled correctly to prevent broken or split attributes from being incorrectly parsed as separate attributes.
+**Description**: Verify that broken attribute fragments from multi-line PDF table formatting are filtered out to prevent incorrect parsing of partial attributes, while valid attributes with proper type information are preserved.
 
 **Precondition**: None
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Parse text with class definition including attributes that may span multiple lines in the PDF (e.g., "isStructWithOptionalElement", "dynamicArraySizeProfile")
-3. Verify that complete attribute names are correctly extracted (e.g., "isStructWithOptionalElement" not "isStructWith")
-4. Verify that complete attribute types are correctly extracted (e.g., "dynamicArraySizeProfile" not "dynamicArray")
-5. Verify that partial attribute fragments are NOT treated as complete attributes
-6. Verify that broken lines from table formatting are filtered out, including:
-   - Continuation types: "data", "If", "has", "to"
-   - Fragment names: "Element", "SizeProfile", "intention", "ImplementationDataType"
-   - Partial attribute names: "dynamicArray", "isStructWith"
-7. Verify that only valid, complete attributes remain after filtering
+2. Parse text containing attribute section with mixed content:
+   - Valid attribute with proper type: "dynamicArray String * aggr"
+   - Broken fragments: "SizeProfile data", "Element If", "ImplementationDataType has", "intention to", "isStructWith Boolean"
+3. Verify that attributes with proper type information (e.g., "dynamicArray" with type "String") are kept
+4. Verify that broken fragments without proper types are filtered out
+5. Verify that only valid attributes remain
 
-**Expected Result**: Only complete, valid attribute definitions are extracted; multi-line attributes are properly reconstructed; broken fragments are filtered out
+**Expected Result**: Attributes with proper type information (starting with uppercase) are preserved; broken attribute fragments from multi-line formatting are filtered out
 
 **Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00012
 
 ---
 
-#### SWUT_PARSER_00017
+#### SWUT_PARSER_00037
 **Title**: Test Recognition of Primitive Class Definition Pattern
 
 **Maturity**: accept
@@ -2092,11 +2396,11 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Parse text containing a "Primitive <classname>" definition followed by a package path (e.g., "Primitive Limit" followed by "Package M2::AUTOSARTTemplates::...")
+2. Parse text containing a "Primitive <classname>" definition followed by a package path (e.g., "Primitive Limit" followed by "Package M2::AUTOSARTemplates::...")
 3. Verify that the primitive class is recognized as a valid class definition
-4. Verify that attributes following the primitive class definition are assigned to the primitive class, not the previous class
-5. Verify that the primitive class name is extracted correctly (e.g., "Limit" from "Primitive Limit")
-6. Verify that the primitive class is marked as non-abstract (primitive types are concrete)
+4. Verify that the primitive class name is extracted correctly (e.g., "Limit" from "Primitive Limit")
+5. Verify that the primitive class is marked as non-abstract
+6. Verify that any attributes following the primitive definition belong to the primitive class
 
 **Expected Result**: Primitive class definitions are correctly recognized and parsed; attributes are assigned to the correct class
 
@@ -2104,7 +2408,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_PARSER_00018
+#### SWUT_PARSER_00038
 **Title**: Test Recognition of Enumeration Class Definition Pattern
 
 **Maturity**: accept
@@ -2115,11 +2419,11 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Parse text containing an "Enumeration <classname>" definition followed by a package path (e.g., "Enumeration IntervalTypeEnum" followed by "Package M2::AUTOSARTTemplates::...")
+2. Parse text containing an "Enumeration <classname>" definition followed by a package path (e.g., "Enumeration IntervalTypeEnum" followed by "Package M2::AUTOSARTemplates::...")
 3. Verify that the enumeration class is recognized as a valid class definition
 4. Verify that the enumeration class name is extracted correctly (e.g., "IntervalTypeEnum" from "Enumeration IntervalTypeEnum")
 5. Verify that the enumeration class is marked as non-abstract
-6. Verify that any attributes following the enumeration definition belong to the enumeration class, not the previous class
+6. Verify that any attributes following the enumeration definition belong to the enumeration class
 
 **Expected Result**: Enumeration class definitions are correctly recognized and parsed; attributes are assigned to the correct class
 
@@ -2127,7 +2431,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_PARSER_00019
+#### SWUT_PARSER_00039
 **Title**: Test Prevention of Attribute Bleed Between Class Definitions
 
 **Maturity**: accept
@@ -2139,14 +2443,14 @@ All existing test cases in this document are currently at maturity level **accep
 **Test Steps**:
 1. Create a PdfParser instance
 2. Parse text containing multiple class definitions using different patterns:
-   - "Class ImplementationDataType" with attributes (dynamicArray, isStructWithOptionalElement, etc.)
-   - "Primitive Limit" with attributes (intervalType, etc.)
-   - "Enumeration IntervalTypeEnum" with literals (closed, open, etc.)
+   - "Class ImplementationDataType" with attributes
+   - "Primitive Limit" with attributes
+   - "Enumeration IntervalTypeEnum" with literals
 3. Verify that each class is recognized as a separate class definition
-4. Verify that ImplementationDataType has only its own attributes (dynamicArray, isStructWithOptionalElement, subElement, symbolProps, typeEmitter)
-5. Verify that Limit has only its own attributes (intervalType)
-6. Verify that IntervalTypeEnum has its own literals (closed, open)
-7. Verify that attributes are not "bleeding" from one class to another (e.g., intervalType is NOT in ImplementationDataType)
+4. Verify that ImplementationDataType has only its own attributes
+5. Verify that Limit has only its own attributes
+6. Verify that IntervalTypeEnum has its own literals
+7. Verify that attributes are not "bleeding" from one class to another
 
 **Expected Result**: Each class receives only its own attributes; no attribute bleed occurs between classes with different definition patterns
 

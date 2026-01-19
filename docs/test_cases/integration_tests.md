@@ -138,17 +138,20 @@ Future integration tests should cover:
 13. Find ImplementationDataTypes subpackage under CommonStructure
 14. Find ImplementationDataType class in ImplementationDataTypes
 15. Verify ImplementationDataType attributes are correct:
-    - Should have `dynamicArraySizeProfile: String` attribute
+    - Should have exactly 5 attributes
+    - Should have `dynamicArray: String` attribute
     - Should have `isStructWithOptionalElement: Boolean` attribute
+    - Should have `subElement: ImplementationData` attribute
+    - Should have `symbolProps: SymbolProps` attribute
+    - Should have `typeEmitter: NameToken` attribute
     - Should NOT have broken fragment attributes like:
-      - `dynamicArray: String` (partial name)
       - `SizeProfile: data` (continuation fragment)
       - `isStructWith: Boolean` (partial name)
       - `Element: If` (continuation fragment)
       - `ImplementationDataType: has` (continuation fragment)
       - `intention: to` (continuation fragment)
 
-**Expected Result**: 
+**Expected Result**:
 1. Package hierarchy is correctly structured as:
    - M2 (top-level)
      └─ AUTOSARTemplates
@@ -160,9 +163,12 @@ Future integration tests should cover:
            └─ ImplementationDataTypes
               └─ ImplementationDataType (with correct attributes)
 
-2. ImplementationDataType has exactly 2 attributes:
-   - `dynamicArraySizeProfile: String`
+2. ImplementationDataType has exactly 5 attributes:
+   - `dynamicArray: String`
    - `isStructWithOptionalElement: Boolean`
+   - `subElement: ImplementationData`
+   - `symbolProps: SymbolProps`
+   - `typeEmitter: NameToken`
 
 3. Broken attribute fragments are filtered out and not present
 

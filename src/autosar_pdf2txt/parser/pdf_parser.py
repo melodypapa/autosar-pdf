@@ -4,7 +4,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 
 from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
 
@@ -166,7 +166,8 @@ class PdfParser:
         ]
 
         # Partial attribute names that are incomplete
-        partial_names = ["dynamicArray", "isStructWith"]
+        # Note: These are only filtered if they don't have proper type information
+        partial_names = ["isStructWith"]  # Removed "dynamicArray" - it's a valid attribute
 
         return (
             attr_type in continuation_types
@@ -459,10 +460,20 @@ class PdfParser:
                 if line.startswith("Table ") or line.startswith("Enumeration "):
                     # Finalize pending attribute before ending section
                     if pending_attr_name is not None and pending_attr_type is not None:
+                        # Filter rules (same as above)
+                        continuation_types = ["data", "If", "has", "to", "of", "CP", "atpSplitable"]
+                        fragment_names = ["Element", "SizeProfile", "intention", "ImplementationDataType"]
+                        partial_names = ["isStructWith"]  # Always filtered - never a complete attribute
+
+                        should_filter = (
+                            pending_attr_type in continuation_types or
+                            pending_attr_name in fragment_names or
+                            pending_attr_name in partial_names  # Always filter partial names
+                        )
+
                         if (":" not in pending_attr_name and ";" not in pending_attr_name and
                             not pending_attr_name.isdigit() and
-                            pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
-                            not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
+                            not should_filter):
                             is_ref = self._is_reference_type(pending_attr_type)
                             attr = AutosarAttribute(
                                 name=pending_attr_name,
@@ -499,14 +510,29 @@ class PdfParser:
                     )
 
                     if is_new_attribute:
-                        # This is a new attribute line
+                        # This is a new attribute line with proper structure
                         # Finalize any pending attribute first
                         if pending_attr_name is not None and pending_attr_type is not None:
                             # Validate and add the pending attribute
+                            # Filter rules:
+                            # 1. Always filter if attr_type is a known continuation type (data, If, has, to)
+                            # 2. Always filter if attr_name is a known fragment name (Element, SizeProfile, etc.)
+                            # 3. Always filter if attr_name is a known partial name (isStructWith) - never a complete attribute
+                            # 4. Keep dynamicArray (and other valid attrs) if they have proper type information
+                            continuation_types = ["data", "If", "has", "to", "of", "CP", "atpSplitable"]
+                            fragment_names = ["Element", "SizeProfile", "intention", "ImplementationDataType"]
+                            partial_names = ["isStructWith"]  # Always filtered - never a complete attribute
+
+                            # Check if this should be filtered
+                            should_filter = (
+                                pending_attr_type in continuation_types or
+                                pending_attr_name in fragment_names or
+                                pending_attr_name in partial_names  # Always filter partial names
+                            )
+
                             if (":" not in pending_attr_name and ";" not in pending_attr_name and
                                 not pending_attr_name.isdigit() and
-                                pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
-                                not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
+                                not should_filter):
                                 is_ref = self._is_reference_type(pending_attr_type)
                                 attr = AutosarAttribute(
                                     name=pending_attr_name,

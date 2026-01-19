@@ -293,8 +293,7 @@ class MarkdownWriter:
             output: StringIO buffer to write to.
         """
         indent = "  " * level
-        abstract_suffix = " (abstract)" if enum.is_abstract else ""
-        output.write(f"{indent}* {enum.name}{abstract_suffix}\n")
+        output.write(f"{indent}* {enum.name}\n")
 
     def _write_enumeration_to_file(
         self, enum: AutosarEnumeration, pkg_dir: Path, package_name: str
@@ -319,10 +318,7 @@ class MarkdownWriter:
         output.write(f"# Package: {package_name}\n\n")
 
         # Write enumeration name
-        if enum.is_abstract:
-            output.write("## Enumeration (abstract)\n\n")
-        else:
-            output.write("## Enumeration\n\n")
+        output.write("## Enumeration\n\n")
         output.write(f"**{enum.name}**\n\n")
 
         # Write ATP type section if ATP type is not NONE
@@ -334,13 +330,6 @@ class MarkdownWriter:
                 output.write("* atpMixedString\n")
             elif enum.atp_type == ATPType.ATP_MIXED:
                 output.write("* atpMixed\n")
-            output.write("\n")
-
-        # Write base classes if present
-        if enum.bases:
-            output.write("## Base Classes\n\n")
-            for base in enum.bases:
-                output.write(f"* {base}\n")
             output.write("\n")
 
         # Write note if present

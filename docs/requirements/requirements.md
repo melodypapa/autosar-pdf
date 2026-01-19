@@ -273,6 +273,50 @@ This requirement provides a unified interface for managing both classes and enum
 
 ---
 
+#### SWR_MODEL_00021
+**Title**: AUTOSAR Class Multi-Level Inheritance Hierarchy
+
+**Maturity**: accept
+
+**Description**: The system shall support multi-level inheritance hierarchies for AUTOSAR classes, where a class can inherit from a base class, which in turn can inherit from its own base class, and so on (parent → grandparent → great-grandparent → ...).
+
+The `AutosarClass` data model shall:
+- Maintain the existing `bases` attribute (List[str]) that stores the immediate parent class names
+- Support inheritance chains of arbitrary depth through the base class references
+- Allow classes to have multiple immediate base classes (multiple inheritance)
+- Preserve the complete inheritance path from the most derived class to the root ancestor(s)
+
+This requirement enables the system to represent complex AUTOSAR class hierarchies such as:
+- `SwComponentPrototype` → `Prototype` → `Identifiable` (3-level inheritance)
+- `SwcInternalBehavior` → `InternalBehavior` → `Behavior` → `Identifiable` (4-level inheritance)
+- Classes with multiple inheritance paths where a class inherits from multiple base classes
+
+The inheritance hierarchy is represented through the `bases` list in each `AutosarClass`, which contains the names of the immediate parent classes. To traverse the complete inheritance chain, the system must recursively follow the `bases` references through all ancestor classes.
+
+---
+
+#### SWR_MODEL_00022
+**Title**: AUTOSAR Class Parent Attribute
+
+**Maturity**: accept
+
+**Description**: The system shall provide a `parent` attribute in the `AutosarClass` data model to indicate the only parent of this class.
+
+The `AutosarClass` data model shall:
+- Add a `parent` attribute that stores a reference to the immediate parent `AutosarClass` object
+- The `parent` attribute shall be optional (None for root classes with no parent)
+- The `parent` attribute shall be a single `AutosarClass` reference (not a list), supporting only single inheritance
+- When a class has multiple bases (multiple inheritance), the `parent` attribute shall reference the first/primary parent
+
+This requirement enables:
+- Direct traversal from child to parent without searching through package hierarchies
+- Simplified access to the immediate parent class object (not just the name)
+- Efficient parent-child relationship queries
+
+**Note**: This attribute complements the existing `bases` attribute (which stores parent class names as strings) by providing direct object references to the parent class.
+
+---
+
 ### 2. Parser
 
 #### SWR_PARSER_00001
@@ -538,6 +582,31 @@ This requirement ensures that enumeration literal extraction is scoped correctly
 
 ---
 
+#### SWR_PARSER_00017
+**Title**: AUTOSAR Class Parent Resolution
+
+**Maturity**: accept
+
+**Description**: After parsing all classes from a PDF file and building the AUTOSAR class hierarchy tree, the system shall automatically set the `parent` attribute for each class to reference the correct parent `AutosarClass` object.
+
+The system shall:
+1. After building the complete package hierarchy with all `AutosarClass` objects
+2. For each class that has a non-empty `bases` list:
+   - Search through all packages to find the parent `AutosarClass` object by name
+   - Set the `parent` attribute to reference the first base class in the `bases` list
+   - If the parent class is not found in any package, leave `parent` as None
+3. For classes with an empty `bases` list, set `parent` to None (root classes)
+4. Process classes in dependency order to ensure parent classes are resolved before child classes
+
+This requirement enables:
+- Automatic parent-child relationship establishment during parsing
+- Direct object reference navigation from child to parent without searching
+- Support for traversing the complete inheritance hierarchy by following parent references
+
+**Note**: This requirement complements SWR_MODEL_00022 (AUTOSAR Class Parent Attribute) by describing how the `parent` attribute is automatically populated during PDF parsing.
+
+---
+
 ### 3. Writer
 
 #### SWR_WRITER_00001
@@ -730,6 +799,8 @@ The ATP Type section shall:
 **Description**: The system shall export the following public API from the root package:
 - `AutosarAttribute`
 - `AutosarClass`
+- `AutosarEnumLiteral`
+- `AutosarEnumeration`
 - `AutosarPackage`
 - `PdfParser`
 - `MarkdownWriter`

@@ -97,20 +97,16 @@ class AutosarType(ABC):
 
     Attributes:
         name: The name of the type.
-        is_abstract: Whether the type is abstract.
         atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
-        bases: List of base type names for inheritance tracking.
         note: Optional documentation or comments about the type.
 
     Examples:
-        >>> type_obj = AutosarType("MyType", False)  # This would fail - can't instantiate abstract class
+        >>> type_obj = AutosarType("MyType")  # This would fail - can't instantiate abstract class
         >>> # Instead, use AutosarClass or AutosarEnumeration
     """
 
     name: str
-    is_abstract: bool
     atp_type: ATPType = ATPType.NONE
-    bases: List[str] = field(default_factory=list)
     note: Optional[str] = None
 
     def __post_init__(self) -> None:
@@ -132,10 +128,9 @@ class AutosarType(ABC):
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
 
         Returns:
-            Type name with '(abstract)' suffix if abstract.
+            Type name.
         """
-        suffix = " (abstract)" if self.is_abstract else ""
-        return f"{self.name}{suffix}"
+        return f"{self.name}"
 
 
 @dataclass
@@ -202,43 +197,62 @@ class AutosarClass(AutosarType):
     Requirements:
         SWR_MODEL_00001: AUTOSAR Class Representation
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        SWR_MODEL_00022: AUTOSAR Class Parent Attribute
 
-    Inherits from AutosarType to provide common type properties (name, is_abstract,
-    atp_type, bases, note) and adds class-specific attributes.
+    Inherits from AutosarType to provide common type properties (name, atp_type, note)
+    and adds class-specific attributes including inheritance support.
 
     Attributes:
         name: The name of the class (inherited from AutosarType).
-        is_abstract: Whether the class is abstract (inherited from AutosarType).
+        is_abstract: Whether the class is abstract.
         atp_type: ATP marker type enum (inherited from AutosarType).
         attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
-        bases: List of base class names for inheritance tracking (inherited from AutosarType).
+        bases: List of base class names for inheritance tracking.
+        parent: Reference to the immediate parent AutosarClass object (None for root classes).
         note: Optional documentation or comments (inherited from AutosarType).
 
     Examples:
         >>> cls = AutosarClass("RunnableEntity", False)
         >>> abstract_cls = AutosarClass("InternalBehavior", True)
         >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True)
-        >>> cls_with_attr = AutosarClass("Component", False, {"dataReadPort": attr})
+        >>> cls_with_attr = AutosarClass("Component", False, attributes={"dataReadPort": attr})
         >>> cls_with_bases = AutosarClass("DerivedClass", False, bases=["BaseClass"])
         >>> cls_with_note = AutosarClass("MyClass", False, note="Documentation note")
         >>> cls_with_atp = AutosarClass("MyClass", False, atp_type=ATPType.ATP_VARIATION)
     """
 
+    is_abstract: bool = False
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
+    bases: List[str] = field(default_factory=list)
+    parent: Optional["AutosarClass"] = None
+
+    def __str__(self) -> str:
+        """Return string representation of the class.
+
+        Requirements:
+            SWR_MODEL_00003: AUTOSAR Class String Representation
+
+        Returns:
+            Class name with '(abstract)' suffix if abstract.
+        """
+        suffix = " (abstract)" if self.is_abstract else ""
+        return f"{self.name}{suffix}"
 
     def __repr__(self) -> str:
         """Return detailed representation for debugging.
 
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
+            SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
         attrs_count = len(self.attributes)
         bases_count = len(self.bases)
         note_present = self.note is not None
+        parent_name = self.parent.name if self.parent else None
         return (
             f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
             f"atp_type={self.atp_type.name}, "
-            f"attributes={attrs_count}, bases={bases_count}, note={note_present})"
+            f"attributes={attrs_count}, bases={bases_count}, parent={parent_name}, note={note_present})"
         )
 
 
@@ -250,28 +264,24 @@ class AutosarEnumeration(AutosarType):
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
 
-    Inherits from AutosarType to provide common type properties (name, is_abstract,
-    atp_type, bases, note) and adds enumeration-specific literals.
+    Inherits from AutosarType to provide common type properties (name, atp_type, note)
+    and adds enumeration-specific literals.
 
     Attributes:
         name: The name of the enumeration (inherited from AutosarType).
-        is_abstract: Whether the enumeration is abstract (inherited from AutosarType).
         atp_type: ATP marker type enum (inherited from AutosarType).
         enumeration_literals: List of enumeration literal values.
-        bases: List of base type names for inheritance tracking (inherited from AutosarType).
         note: Optional documentation or comments (inherited from AutosarType).
 
     Examples:
-        >>> enum = AutosarEnumeration("EcucDestinationUriNestingContractEnum", False)
+        >>> enum = AutosarEnumeration("EcucDestinationUriNestingContractEnum")
         >>> enum_with_literals = AutosarEnumeration(
         ...     "MyEnum",
-        ...     False,
         ...     enumeration_literals=[
         ...         AutosarEnumLiteral("VALUE1", 0, "First value"),
         ...         AutosarEnumLiteral("VALUE2", 1, "Second value")
         ...     ]
         ... )
-        >>> enum_abstract = AutosarEnumeration("AbstractEnum", True)
     """
 
     enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
@@ -283,12 +293,11 @@ class AutosarEnumeration(AutosarType):
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
         literals_count = len(self.enumeration_literals)
-        bases_count = len(self.bases)
         note_present = self.note is not None
         return (
-            f"AutosarEnumeration(name='{self.name}', is_abstract={self.is_abstract}, "
+            f"AutosarEnumeration(name='{self.name}', "
             f"atp_type={self.atp_type.name}, "
-            f"enumeration_literals={literals_count}, bases={bases_count}, note={note_present})"
+            f"enumeration_literals={literals_count}, note={note_present})"
         )
 
 

@@ -7,7 +7,7 @@ to cache parsed PDF data. Each PDF is parsed only once per test session, with
 results shared across all tests that need them.
 """
 
-from autosar_pdf2txt.models import ATPType
+from autosar_pdf2txt.models import ATPType, AutosarClass
 from autosar_pdf2txt.parser import PdfParser
 
 
@@ -117,8 +117,10 @@ class TestPdfIntegration:
 
         def collect_classes(pkg):
             for cls in pkg.types:
-                if cls.bases:
-                    classes_with_bases.append(cls)
+                # Only AutosarClass has bases attribute, not AutosarEnumeration
+                if isinstance(cls, AutosarClass):
+                    if cls.bases:
+                        classes_with_bases.append(cls)
                 if cls.note:
                     classes_with_notes.append(cls)
             for subpkg in pkg.subpackages:

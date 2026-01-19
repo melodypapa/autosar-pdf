@@ -19,6 +19,7 @@ class TestPdfParser:
         SWR_PARSER_00004: Class Definition Pattern Recognition
         SWR_PARSER_00005: Class Definition Data Model
         SWR_PARSER_00006: Package Hierarchy Building
+        SWR_PARSER_00017: AUTOSAR Class Parent Resolution
     """
 
     def test_init(self) -> None:
@@ -1289,7 +1290,6 @@ class TestPdfParser:
         assert enum is not None
         assert isinstance(enum, AutosarEnumeration)
         assert enum.name == "MyEnum"
-        assert enum.is_abstract is False
         assert len(enum.enumeration_literals) == 2
         assert enum.enumeration_literals[0].name == "VALUE1"
         assert enum.enumeration_literals[0].index == 0
@@ -1342,4 +1342,164 @@ class TestPdfParser:
         # Verify second is an enumeration
         assert isinstance(data_types_pkg.types[1], AutosarEnumeration)
         assert data_types_pkg.types[1].name == "MyEnum"
+
+    def test_parent_resolution_sets_parent_reference(self) -> None:
+        """Test that parent references are correctly resolved after building packages.
+
+        SWUT_PARSER_00046: Test Parent Resolution Sets Parent Reference
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="BaseClass",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="DerivedClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["BaseClass"]
+            ),
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        pkg = packages[0]
+
+        # Get both classes
+        base_pkg = pkg.get_subpackage("Base")
+        derived_pkg = pkg.get_subpackage("Derived")
+        assert base_pkg is not None
+        assert derived_pkg is not None
+
+        base_class = base_pkg.get_class("BaseClass")
+        derived_class = derived_pkg.get_class("DerivedClass")
+        assert base_class is not None
+        assert derived_class is not None
+
+        # Verify parent reference is set correctly
+        assert derived_class.parent is base_class
+        assert derived_class.parent.name == "BaseClass"
+
+        # Verify base class has no parent
+        assert base_class.parent is None
+
+    def test_parent_resolution_with_multiple_bases_uses_first(self) -> None:
+        """Test that parent reference uses the first base class when there are multiple.
+
+        SWUT_PARSER_00047: Test Parent Resolution with Multiple Bases Uses First
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="Base1",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="Base2",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="DerivedClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["Base1", "Base2"]
+            ),
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        base_pkg = pkg.get_subpackage("Base")
+        derived_pkg = pkg.get_subpackage("Derived")
+
+        base1 = base_pkg.get_class("Base1")
+        derived = derived_pkg.get_class("DerivedClass")
+
+        # Verify parent is set to the first base
+        assert derived.parent is base1
+        assert derived.parent.name == "Base1"
+
+    def test_parent_resolution_missing_base_leaves_parent_none(self) -> None:
+        """Test that parent reference remains None when base class is not found.
+
+        SWUT_PARSER_00048: Test Parent Resolution Missing Base Leaves Parent None
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="DerivedClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["NonExistentBase"]
+            ),
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        derived_pkg = pkg.get_subpackage("Derived")
+        derived = derived_pkg.get_class("DerivedClass")
+
+        # Parent should remain None when base is not found
+        assert derived.parent is None
+        assert derived.bases == ["NonExistentBase"]
+
+    def test_parent_resolution_enumerations_not_affected(self) -> None:
+        """Test that enumerations are not used as parent references.
+
+        SWUT_PARSER_00049: Test Parent Resolution Enumerations Not Affected
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="MyEnum",
+                package_path="AUTOSAR::Enums",
+                is_abstract=False,
+                is_enumeration=True,
+                base_classes=[],
+                enumeration_literals=[]
+            ),
+            ClassDefinition(
+                name="MyClass",
+                package_path="AUTOSAR::Classes",
+                is_abstract=False,
+                base_classes=["MyEnum"]
+            ),
+        ]
+
+        packages = parser._build_package_hierarchy(class_defs)
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        classes_pkg = pkg.get_subpackage("Classes")
+        my_class = classes_pkg.get_class("MyClass")
+
+        # Parent should remain None because MyEnum is an enumeration, not a class
+        assert my_class.parent is None
 

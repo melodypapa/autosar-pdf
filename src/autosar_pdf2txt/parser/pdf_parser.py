@@ -139,6 +139,41 @@ class PdfParser:
         ]
         return any(indicator in attr_type for indicator in reference_indicators)
 
+    def _is_broken_attribute_fragment(
+        self, attr_name: str, attr_type: str
+    ) -> bool:
+        """Check if an attribute is a broken fragment from multi-line PDF table formatting.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Args:
+            attr_name: The attribute name.
+            attr_type: The attribute type.
+
+        Returns:
+            True if this is a broken fragment that should be filtered out, False otherwise.
+        """
+        # Continuation types that appear as attribute types in broken fragments
+        continuation_types = ["data", "If", "has", "to"]
+
+        # Fragment names that appear as attribute names in broken fragments
+        fragment_names = [
+            "Element",
+            "SizeProfile",
+            "intention",
+            "ImplementationDataType",
+        ]
+
+        # Partial attribute names that are incomplete
+        partial_names = ["dynamicArray", "isStructWith"]
+
+        return (
+            attr_type in continuation_types
+            or attr_name in fragment_names
+            or attr_name in partial_names
+        )
+
     def parse_pdf(self, pdf_path: str) -> List[AutosarPackage]:
         """Parse a PDF file and extract the package hierarchy.
 
@@ -284,7 +319,8 @@ class PdfParser:
                 if current_class is not None and pending_attr_name is not None and pending_attr_type is not None:
                     if (":" not in pending_attr_name and ";" not in pending_attr_name and
                         not pending_attr_name.isdigit() and
-                        pending_attr_type not in [":", "of", "CP", "atpSplitable"]):
+                        pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
+                        not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
                         is_ref = self._is_reference_type(pending_attr_type)
                         attr = AutosarAttribute(
                             name=pending_attr_name,
@@ -425,7 +461,8 @@ class PdfParser:
                     if pending_attr_name is not None and pending_attr_type is not None:
                         if (":" not in pending_attr_name and ";" not in pending_attr_name and
                             not pending_attr_name.isdigit() and
-                            pending_attr_type not in [":", "of", "CP", "atpSplitable"]):
+                            pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
+                            not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
                             is_ref = self._is_reference_type(pending_attr_type)
                             attr = AutosarAttribute(
                                 name=pending_attr_name,
@@ -468,7 +505,8 @@ class PdfParser:
                             # Validate and add the pending attribute
                             if (":" not in pending_attr_name and ";" not in pending_attr_name and
                                 not pending_attr_name.isdigit() and
-                                pending_attr_type not in [":", "of", "CP", "atpSplitable"]):
+                                pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
+                                not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
                                 is_ref = self._is_reference_type(pending_attr_type)
                                 attr = AutosarAttribute(
                                     name=pending_attr_name,
@@ -520,7 +558,8 @@ class PdfParser:
                 # Validate that this is a real attribute, not metadata
                 if (":" not in pending_attr_name and ";" not in pending_attr_name and
                     not pending_attr_name.isdigit() and
-                    pending_attr_type not in [":", "of", "CP", "atpSplitable"]):
+                    pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
+                    not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
                     is_ref = self._is_reference_type(pending_attr_type)
                     attr = AutosarAttribute(
                         name=pending_attr_name,

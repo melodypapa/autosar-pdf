@@ -899,7 +899,7 @@ class TestPdfParser:
     def test_extract_class_ignores_metadata_as_attributes(self) -> None:
         """Test that metadata lines are not incorrectly parsed as attributes.
 
-        SWUT_PARSER_00015: Test Metadata Filtering in Attribute Extraction
+        SWUT_PARSER_00035: Test Metadata Filtering in Attribute Extraction
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -949,7 +949,7 @@ class TestPdfParser:
     def test_extract_class_filters_broken_attribute_fragments(self) -> None:
         """Test that broken attribute fragments from multi-line PDF tables are filtered out.
 
-        SWUT_PARSER_00016: Test Multi-Line Attribute Handling
+        SWUT_PARSER_00036: Test Multi-Line Attribute Handling
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -957,8 +957,9 @@ class TestPdfParser:
             SWR_PARSER_00012: Multi-Line Attribute Handling
 
         This test verifies that broken attribute fragments like "SizeProfile", "Element",
-        "ImplementationDataType", "intention", "dynamicArray", "isStructWith" are filtered out
+        "ImplementationDataType", "intention", "isStructWith" are filtered out
         as they are continuation words or partial attribute names from multi-line PDF table formatting.
+        However, attributes with proper type information (like "dynamicArray String") are kept.
         """
         parser = PdfParser()
         text = """
@@ -977,21 +978,24 @@ class TestPdfParser:
         assert len(class_defs) == 1
         assert class_defs[0].name == "ImplementationDataType"
 
+        # Verify that dynamicArray is kept (has proper type "String")
+        assert "dynamicArray" in class_defs[0].attributes
+        assert class_defs[0].attributes["dynamicArray"].type == "String"
+
         # Verify that broken fragments are filtered out
-        assert "dynamicArray" not in class_defs[0].attributes
         assert "SizeProfile" not in class_defs[0].attributes
         assert "isStructWith" not in class_defs[0].attributes
         assert "Element" not in class_defs[0].attributes
         assert "ImplementationDataType" not in class_defs[0].attributes
         assert "intention" not in class_defs[0].attributes
 
-        # Verify that no attributes remain (all were fragments)
-        assert len(class_defs[0].attributes) == 0
+        # Verify that only 1 attribute remains (dynamicArray)
+        assert len(class_defs[0].attributes) == 1
 
     def test_extract_primitive_class_definition(self) -> None:
         """Test that the parser correctly recognizes class definitions with 'Primitive' prefix.
 
-        SWUT_PARSER_00017: Test Recognition of Primitive Class Definition Pattern
+        SWUT_PARSER_00037: Test Recognition of Primitive Class Definition Pattern
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -1019,7 +1023,7 @@ class TestPdfParser:
     def test_extract_enumeration_class_definition(self) -> None:
         """Test that the parser correctly recognizes class definitions with 'Enumeration' prefix.
 
-        SWUT_PARSER_00018: Test Recognition of Enumeration Class Definition Pattern
+        SWUT_PARSER_00038: Test Recognition of Enumeration Class Definition Pattern
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -1045,7 +1049,7 @@ class TestPdfParser:
     def test_prevent_attribute_bleed_between_class_types(self) -> None:
         """Test that attributes don't bleed between classes with different definition patterns.
 
-        SWUT_PARSER_00019: Test Prevention of Attribute Bleed Between Class Definitions
+        SWUT_PARSER_00039: Test Prevention of Attribute Bleed Between Class Definitions
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition

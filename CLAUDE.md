@@ -124,6 +124,20 @@ python scripts/run_tests.py --unit
 python scripts/run_tests.py --all && ruff check src/ tests/ && mypy src/autosar_pdf2txt/
 ```
 
+## Project Examples
+
+The `examples/pdf/` directory contains sample AUTOSAR specification PDFs for testing:
+
+- `AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf`
+- `AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf`
+- `AUTOSAR_CP_TPS_ECUConfiguration.pdf`
+- `AUTOSAR_CP_TPS_ECUResourceTemplate.pdf`
+- `AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf`
+- `AUTOSAR_CP_TPS_SystemTemplate.pdf`
+- `AUTOSAR_CP_TPS_TimingExtensions.pdf`
+
+Use these files to test parser changes or verify extraction behavior.
+
 ## Code Architecture
 
 ### Package Structure
@@ -316,12 +330,24 @@ autosar-extract input.pdf -o output.md --write-class-files
 
 ### PDF Parsing Patterns
 - Class definitions: `Class <name> (abstract)`
+- Primitive class definitions: `Primitive <name>` (SWR_PARSER_00013)
+- Enumeration class definitions: `Enumeration <name>` (SWR_PARSER_00013)
 - Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>`
 - Subclasses: `Subclasses <class_list>`
 - Notes: `Note <text>` (documentation/comments)
-- Attributes: `<name> : <type>` with `(ref)` suffix for reference types
+- Attribute header: `Attribute Type Mult. Kind Note` (SWR_PARSER_00010)
+- Attributes: `<name> <type> <mult> <kind> <description>` (SWR_PARSER_00010, SWR_PARSER_00011, SWR_PARSER_00012)
+
+### PDF Text Extraction Strategy
+The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_tolerance=1`) instead of raw text extraction to properly handle word spacing and avoid concatenated words due to tight kerning in PDF files (SWR_PARSER_00009).
+
+### Attribute Extraction Details
+- Recognizes attribute section by the "Attribute Type Mult. Kind Note" header (SWR_PARSER_00010)
+- Filters out metadata lines containing special characters (`:`, `;`) or starting with numbers (SWR_PARSER_00011)
+- Handles multi-line attribute definitions by detecting and filtering broken attribute fragments (SWR_PARSER_00012)
+- Common filtered fragments: "Element", "SizeProfile", "data", "If", "has", "to", "ImplementationDataType", "intention"
 
 ## Requirement Traceability
 
@@ -343,7 +369,7 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
   - SWR_MODEL_00012: AUTOSAR Attribute Type Validation
   - SWR_MODEL_00013: AUTOSAR Attribute String Representation
 
-- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00007
+- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00013
   - SWR_PARSER_00001: PDF Parser Initialization
   - SWR_PARSER_00002: Backend Validation
   - SWR_PARSER_00003: PDF File Parsing
@@ -351,6 +377,12 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
   - SWR_PARSER_00005: Class Definition Data Model
   - SWR_PARSER_00006: Package Hierarchy Building
   - SWR_PARSER_00007: PDF Backend Support - pdfplumber
+  - SWR_PARSER_00008: PDF Backend Support - pdfplumber (duplicate of SWR_PARSER_00007)
+  - SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+  - SWR_PARSER_00010: Attribute Extraction from PDF
+  - SWR_PARSER_00011: Metadata Filtering in Attribute Extraction
+  - SWR_PARSER_00012: Multi-Line Attribute Handling
+  - SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
 
 - **Writer**: SWR_WRITER_00001 - SWR_WRITER_00006
   - SWR_WRITER_00001: Markdown Writer Initialization
@@ -500,11 +532,18 @@ If the parser is not extracting classes correctly from a PDF:
    ```
 
 3. **Verify regex patterns** in `pdf_parser.py` match the PDF format:
-   - Class definitions: `CLASS_PATTERN`
+   - Class definitions: `CLASS_PATTERN`, `PRIMITIVE_PATTERN`, `ENUMERATION_PATTERN`
    - Package paths: `PACKAGE_PATTERN`
-   - Attributes: `ATTRIBUTE_PATTERN`
+   - Attributes: `ATTRIBUTE_PATTERN` (checks for "Attribute Type Mult. Kind Note" header)
+   - ATP markers: `ATP_MIXED_STRING_PATTERN`, `ATP_VARIATION_PATTERN`, `ATP_MIXED_PATTERN`
 
-4. **Check for M2 package prefixes** which affect hierarchy building
+4. **Check for attribute extraction issues**:
+   - Verify attribute header recognition: "Attribute Type Mult. Kind Note"
+   - Check for metadata lines being incorrectly parsed (SWR_PARSER_00011)
+   - Look for multi-line attribute fragments (SWR_PARSER_00012)
+   - Common problematic fragments: "Element", "SizeProfile", "data", "If", "has"
+
+5. **Check for M2 package prefixes** which affect hierarchy building
 
 ### Understanding Package Hierarchy
 

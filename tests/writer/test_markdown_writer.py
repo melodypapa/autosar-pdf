@@ -413,6 +413,11 @@ class TestMarkdownWriterFiles:
         class_file = child_dir / "ChildClass.md"
         assert class_file.is_file()
 
+        # Verify full package path is written to the file
+        content = class_file.read_text(encoding="utf-8")
+        assert "## Package\n\n" in content
+        assert "RootPackage::ChildPackage\n\n" in content
+
     def test_write_class_with_attributes(self, tmp_path: Path) -> None:
         """SWUT_WRITER_00020: Test writing a class with attributes to file.
 
@@ -816,6 +821,11 @@ class TestMarkdownWriterFiles:
         # Check class file in deep directory
         class_file = deep_dir / "DeepClass.md"
         assert class_file.is_file()
+
+        # Verify full package path is written to the file
+        content = class_file.read_text(encoding="utf-8")
+        assert "## Package\n\n" in content
+        assert "Level1::Level2::Level3\n\n" in content
 
     def test_sanitize_filename_normal_name(self) -> None:
         """SWUT_WRITER_00036: Test sanitizing a normal class name.

@@ -171,7 +171,7 @@ class MarkdownWriter:
         indent = "  " * level
         output.write(f"{indent}* {cls.name}\n")
 
-    def _write_package_to_files(self, pkg: AutosarPackage, parent_dir: Path) -> None:
+    def _write_package_to_files(self, pkg: AutosarPackage, parent_dir: Path, parent_path: Optional[List[str]] = None) -> None:
         """Write a package to directory structure with class files.
 
         Requirements:
@@ -183,26 +183,34 @@ class MarkdownWriter:
         Args:
             pkg: The package to write.
             parent_dir: Parent directory path where the package directory will be created.
+            parent_path: List of parent package names for constructing full package path.
 
         Raises:
             OSError: If directory creation or file writing fails.
         """
+        if parent_path is None:
+            parent_path = []
+
         # Create directory for this package
         pkg_dir = parent_dir / pkg.name
         pkg_dir.mkdir(parents=True, exist_ok=True)
 
+        # Build full package path for this package
+        full_package_path = parent_path + [pkg.name]
+        package_path_str = "::".join(full_package_path)
+
         # Write each type to a separate file
         for typ in pkg.types:
             if isinstance(typ, AutosarClass):
-                self._write_class_to_file(typ, pkg_dir, pkg.name)
+                self._write_class_to_file(typ, pkg_dir, package_path_str)
             elif isinstance(typ, AutosarEnumeration):
-                self._write_enumeration_to_file(typ, pkg_dir, pkg.name)
+                self._write_enumeration_to_file(typ, pkg_dir, package_path_str)
 
         # Recursively write subpackages
         for subpkg in pkg.subpackages:
-            self._write_package_to_files(subpkg, pkg_dir)
+            self._write_package_to_files(subpkg, pkg_dir, full_package_path)
 
-    def _write_class_to_file(self, cls: AutosarClass, pkg_dir: Path, package_name: str) -> None:
+    def _write_class_to_file(self, cls: AutosarClass, pkg_dir: Path, package_path_str: str) -> None:
         """Write a single class to its own markdown file.
 
         Requirements:
@@ -210,7 +218,7 @@ class MarkdownWriter:
             SWR_WRITER_00006: Individual Class Markdown File Content
 
         The markdown file contains:
-        - Package name
+        - Package path (full parent hierarchy)
         - Abstract class indicator
         - ATP type (if any ATP flags are present)
         - Base classes (if any)
@@ -220,7 +228,7 @@ class MarkdownWriter:
         Args:
             cls: The class to write.
             pkg_dir: Directory where the class file will be created.
-            package_name: Name of the package containing the class.
+            package_path_str: Full package path (e.g., "AUTOSAR::DataTypes::ImplementationDataTypes").
 
         Raises:
             OSError: If file writing fails.
@@ -231,7 +239,7 @@ class MarkdownWriter:
 
         # Write package information
         output.write("## Package\n\n")
-        output.write(f"{package_name}\n\n")
+        output.write(f"{package_path_str}\n\n")
 
         # Write abstract indicator
         output.write("## Type\n\n")
@@ -300,7 +308,7 @@ class MarkdownWriter:
         output.write(f"{indent}* {enum.name}\n")
 
     def _write_enumeration_to_file(
-        self, enum: AutosarEnumeration, pkg_dir: Path, package_name: str
+        self, enum: AutosarEnumeration, pkg_dir: Path, package_path_str: str
     ) -> None:
         """Write a single enumeration to its own markdown file.
 
@@ -311,7 +319,7 @@ class MarkdownWriter:
         Args:
             enum: The enumeration to write.
             pkg_dir: Directory path for the package.
-            package_name: Name of the parent package.
+            package_path_str: Full package path (e.g., "AUTOSAR::DataTypes::ImplementationDataTypes").
 
         Raises:
             OSError: If file writing fails.
@@ -319,7 +327,7 @@ class MarkdownWriter:
         output = StringIO()
 
         # Write package name
-        output.write(f"# Package: {package_name}\n\n")
+        output.write(f"# Package: {package_path_str}\n\n")
 
         # Write enumeration name
         output.write("## Enumeration\n\n")

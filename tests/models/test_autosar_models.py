@@ -1,4 +1,4 @@
-"""Tests for AutosarAttribute, AutosarClass, AutosarEnumeration, AutosarEnumLiteral, AutosarPackage and AbstractAutosarBase models.
+"""Tests for AutosarAttribute, AutosarClass, AutosarEnumeration, AutosarEnumLiteral, AutosarPackage, AutosarPrimitive and AbstractAutosarBase models.
 
 Test coverage for autosar_models.py targeting 100%.
 """
@@ -7,11 +7,13 @@ import pytest
 
 from autosar_pdf2txt.models import (
     ATPType,
+    AttributeKind,
     AutosarAttribute,
     AutosarClass,
     AutosarEnumLiteral,
     AutosarEnumeration,
     AutosarPackage,
+    AutosarPrimitive,
 )
 
 
@@ -169,10 +171,20 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00010: AUTOSAR Attribute Representation
         """
-        attr = AutosarAttribute(name="dataReadPort", type="PPortPrototype", is_ref=True)
+        attr = AutosarAttribute(
+            name="dataReadPort",
+            type="PPortPrototype",
+            is_ref=True,
+            multiplicity="0..1",
+            kind=AttributeKind.ATTR,
+            note="Data read port"
+        )
         assert attr.name == "dataReadPort"
         assert attr.type == "PPortPrototype"
         assert attr.is_ref is True
+        assert attr.multiplicity == "0..1"
+        assert attr.kind == AttributeKind.ATTR
+        assert attr.note == "Data read port"
 
     def test_init_non_reference_attribute(self) -> None:
         """Test creating a non-reference type attribute.
@@ -180,10 +192,20 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00010: AUTOSAR Attribute Representation
         """
-        attr = AutosarAttribute(name="id", type="uint32", is_ref=False)
+        attr = AutosarAttribute(
+            name="id",
+            type="uint32",
+            is_ref=False,
+            multiplicity="1",
+            kind=AttributeKind.ATTR,
+            note="Unique identifier"
+        )
         assert attr.name == "id"
         assert attr.type == "uint32"
         assert attr.is_ref is False
+        assert attr.multiplicity == "1"
+        assert attr.kind == AttributeKind.ATTR
+        assert attr.note == "Unique identifier"
 
     def test_post_init_valid_name(self) -> None:
         """Test valid name validation.
@@ -191,7 +213,14 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00011: AUTOSAR Attribute Name Validation
         """
-        attr = AutosarAttribute(name="validAttribute", type="string", is_ref=False)
+        attr = AutosarAttribute(
+            name="validAttribute",
+            type="string",
+            is_ref=False,
+            multiplicity="1",
+            kind=AttributeKind.ATTR,
+            note=""
+        )
         assert attr.name == "validAttribute"
 
     def test_post_init_empty_name(self) -> None:
@@ -201,7 +230,14 @@ class TestAutosarAttribute:
             SWR_MODEL_00011: AUTOSAR Attribute Name Validation
         """
         with pytest.raises(ValueError, match="Attribute name cannot be empty"):
-            AutosarAttribute(name="", type="string", is_ref=False)
+            AutosarAttribute(
+                name="",
+                type="string",
+                is_ref=False,
+                multiplicity="1",
+                kind=AttributeKind.ATTR,
+                note=""
+            )
 
     def test_post_init_whitespace_name(self) -> None:
         """Test whitespace-only name raises ValueError.
@@ -210,7 +246,14 @@ class TestAutosarAttribute:
             SWR_MODEL_00011: AUTOSAR Attribute Name Validation
         """
         with pytest.raises(ValueError, match="Attribute name cannot be empty"):
-            AutosarAttribute(name="   ", type="string", is_ref=False)
+            AutosarAttribute(
+                name="   ",
+                type="string",
+                is_ref=False,
+                multiplicity="1",
+                kind=AttributeKind.ATTR,
+                note=""
+            )
 
     def test_post_init_valid_type(self) -> None:
         """Test valid type validation.
@@ -218,7 +261,14 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00012: AUTOSAR Attribute Type Validation
         """
-        attr = AutosarAttribute(name="attr", type="ValidType", is_ref=False)
+        attr = AutosarAttribute(
+            name="attr",
+            type="ValidType",
+            is_ref=False,
+            multiplicity="1",
+            kind=AttributeKind.ATTR,
+            note=""
+        )
         assert attr.type == "ValidType"
 
     def test_post_init_empty_type(self) -> None:
@@ -228,7 +278,14 @@ class TestAutosarAttribute:
             SWR_MODEL_00012: AUTOSAR Attribute Type Validation
         """
         with pytest.raises(ValueError, match="Attribute type cannot be empty"):
-            AutosarAttribute(name="attr", type="", is_ref=False)
+            AutosarAttribute(
+                name="attr",
+                type="",
+                is_ref=False,
+                multiplicity="1",
+                kind=AttributeKind.ATTR,
+                note=""
+            )
 
     def test_post_init_whitespace_type(self) -> None:
         """Test whitespace-only type raises ValueError.
@@ -237,7 +294,14 @@ class TestAutosarAttribute:
             SWR_MODEL_00012: AUTOSAR Attribute Type Validation
         """
         with pytest.raises(ValueError, match="Attribute type cannot be empty"):
-            AutosarAttribute(name="attr", type="   ", is_ref=False)
+            AutosarAttribute(
+                name="attr",
+                type="   ",
+                is_ref=False,
+                multiplicity="1",
+                kind=AttributeKind.ATTR,
+                note=""
+            )
 
     def test_str_reference_attribute(self) -> None:
         """Test string representation of reference attribute.
@@ -245,8 +309,15 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00013: AUTOSAR Attribute String Representation
         """
-        attr = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
-        assert str(attr) == "port: PPortPrototype (ref)"
+        attr = AutosarAttribute(
+            name="port",
+            type="PPortPrototype",
+            is_ref=True,
+            multiplicity="0..1",
+            kind=AttributeKind.ATTR,
+            note="Port"
+        )
+        assert str(attr) == "port: PPortPrototype (ref) [0..1] (attr) - Port"
 
     def test_str_non_reference_attribute(self) -> None:
         """Test string representation of non-reference attribute.
@@ -254,8 +325,15 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00013: AUTOSAR Attribute String Representation
         """
-        attr = AutosarAttribute(name="value", type="uint32", is_ref=False)
-        assert str(attr) == "value: uint32"
+        attr = AutosarAttribute(
+            name="value",
+            type="uint32",
+            is_ref=False,
+            multiplicity="1",
+            kind=AttributeKind.ATTR,
+            note="Value"
+        )
+        assert str(attr) == "value: uint32 [1] (attr) - Value"
 
     def test_repr(self) -> None:
         """Test __repr__ method.
@@ -263,12 +341,22 @@ class TestAutosarAttribute:
         Requirements:
             SWR_MODEL_00013: AUTOSAR Attribute String Representation
         """
-        attr = AutosarAttribute(name="testAttr", type="TestType", is_ref=True)
+        attr = AutosarAttribute(
+            name="testAttr",
+            type="TestType",
+            is_ref=True,
+            multiplicity="*",
+            kind=AttributeKind.AGGR,
+            note="Test"
+        )
         result = repr(attr)
         assert "AutosarAttribute" in result
         assert "name='testAttr'" in result
         assert "type='TestType'" in result
         assert "is_ref=True" in result
+        assert "multiplicity='*'" in result
+        assert "kind=AttributeKind.AGGR" in result
+        assert "note='Test'" in result
 
 
 class TestAutosarClass:
@@ -374,8 +462,22 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        attr1 = AutosarAttribute(name="dataReadPort", type="PPortPrototype", is_ref=True)
-        attr2 = AutosarAttribute(name="id", type="uint32", is_ref=False)
+        attr1 = AutosarAttribute(
+            name="dataReadPort",
+            type="PPortPrototype",
+            is_ref=True,
+            multiplicity="0..1",
+            kind=AttributeKind.ATTR,
+            note="Data read port"
+        )
+        attr2 = AutosarAttribute(
+            name="id",
+            type="uint32",
+            is_ref=False,
+            multiplicity="1",
+            kind=AttributeKind.ATTR,
+            note="Unique identifier"
+        )
         cls = AutosarClass(
     name="Component",
     package="M2::Test",
@@ -394,8 +496,8 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
-        attr1 = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
-        attr2 = AutosarAttribute(name="value", type="uint32", is_ref=False)
+        attr1 = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True, multiplicity="1", kind=AttributeKind.ATTR, note="")
+        attr2 = AutosarAttribute(name="value", type="uint32", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
         cls = AutosarClass(
     name="Component",
     package="M2::Test",
@@ -532,7 +634,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        attr = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
+        attr = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True, multiplicity="1", kind=AttributeKind.ATTR, note="")
         cls = AutosarClass(
     name="CompleteClass",
     package="M2::Test",
@@ -856,6 +958,178 @@ class TestAutosarEnumeration:
         assert hasattr(enum, 'note')
         # Check enumeration-specific attribute
         assert hasattr(enum, 'enumeration_literals')
+
+
+class TestAutosarPrimitive:
+    """Tests for AutosarPrimitive class.
+
+    Requirements:
+        SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+    """
+
+    def test_init_concrete_primitive(self) -> None:
+        """Test creating a concrete primitive type.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        assert primitive.name == "Limit"
+        assert primitive.package == "M2::DataTypes"
+        assert primitive.note is None
+
+    def test_init_with_note(self) -> None:
+        """Test creating a primitive type with note.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        primitive = AutosarPrimitive(name="Interval", package="M2::DataTypes", note="Interval type")
+        assert primitive.name == "Interval"
+        assert primitive.note == "Interval type"
+
+    def test_init_with_all_fields(self) -> None:
+        """Test creating a primitive type with all fields.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        attr = AutosarAttribute(name="intervalType", type="String", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
+        primitive = AutosarPrimitive(
+            name="CompletePrimitive",
+            package="M2::DataTypes",
+            note="Complete primitive type",
+            attributes={"intervalType": attr}
+        )
+        assert primitive.name == "CompletePrimitive"
+        assert primitive.package == "M2::DataTypes"
+        assert primitive.note == "Complete primitive type"
+        assert len(primitive.attributes) == 1
+        assert "intervalType" in primitive.attributes
+
+    def test_init_with_empty_attributes(self) -> None:
+        """Test creating a primitive type with empty attributes dictionary.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        assert primitive.attributes == {}
+        assert len(primitive.attributes) == 0
+
+    def test_init_with_attributes(self) -> None:
+        """Test creating a primitive type with attributes.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        attr1 = AutosarAttribute(name="intervalType", type="String", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
+        attr2 = AutosarAttribute(name="limitType", type="Integer", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
+        primitive = AutosarPrimitive(
+            name="Limit",
+            package="M2::DataTypes",
+            attributes={"intervalType": attr1, "limitType": attr2}
+        )
+        assert len(primitive.attributes) == 2
+        assert "intervalType" in primitive.attributes
+        assert "limitType" in primitive.attributes
+        assert primitive.attributes["intervalType"] == attr1
+        assert primitive.attributes["limitType"] == attr2
+
+    def test_repr_with_attributes(self) -> None:
+        """Test __repr__ method shows attributes count.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        attr = AutosarAttribute(name="intervalType", type="String", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
+        primitive = AutosarPrimitive(
+            name="Limit",
+            package="M2::DataTypes",
+            attributes={"intervalType": attr}
+        )
+        result = repr(primitive)
+        assert "AutosarPrimitive" in result
+        assert "name='Limit'" in result
+        assert "attributes=1" in result
+
+    def test_repr_without_attributes(self) -> None:
+        """Test __repr__ method with no attributes.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        result = repr(primitive)
+        assert "AutosarPrimitive" in result
+        assert "name='Limit'" in result
+        assert "attributes=0" in result
+
+    def test_str_primitive(self) -> None:
+        """Test string representation of primitive type.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        assert str(primitive) == "Limit"
+
+    def test_repr_without_note(self) -> None:
+        """Test debug representation without note.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        result = repr(primitive)
+        assert "AutosarPrimitive" in result
+        assert "name='Limit'" in result
+        assert "package='M2::DataTypes'" in result
+        assert "attributes=0" in result
+        assert "note=False" in result
+
+    def test_repr_with_note(self) -> None:
+        """Test debug representation with note.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes", note="Test note")
+        result = repr(primitive)
+        assert "AutosarPrimitive" in result
+        assert "name='Limit'" in result
+        assert "attributes=0" in result
+        assert "note=True" in result
+
+    def test_post_init_valid_name(self) -> None:
+        """Test valid name validation.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        primitive = AutosarPrimitive(name="ValidPrimitive", package="M2::DataTypes")
+        assert primitive.name == "ValidPrimitive"
+
+    def test_post_init_empty_name(self) -> None:
+        """Test empty name raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        with pytest.raises(ValueError, match="Type name cannot be empty"):
+            AutosarPrimitive(name="", package="M2::DataTypes")
+
+    def test_post_init_whitespace_name(self) -> None:
+        """Test whitespace-only name raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        """
+        with pytest.raises(ValueError, match="Type name cannot be empty"):
+            AutosarPrimitive(name="   ", package="M2::DataTypes")
 
 
 class TestAutosarPackage:
@@ -1228,22 +1502,27 @@ class TestAutosarPackage:
         assert result is None
 
     def test_get_type_from_mixed_types(self) -> None:
-        """Test get_type can retrieve both classes and enumerations.
+        """Test get_type can retrieve classes, enumerations, and primitives.
 
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
         pkg.add_type(cls)
         pkg.add_type(enum)
+        pkg.add_type(primitive)
 
         cls_result = pkg.get_type("MyClass")
         enum_result = pkg.get_type("MyEnum")
+        primitive_result = pkg.get_type("Limit")
 
         assert isinstance(cls_result, AutosarClass)
         assert isinstance(enum_result, AutosarEnumeration)
+        assert isinstance(primitive_result, AutosarPrimitive)
 
     def test_get_enumeration_found(self) -> None:
         """Test get_enumeration method when enumeration exists.
@@ -1334,28 +1613,135 @@ class TestAutosarPackage:
         pkg = AutosarPackage(name="TestPackage")
         assert pkg.has_enumeration("NonExistent") is False
 
+    def test_add_primitive(self) -> None:
+        """Test add_primitive method.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        pkg.add_primitive(primitive)
+        assert len(pkg.types) == 1
+        assert isinstance(pkg.types[0], AutosarPrimitive)
+
+    def test_get_primitive_found(self) -> None:
+        """Test get_primitive method when primitive exists.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        pkg.add_primitive(primitive)
+        result = pkg.get_primitive("Limit")
+        assert result is not None
+        assert result.name == "Limit"
+        assert isinstance(result, AutosarPrimitive)
+
+    def test_get_primitive_not_found(self) -> None:
+        """Test get_primitive method when primitive doesn't exist.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        result = pkg.get_primitive("NonExistent")
+        assert result is None
+
+    def test_get_primitive_returns_none_for_class(self) -> None:
+        """Test get_primitive returns None for classes.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        pkg.add_class(cls)
+        result = pkg.get_primitive("MyClass")
+        assert result is None
+
+    def test_get_primitive_returns_none_for_enumeration(self) -> None:
+        """Test get_primitive returns None for enumerations.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        pkg.add_enumeration(enum)
+        result = pkg.get_primitive("MyEnum")
+        assert result is None
+
+    def test_has_primitive_true(self) -> None:
+        """Test has_primitive returns True when primitive exists.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
+        pkg.add_primitive(primitive)
+        assert pkg.has_primitive("Limit") is True
+
+    def test_has_primitive_false_for_class(self) -> None:
+        """Test has_primitive returns False for classes.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        pkg.add_class(cls)
+        assert pkg.has_primitive("MyClass") is False
+
+    def test_has_primitive_false_for_enumeration(self) -> None:
+        """Test has_primitive returns False for enumerations.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        pkg.add_enumeration(enum)
+        assert pkg.has_primitive("MyEnum") is False
+
+    def test_has_primitive_false_not_found(self) -> None:
+        """Test has_primitive returns False when not found.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        assert pkg.has_primitive("NonExistent") is False
+
     def test_unified_type_management(self) -> None:
-        """Test that types collection unifies classes and enumerations.
+        """Test that types collection unifies classes, enumerations, and primitives.
 
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        primitive = AutosarPrimitive(name="Limit", package="M2::DataTypes")
 
         pkg.add_type(cls)
         pkg.add_type(enum)
+        pkg.add_type(primitive)
 
-        assert len(pkg.types) == 2
+        assert len(pkg.types) == 3
         assert pkg.has_type("MyClass") is True
         assert pkg.has_type("MyEnum") is True
+        assert pkg.has_type("Limit") is True
 
     def test_duplicate_prevention_across_type_kinds(self) -> None:
-        """Test duplicate names prevented across classes and enumerations.
+        """Test duplicate names prevented across classes, enumerations, and primitives.
 
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)

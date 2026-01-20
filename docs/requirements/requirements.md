@@ -131,6 +131,9 @@ The ATP type enum shall support the following values:
 - `name`: The name of the attribute (non-empty string)
 - `type`: The data type of the attribute (non-empty string)
 - `is_ref`: Boolean flag indicating whether the attribute is a reference type
+- `multiplicity`: The multiplicity of the attribute (e.g., "0..1", "*", "0..*")
+- `kind`: The kind of attribute as an enum (AttributeKind.ATTR or AttributeKind.AGGR)
+- `note`: The description or note for the attribute
 
 ---
 
@@ -158,8 +161,8 @@ The ATP type enum shall support the following values:
 **Maturity**: accept
 
 **Description**: The system shall provide string representations of AUTOSAR attributes, including:
-- A user-friendly string showing attribute name and type, with "(ref)" suffix for reference types
-- A debug representation showing all attributes (name, type, is_ref)
+- A user-friendly string showing attribute name, type, reference indicator, multiplicity, kind, and note
+- A debug representation showing all attributes (name, type, is_ref, multiplicity, kind, note)
 
 ---
 
@@ -351,6 +354,55 @@ This requirement enables:
 
 ---
 
+#### SWR_MODEL_00024
+**Title**: AUTOSAR Primitive Type Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide a dedicated data model (`AutosarPrimitive`) to represent AUTOSAR primitive types, inheriting from the `AbstractAutosarBase` abstract base class.
+
+The `AutosarPrimitive` class shall include:
+- All inherited attributes from `AbstractAutosarBase` (name, package, note)
+- `attributes`: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute)
+
+The class shall:
+- Inherit validation logic from `AbstractAutosarBase`
+- Implement the abstract `__str__()` method to return the primitive type name
+- Provide a debug representation showing all attributes including attributes count and note presence
+
+This allows the system to properly represent primitive types like `Limit` from AUTOSAR CP TPS ECUConfiguration as a distinct type from regular classes and enumerations, improving type safety and code clarity.
+
+---
+
+#### SWR_MODEL_00025
+**Title**: AUTOSAR Package Primitive Type Support
+
+**Maturity**: accept
+
+**Description**: The system shall update the `AutosarPackage` data model to support classes, enumerations, and primitives through a unified `types` collection.
+
+The `AutosarPackage` class shall:
+- Update the `types` attribute type to `List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]`
+- Provide the following methods:
+  - `add_type(typ)`: Add any type (class, enumeration, or primitive) to the package
+  - `add_class(cls)`: Add a class to the package (backward compatibility)
+  - `add_enumeration(enum)`: Add an enumeration to the package
+  - `add_primitive(primitive)`: Add a primitive type to the package
+  - `get_type(name)`: Get any type by name
+  - `get_class(name)`: Get a class by name (returns only AutosarClass instances)
+  - `get_enumeration(name)`: Get an enumeration by name (returns only AutosarEnumeration instances)
+  - `get_primitive(name)`: Get a primitive type by name (returns only AutosarPrimitive instances)
+  - `has_type(name)`: Check if any type exists
+  - `has_class(name)`: Check if a class exists
+  - `has_enumeration(name)`: Check if an enumeration exists
+  - `has_primitive(name)`: Check if a primitive type exists
+- Prevent duplicate type names across all types (classes, enumerations, and primitives)
+- Update string representation to show "X types" instead of "X classes"
+
+This requirement provides a unified interface for managing classes, enumerations, and primitives while maintaining backward compatibility through the existing `add_class()` and `add_enumeration()` methods.
+
+---
+
 ### 2. Parser
 
 #### SWR_PARSER_00001
@@ -413,11 +465,13 @@ The system shall filter out class definitions that do not have an associated pac
 **Maturity**: accept
 
 **Description**: The system shall provide an internal data model (`ClassDefinition`) to represent parsed class information including:
-- Class name (extracted from PDF text following the pattern `Class <name>`)
+- Class name (extracted from PDF text following the pattern `Class <name>`, `Primitive <name>`, or `Enumeration <name>`)
 - Full package path
 - Abstract flag (set to `true` when the class name starts with "Abstract" or the class is marked as abstract in the PDF)
 - List of base classes
 - List of subclasses
+- `is_enumeration`: Boolean flag indicating whether this is an enumeration type
+- `is_primitive`: Boolean flag indicating whether this is a primitive type
 
 ---
 
@@ -426,16 +480,17 @@ The system shall filter out class definitions that do not have an associated pac
 
 **Maturity**: accept
 
-**Description**: The system shall build a hierarchical AUTOSAR package structure from parsed class and enumeration definitions, creating nested packages based on the package path delimiter ("::").
+**Description**: The system shall build a hierarchical AUTOSAR package structure from parsed class, enumeration, and primitive definitions, creating nested packages based on the package path delimiter ("::").
 
 Requirements:
     SWR_MODEL_00020: AUTOSAR Package Type Support
+    SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
 
 The system shall:
 1. Parse the package path into individual components using "::" as the delimiter
 2. Create or retrieve package objects for each component in the path
 3. Establish parent-child relationships between packages by adding subpackages to their parent packages
-4. Add types (classes and enumerations) to the appropriate package based on the full package path using the unified `types` collection
+4. Add types (classes, enumerations, and primitives) to the appropriate package based on the full package path using the unified `types` collection
 
 ---
 
@@ -495,7 +550,7 @@ This requirement addresses common PDF text extraction issues where words are con
 The system shall:
 1. Recognize the attribute section in PDF class tables (identified by "Attribute Type Mult. Kind Note" header)
 2. Parse each attribute line with the format: `<name> <type> <multiplicity> <kind> <description>`
-3. Create AutosarAttribute objects with the extracted name and type
+3. Create AutosarAttribute objects with the extracted name, type, multiplicity, kind, and note
 4. Determine if an attribute is a reference type based on the attribute type (e.g., types ending with "Prototype", "Ref", or other reference indicators)
 5. Store attributes in a dictionary keyed by attribute name in the ClassDefinition
 6. Transfer attributes to the AutosarClass object during package hierarchy building
@@ -558,6 +613,9 @@ The system shall:
 4. Apply the same validation rules to all three patterns (require package path within 5 lines to avoid page header false positives)
 5. Treat all three patterns as class definition markers that end the attribute section of the previous class
 6. Properly assign attributes to the correct class based on which definition they follow
+7. Create AutosarPrimitive objects for primitive type definitions
+8. Create AutosarEnumeration objects for enumeration type definitions
+9. Create AutosarClass objects for regular class definitions
 
 This requirement ensures that the parser correctly handles the three types of class definitions used in AUTOSAR PDF specification documents:
 - Regular classes: `Class ImplementationDataType`
@@ -675,6 +733,7 @@ This requirement enables:
 **Description**: The system shall write AUTOSAR classes in markdown format with:
 - Indentation 1 level deeper than their parent package
 - No abstract marker in the class name (abstract status is shown only in individual class files)
+- Attributes displayed in a table format with columns: Attribute | Type | Mult. | Kind | Note
 
 ---
 

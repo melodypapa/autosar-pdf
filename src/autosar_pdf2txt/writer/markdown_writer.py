@@ -263,9 +263,13 @@ class MarkdownWriter:
         # Write attributes if present
         if cls.attributes:
             output.write("## Attributes\n\n")
+            # Table header
+            output.write("| Attribute | Type | Mult. | Kind | Note |\n")
+            output.write("|----------|------|-------|------|------|\n")
+            # Table rows
             for attr_name, attr in cls.attributes.items():
                 ref_suffix = " (ref)" if attr.is_ref else ""
-                output.write(f"* {attr_name} : {attr.type}{ref_suffix}\n")
+                output.write(f"| {attr_name}{ref_suffix} | {attr.type} | {attr.multiplicity} | {attr.kind.value} | {attr.note} |\n")
             output.write("\n")
 
         # Write to file with sanitized filename

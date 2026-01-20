@@ -728,13 +728,14 @@ class PdfParser:
                     if class_def.is_enumeration:
                         autosar_type = AutosarEnumeration(
                             name=class_def.name,
-                            atp_type=class_def.atp_type,
+                            package=class_def.package_path,
                             note=class_def.note,
                             enumeration_literals=class_def.enumeration_literals.copy()
                         )
                     else:
                         autosar_type = AutosarClass(
                             name=class_def.name,
+                            package=class_def.package_path,
                             is_abstract=class_def.is_abstract,
                             atp_type=class_def.atp_type,
                             bases=class_def.base_classes.copy(),

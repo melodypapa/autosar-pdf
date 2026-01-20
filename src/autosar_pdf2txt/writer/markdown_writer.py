@@ -321,17 +321,6 @@ class MarkdownWriter:
         output.write("## Enumeration\n\n")
         output.write(f"**{enum.name}**\n\n")
 
-        # Write ATP type section if ATP type is not NONE
-        if enum.atp_type != ATPType.NONE:
-            output.write("## ATP Type\n\n")
-            if enum.atp_type == ATPType.ATP_VARIATION:
-                output.write("* atpVariation\n")
-            elif enum.atp_type == ATPType.ATP_MIXED_STRING:
-                output.write("* atpMixedString\n")
-            elif enum.atp_type == ATPType.ATP_MIXED:
-                output.write("* atpMixed\n")
-            output.write("\n")
-
         # Write note if present
         if enum.note:
             output.write("## Note\n\n")

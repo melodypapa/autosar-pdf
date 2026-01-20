@@ -23,6 +23,7 @@ All existing requirements in this document are currently at maturity level **acc
 
 **Description**: The system shall provide a data model to represent an AUTOSAR class with the following attributes:
 - `name`: The name of the class (non-empty string)
+- `package`: The full package path in PDF format (e.g., "M2::MSR::DataDictionary::RecordLayout")
 - `is_abstract`: Boolean flag indicating whether the class is abstract
 - `atp_type`: ATP marker type enum indicating the AUTOSAR Tool Platform marker (defaults to NONE)
 - `attributes`: Dictionary of AUTOSAR attributes where key is the attribute name and value is the AUTOSAR attribute object
@@ -213,7 +214,7 @@ The original approach of adding enumeration literals to AutosarClass has been re
 
 The abstract base class shall include the following attributes:
 - `name`: The name of the type (non-empty string)
-- `atp_type`: ATP marker type enum indicating the AUTOSAR Tool Platform marker (defaults to NONE)
+- `package`: The full package path in PDF format (e.g., "M2::MSR::DataDictionary::RecordLayout")
 - `note`: Optional documentation or comments about the type (str | None, defaults to None)
 
 The abstract base class shall provide:
@@ -233,7 +234,7 @@ This requirement enables a proper inheritance hierarchy where both `AutosarClass
 **Description**: The system shall provide a dedicated data model (`AutosarEnumeration`) to represent AUTOSAR enumeration types, inheriting from the `AbstractAutosarBase` abstract base class.
 
 The `AutosarEnumeration` class shall include:
-- All inherited attributes from `AbstractAutosarBase` (name, atp_type, note)
+- All inherited attributes from `AbstractAutosarBase` (name, package, note)
 - `enumeration_literals`: List of enumeration literal values (List[AutosarEnumLiteral], defaults to empty list)
 
 The class shall:

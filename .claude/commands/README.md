@@ -82,6 +82,44 @@ Manage AUTOSAR project requirements with traceability.
 /req search parser
 ```
 
+### `/sync-docs` - Synchronize Documentation
+Synchronize requirements, test cases, and source code to ensure consistency across the codebase.
+
+**What It Does:**
+- Analyzes source code to extract implementation details
+- Compares implementation with requirements and test case documentation
+- Updates documentation to match actual implementation
+- Ensures traceability and accuracy across the codebase
+
+**Common Synchronization Tasks:**
+- Attribute changes (added/removed/moved)
+- Inheritance hierarchy updates
+- Type changes and signature updates
+- Unit test case alignment with implementation
+- Integration test workflow updates
+
+**Files Modified:**
+- `docs/requirements/requirements.md` - Requirements specifications
+- `docs/test_cases/unit_tests.md` - Unit test case documentation
+- `docs/test_cases/integration_tests.md` - Integration test case documentation
+
+**Usage:**
+```
+/sync-docs    # Analyze and sync all documentation
+```
+
+**Verification After Sync:**
+```bash
+pytest tests/ --cache-clear
+ruff check src/ tests/
+mypy src/autosar_pdf2txt/
+```
+
+**Related Commands:**
+- `/req` - Manage individual requirements
+- `/test` - Run tests and coverage
+- `/quality` - Run quality checks
+
 ## Creating New Commands
 
 To create a new slash command:

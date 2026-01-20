@@ -97,7 +97,7 @@ class AbstractAutosarBase(ABC):
 
     Attributes:
         name: The name of the type.
-        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
+        package: The full package path in PDF format (e.g., "M2::MSR::DataDictionary::RecordLayout").
         note: Optional documentation or comments about the type.
 
     Examples:
@@ -106,7 +106,7 @@ class AbstractAutosarBase(ABC):
     """
 
     name: str
-    atp_type: ATPType = ATPType.NONE
+    package: str
     note: Optional[str] = None
 
     def __post_init__(self) -> None:
@@ -200,29 +200,31 @@ class AutosarClass(AbstractAutosarBase):
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         SWR_MODEL_00022: AUTOSAR Class Parent Attribute
 
-    Inherits from AbstractAutosarBase to provide common type properties (name, atp_type, note)
-    and adds class-specific attributes including inheritance support.
+    Inherits from AbstractAutosarBase to provide common type properties (name, package, note)
+    and adds class-specific attributes including inheritance support and ATP markers.
 
     Attributes:
         name: The name of the class (inherited from AbstractAutosarBase).
+        package: The full package path (inherited from AbstractAutosarBase).
         is_abstract: Whether the class is abstract.
-        atp_type: ATP marker type enum (inherited from AbstractAutosarBase).
+        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
         attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
         bases: List of base class names for inheritance tracking.
         parent: Reference to the immediate parent AutosarClass object (None for root classes).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
-        >>> cls = AutosarClass("RunnableEntity", False)
-        >>> abstract_cls = AutosarClass("InternalBehavior", True)
+        >>> cls = AutosarClass("RunnableEntity", "M2::SWR", False)
+        >>> abstract_cls = AutosarClass("InternalBehavior", "M2::SWR", True)
         >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True)
-        >>> cls_with_attr = AutosarClass("Component", False, attributes={"dataReadPort": attr})
-        >>> cls_with_bases = AutosarClass("DerivedClass", False, bases=["BaseClass"])
-        >>> cls_with_note = AutosarClass("MyClass", False, note="Documentation note")
-        >>> cls_with_atp = AutosarClass("MyClass", False, atp_type=ATPType.ATP_VARIATION)
+        >>> cls_with_attr = AutosarClass("Component", "M2::SWR", False, attributes={"dataReadPort": attr})
+        >>> cls_with_bases = AutosarClass("DerivedClass", "M2::SWR", False, bases=["BaseClass"])
+        >>> cls_with_note = AutosarClass("MyClass", "M2::SWR", False, note="Documentation note")
+        >>> cls_with_atp = AutosarClass("MyClass", "M2::SWR", False, atp_type=ATPType.ATP_VARIATION)
     """
 
     is_abstract: bool = False
+    atp_type: ATPType = ATPType.NONE
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     bases: List[str] = field(default_factory=list)
     parent: Optional["AutosarClass"] = None
@@ -265,19 +267,20 @@ class AutosarEnumeration(AbstractAutosarBase):
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
 
-    Inherits from AbstractAutosarBase to provide common type properties (name, atp_type, note)
+    Inherits from AbstractAutosarBase to provide common type properties (name, package, note)
     and adds enumeration-specific literals.
 
     Attributes:
         name: The name of the enumeration (inherited from AbstractAutosarBase).
-        atp_type: ATP marker type enum (inherited from AbstractAutosarBase).
+        package: The full package path (inherited from AbstractAutosarBase).
         enumeration_literals: List of enumeration literal values.
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
-        >>> enum = AutosarEnumeration("EcucDestinationUriNestingContractEnum")
+        >>> enum = AutosarEnumeration("EcucDestinationUriNestingContractEnum", "M2::ECUC")
         >>> enum_with_literals = AutosarEnumeration(
         ...     "MyEnum",
+        ...     "M2::ECUC",
         ...     enumeration_literals=[
         ...         AutosarEnumLiteral("VALUE1", 0, "First value"),
         ...         AutosarEnumLiteral("VALUE2", 1, "Second value")
@@ -309,7 +312,7 @@ class AutosarEnumeration(AbstractAutosarBase):
         note_present = self.note is not None
         return (
             f"AutosarEnumeration(name='{self.name}', "
-            f"atp_type={self.atp_type.name}, "
+            f"package='{self.package}', "
             f"enumeration_literals={literals_count}, note={note_present})"
         )
 

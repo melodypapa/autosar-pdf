@@ -51,7 +51,7 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
         expected = "* TestPackage\n  * MyClass\n"
@@ -65,7 +65,7 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="AbstractClass", is_abstract=True))
+        pkg.add_class(AutosarClass(name="AbstractClass", package="M2::Test", is_abstract=True))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
         expected = "* TestPackage\n  * AbstractClass\n"
@@ -79,9 +79,9 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
-        pkg.add_class(AutosarClass(name="Class2", is_abstract=True))
-        pkg.add_class(AutosarClass(name="Class3", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class2", package="M2::Test", is_abstract=True))
+        pkg.add_class(AutosarClass(name="Class3", package="M2::Test", is_abstract=False))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
         expected = (
@@ -100,7 +100,7 @@ class TestMarkdownWriter:
         """
         root = AutosarPackage(name="RootPackage")
         child = AutosarPackage(name="ChildPackage")
-        child.add_class(AutosarClass(name="GrandchildClass", is_abstract=False))
+        child.add_class(AutosarClass(name="GrandchildClass", package="M2::Test", is_abstract=False))
         root.add_subpackage(child)
         writer = MarkdownWriter()
         result = writer.write_packages([root])
@@ -128,8 +128,8 @@ class TestMarkdownWriter:
         root = AutosarPackage(name="AUTOSARTemplates")
         bsw = AutosarPackage(name="BswModuleTemplate")
         behavior = AutosarPackage(name="BswBehavior")
-        behavior.add_class(AutosarClass(name="BswInternalBehavior", is_abstract=False))
-        behavior.add_class(AutosarClass(name="ExecutableEntity", is_abstract=True))
+        behavior.add_class(AutosarClass(name="BswInternalBehavior", package="M2::Test", is_abstract=False))
+        behavior.add_class(AutosarClass(name="ExecutableEntity", package="M2::Test", is_abstract=True))
         bsw.add_subpackage(behavior)
         root.add_subpackage(bsw)
 
@@ -152,9 +152,9 @@ class TestMarkdownWriter:
             SWR_WRITER_00004: Bulk Package Writing
         """
         pkg1 = AutosarPackage(name="Package1")
-        pkg1.add_class(AutosarClass(name="Class1", is_abstract=False))
+        pkg1.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
         pkg2 = AutosarPackage(name="Package2")
-        pkg2.add_class(AutosarClass(name="Class2", is_abstract=True))
+        pkg2.add_class(AutosarClass(name="Class2", package="M2::Test", is_abstract=True))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg1, pkg2])
         expected = (
@@ -174,7 +174,7 @@ class TestMarkdownWriter:
         level1 = AutosarPackage(name="Level1")
         level2 = AutosarPackage(name="Level2")
         level3 = AutosarPackage(name="Level3")
-        level3.add_class(AutosarClass(name="DeepClass", is_abstract=False))
+        level3.add_class(AutosarClass(name="DeepClass", package="M2::Test", is_abstract=False))
         level2.add_subpackage(level3)
         level1.add_subpackage(level2)
         writer = MarkdownWriter()
@@ -206,9 +206,9 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="ParentPackage")
-        pkg.add_class(AutosarClass(name="DirectClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="DirectClass", package="M2::Test", is_abstract=False))
         subpkg = AutosarPackage(name="ChildPackage")
-        subpkg.add_class(AutosarClass(name="ChildClass", is_abstract=True))
+        subpkg.add_class(AutosarClass(name="ChildClass", package="M2::Test", is_abstract=True))
         pkg.add_subpackage(subpkg)
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
@@ -228,7 +228,7 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
         writer = MarkdownWriter()
 
         # First write
@@ -249,11 +249,11 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         # Attempting to add duplicate class should raise ValueError
         try:
-            pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+            pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
             assert False, "Expected ValueError for duplicate class"
         except ValueError as e:
             assert "already exists" in str(e)
@@ -272,10 +272,10 @@ class TestMarkdownWriter:
             SWR_WRITER_00004: Bulk Package Writing
         """
         pkg1 = AutosarPackage(name="TestPackage")
-        pkg1.add_class(AutosarClass(name="Class1", is_abstract=False))
+        pkg1.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
 
         pkg2 = AutosarPackage(name="TestPackage")
-        pkg2.add_class(AutosarClass(name="Class2", is_abstract=False))
+        pkg2.add_class(AutosarClass(name="Class2", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         result = writer.write_packages([pkg1, pkg2])
@@ -298,10 +298,10 @@ class TestMarkdownWriter:
         """
         # Create structure where same class name appears in different packages
         pkg1 = AutosarPackage(name="Package1")
-        pkg1.add_class(AutosarClass(name="CommonClass", is_abstract=False))
+        pkg1.add_class(AutosarClass(name="CommonClass", package="M2::Test", is_abstract=False))
 
         pkg2 = AutosarPackage(name="Package2")
-        pkg2.add_class(AutosarClass(name="CommonClass", is_abstract=False))
+        pkg2.add_class(AutosarClass(name="CommonClass", package="M2::Test", is_abstract=False))
 
         root = AutosarPackage(name="Root")
         root.add_subpackage(pkg1)
@@ -329,7 +329,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         writer.write_packages_to_files([pkg], base_dir=tmp_path)
@@ -358,7 +358,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="AbstractClass", is_abstract=True))
+        pkg.add_class(AutosarClass(name="AbstractClass", package="M2::Test", is_abstract=True))
 
         writer = MarkdownWriter()
         writer.write_packages_to_files([pkg], base_dir=tmp_path)
@@ -378,9 +378,9 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
-        pkg.add_class(AutosarClass(name="Class2", is_abstract=True))
-        pkg.add_class(AutosarClass(name="Class3", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class2", package="M2::Test", is_abstract=True))
+        pkg.add_class(AutosarClass(name="Class3", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         writer.write_packages_to_files([pkg], base_dir=tmp_path)
@@ -399,7 +399,7 @@ class TestMarkdownWriterFiles:
         """
         root = AutosarPackage(name="RootPackage")
         child = AutosarPackage(name="ChildPackage")
-        child.add_class(AutosarClass(name="ChildClass", is_abstract=False))
+        child.add_class(AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False))
         root.add_subpackage(child)
 
         writer = MarkdownWriter()
@@ -421,7 +421,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         cls.attributes["attr1"] = AutosarAttribute(name="attr1", type="String", is_ref=False)
         cls.attributes["attr2"] = AutosarAttribute(name="attr2", type="Integer", is_ref=True)
         pkg.add_class(cls)
@@ -448,7 +448,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="DerivedClass", is_abstract=False)
+        cls = AutosarClass(name="DerivedClass", package="M2::Test", is_abstract=False)
         cls.bases = ["BaseClass1", "BaseClass2"]
         pkg.add_class(cls)
 
@@ -474,7 +474,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         cls.note = "This is a documentation note."
         pkg.add_class(cls)
 
@@ -499,7 +499,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="CompleteClass", is_abstract=True)
+        cls = AutosarClass(name="CompleteClass", package="M2::Test", is_abstract=True)
         cls.bases = ["BaseClass"]
         cls.attributes["attr1"] = AutosarAttribute(name="attr1", type="String", is_ref=False)
         cls.note = "Complete documentation."
@@ -538,7 +538,7 @@ class TestMarkdownWriterFiles:
         5. Attributes list
         """
         pkg = AutosarPackage(name="AUTOSAR")
-        cls = AutosarClass(name="BswInternalBehavior", is_abstract=True)
+        cls = AutosarClass(name="BswInternalBehavior", package="M2::Test", is_abstract=True)
         cls.bases = ["IBswInternalBehavior", "IReferable"]
         cls.attributes["swDataDefProps"] = AutosarAttribute(
             name="swDataDefProps", type="SwDataDefProps", is_ref=True
@@ -599,7 +599,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="ConcreteClass", is_abstract=False)
+        cls = AutosarClass(name="ConcreteClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
 
         writer = MarkdownWriter()
@@ -640,10 +640,10 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg1 = AutosarPackage(name="Package1")
-        pkg1.add_class(AutosarClass(name="Class1", is_abstract=False))
+        pkg1.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
 
         pkg2 = AutosarPackage(name="Package2")
-        pkg2.add_class(AutosarClass(name="Class2", is_abstract=False))
+        pkg2.add_class(AutosarClass(name="Class2", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         writer.write_packages_to_files([pkg1, pkg2], base_dir=tmp_path)
@@ -663,7 +663,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         # Use pathlib.Path directly instead of string
@@ -681,7 +681,7 @@ class TestMarkdownWriterFiles:
         The root directory should be the same as the output markdown file location.
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         output_file = tmp_path / "output.md"
@@ -703,7 +703,7 @@ class TestMarkdownWriterFiles:
         The root directory should be the same as the output markdown file location.
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
 
@@ -727,7 +727,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
 
@@ -745,7 +745,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
 
@@ -763,7 +763,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
 
@@ -781,7 +781,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00005: Directory-Based Class File Output
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", is_abstract=False))
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
 
@@ -801,7 +801,7 @@ class TestMarkdownWriterFiles:
         level1 = AutosarPackage(name="Level1")
         level2 = AutosarPackage(name="Level2")
         level3 = AutosarPackage(name="Level3")
-        level3.add_class(AutosarClass(name="DeepClass", is_abstract=False))
+        level3.add_class(AutosarClass(name="DeepClass", package="M2::Test", is_abstract=False))
         level2.add_subpackage(level3)
         level1.add_subpackage(level2)
 
@@ -877,7 +877,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="<<atpVariation>>Class", is_abstract=False))
+        pkg.add_class(AutosarClass(name="<<atpVariation>>Class", package="M2::Test", is_abstract=False))
 
         writer = MarkdownWriter()
         writer.write_packages_to_files([pkg], base_dir=tmp_path)
@@ -902,7 +902,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
         pkg.add_class(cls)
 
         writer = MarkdownWriter()
@@ -924,7 +924,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_MIXED_STRING)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_MIXED_STRING)
         pkg.add_class(cls)
 
         writer = MarkdownWriter()
@@ -946,7 +946,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_MIXED)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_MIXED)
         pkg.add_class(cls)
 
         writer = MarkdownWriter()
@@ -969,7 +969,7 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
 
         writer = MarkdownWriter()
@@ -989,9 +989,8 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(
-            name="MyClass",
-            is_abstract=True,
+        cls = AutosarClass(name="MyClass", package="M2::Test",
+    is_abstract=True,
             atp_type=ATPType.ATP_VARIATION,
             bases=["BaseClass"]
         )
@@ -1023,9 +1022,8 @@ class TestMarkdownWriterFiles:
             SWR_WRITER_00003: Markdown Class Output Format
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(
-            name="MyClass",
-            is_abstract=False,
+        cls = AutosarClass(name="MyClass", package="M2::Test",
+    is_abstract=False,
             atp_type=ATPType.ATP_VARIATION
         )
         pkg.add_class(cls)

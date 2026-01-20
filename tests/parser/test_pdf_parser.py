@@ -435,9 +435,8 @@ class TestPdfParser:
         ])
 
         # Try to manually add duplicate class (should trigger ValueError)
-        duplicate_class = AutosarClass(
-            name="ExistingClass",
-            is_abstract=False,
+        duplicate_class = AutosarClass(name="ExistingClass", package="M2::Test",
+    is_abstract=False,
             bases=["Base2"]
         )
 

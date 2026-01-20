@@ -1215,14 +1215,15 @@ All existing test cases in this document are currently at maturity level **accep
 **Precondition**: None
 
 **Test Steps**:
-1. Create an AutosarClass (which inherits from AbstractAutosarBase)
+1. Create an AutosarClass with package="M2::SWR" (which inherits from AbstractAutosarBase)
 2. Verify the name attribute is set correctly
-3. Verify the atp_type attribute defaults to ATPType.NONE
+3. Verify the package attribute is set correctly
 4. Verify the note attribute is None by default
-5. Create an AutosarEnumeration (which also inherits from AbstractAutosarBase)
-6. Verify that enumeration also has the same base attributes (name, atp_type, note)
+5. Verify the atp_type attribute (AutosarClass-specific) defaults to ATPType.NONE
+6. Create an AutosarEnumeration with package="M2::ECUC" (which also inherits from AbstractAutosarBase)
+7. Verify that enumeration also has the same base attributes (name, package, note)
 
-**Expected Result**: All inherited properties from AbstractAutosarBase are correctly initialized in both AutosarClass and AutosarEnumeration
+**Expected Result**: All inherited properties from AbstractAutosarBase are correctly initialized in both AutosarClass and AutosarEnumeration. AutosarClass has additional atp_type attribute while AutosarEnumeration does not.
 
 **Requirements Coverage**: SWR_MODEL_00018
 
@@ -1280,9 +1281,9 @@ All existing test cases in this document are currently at maturity level **accep
 **Precondition**: None
 
 **Test Steps**:
-1. Create an AutosarEnumeration with name="MyEnum"
+1. Create an AutosarEnumeration with name="MyEnum" and package="M2::ECUC"
 2. Verify the name attribute is set to "MyEnum"
-3. Verify the atp_type attribute defaults to ATPType.NONE
+3. Verify the package attribute is set to "M2::ECUC"
 4. Verify the note attribute is None by default
 5. Verify the enumeration_literals attribute is an empty list
 6. Verify that AutosarEnumeration inherits from AbstractAutosarBase

@@ -287,7 +287,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="RunnableEntity", is_abstract=False)
+        cls = AutosarClass(name="RunnableEntity", package="M2::Test", is_abstract=False)
         assert cls.name == "RunnableEntity"
         assert cls.is_abstract is False
 
@@ -297,7 +297,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="InternalBehavior", is_abstract=True)
+        cls = AutosarClass(name="InternalBehavior", package="M2::Test", is_abstract=True)
         assert cls.name == "InternalBehavior"
         assert cls.is_abstract is True
 
@@ -307,7 +307,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00002: AUTOSAR Class Name Validation
         """
-        cls = AutosarClass(name="ValidClass", is_abstract=False)
+        cls = AutosarClass(name="ValidClass", package="M2::Test", is_abstract=False)
         assert cls.name == "ValidClass"
 
     def test_post_init_empty_name(self) -> None:
@@ -317,7 +317,7 @@ class TestAutosarClass:
             SWR_MODEL_00002: AUTOSAR Class Name Validation
         """
         with pytest.raises(ValueError, match="Type name cannot be empty"):
-            AutosarClass(name="", is_abstract=False)
+            AutosarClass(name="", package="M2::Test", is_abstract=False)
 
     def test_post_init_whitespace_name(self) -> None:
         """Test whitespace-only name raises ValueError.
@@ -326,7 +326,7 @@ class TestAutosarClass:
             SWR_MODEL_00002: AUTOSAR Class Name Validation
         """
         with pytest.raises(ValueError, match="Type name cannot be empty"):
-            AutosarClass(name="   ", is_abstract=False)
+            AutosarClass(name="   ", package="M2::Test", is_abstract=False)
 
     def test_str_concrete_class(self) -> None:
         """Test string representation of concrete class.
@@ -334,7 +334,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         assert str(cls) == "MyClass"
 
     def test_str_abstract_class(self) -> None:
@@ -343,7 +343,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
-        cls = AutosarClass(name="AbstractClass", is_abstract=True)
+        cls = AutosarClass(name="AbstractClass", package="M2::Test", is_abstract=True)
         assert str(cls) == "AbstractClass (abstract)"
 
     def test_repr(self) -> None:
@@ -352,7 +352,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
-        cls = AutosarClass(name="TestClass", is_abstract=True)
+        cls = AutosarClass(name="TestClass", package="M2::Test", is_abstract=True)
         result = repr(cls)
         assert "AutosarClass" in result
         assert "name='TestClass'" in result
@@ -364,7 +364,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="Component", is_abstract=False)
+        cls = AutosarClass(name="Component", package="M2::Test", is_abstract=False)
         assert cls.attributes == {}
         assert len(cls.attributes) == 0
 
@@ -377,8 +377,9 @@ class TestAutosarClass:
         attr1 = AutosarAttribute(name="dataReadPort", type="PPortPrototype", is_ref=True)
         attr2 = AutosarAttribute(name="id", type="uint32", is_ref=False)
         cls = AutosarClass(
-            name="Component",
-            is_abstract=False,
+    name="Component",
+    package="M2::Test",
+    is_abstract=False,
             attributes={"dataReadPort": attr1, "id": attr2}
         )
         assert len(cls.attributes) == 2
@@ -396,8 +397,9 @@ class TestAutosarClass:
         attr1 = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
         attr2 = AutosarAttribute(name="value", type="uint32", is_ref=False)
         cls = AutosarClass(
-            name="Component",
-            is_abstract=False,
+    name="Component",
+    package="M2::Test",
+    is_abstract=False,
             attributes={"port": attr1, "value": attr2}
         )
         result = repr(cls)
@@ -412,7 +414,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
-        cls = AutosarClass(name="Component", is_abstract=False)
+        cls = AutosarClass(name="Component", package="M2::Test", is_abstract=False)
         result = repr(cls)
         assert "AutosarClass" in result
         assert "name='Component'" in result
@@ -427,7 +429,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         assert cls.bases == []
         assert len(cls.bases) == 0
 
@@ -438,8 +440,9 @@ class TestAutosarClass:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         cls = AutosarClass(
-            name="DerivedClass",
-            is_abstract=False,
+    name="DerivedClass",
+    package="M2::Test",
+    is_abstract=False,
             bases=["BaseClass1", "BaseClass2"]
         )
         assert len(cls.bases) == 2
@@ -453,8 +456,9 @@ class TestAutosarClass:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         cls = AutosarClass(
-            name="DerivedClass",
-            is_abstract=False,
+    name="DerivedClass",
+    package="M2::Test",
+    is_abstract=False,
             bases=["BaseClass"]
         )
         assert len(cls.bases) == 1
@@ -467,8 +471,9 @@ class TestAutosarClass:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         cls = AutosarClass(
-            name="DerivedClass",
-            is_abstract=False,
+    name="DerivedClass",
+    package="M2::Test",
+    is_abstract=False,
             bases=["Base1", "Base2"]
         )
         result = repr(cls)
@@ -480,7 +485,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         assert cls.note is None
 
     def test_init_with_note(self) -> None:
@@ -490,8 +495,9 @@ class TestAutosarClass:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         cls = AutosarClass(
-            name="MyClass",
-            is_abstract=False,
+    name="MyClass",
+    package="M2::Test",
+    is_abstract=False,
             note="This is a documentation note"
         )
         assert cls.note == "This is a documentation note"
@@ -502,7 +508,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False, note="")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, note="")
         assert cls.note == ""
 
     def test_repr_with_note(self) -> None:
@@ -512,8 +518,9 @@ class TestAutosarClass:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
         cls = AutosarClass(
-            name="MyClass",
-            is_abstract=False,
+    name="MyClass",
+    package="M2::Test",
+    is_abstract=False,
             note="Documentation"
         )
         result = repr(cls)
@@ -527,8 +534,9 @@ class TestAutosarClass:
         """
         attr = AutosarAttribute(name="port", type="PPortPrototype", is_ref=True)
         cls = AutosarClass(
-            name="CompleteClass",
-            is_abstract=False,
+    name="CompleteClass",
+    package="M2::Test",
+    is_abstract=False,
             attributes={"port": attr},
             bases=["Base1", "Base2"],
             note="Complete example"
@@ -545,7 +553,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         cls.bases.append("BaseClass")
         assert len(cls.bases) == 1
         assert "BaseClass" in cls.bases
@@ -556,7 +564,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         cls.note = "Updated note"
         assert cls.note == "Updated note"
 
@@ -566,7 +574,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         assert cls.atp_type == ATPType.NONE
 
     def test_init_with_atp_mixed_string(self) -> None:
@@ -575,7 +583,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_MIXED_STRING)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_MIXED_STRING)
         assert cls.atp_type == ATPType.ATP_MIXED_STRING
 
     def test_init_with_atp_variation(self) -> None:
@@ -584,7 +592,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
         assert cls.atp_type == ATPType.ATP_VARIATION
 
     def test_repr_includes_atp_type(self) -> None:
@@ -594,8 +602,9 @@ class TestAutosarClass:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
         cls = AutosarClass(
-            name="MyClass",
-            is_abstract=False,
+    name="MyClass",
+    package="M2::Test",
+    is_abstract=False,
             atp_type=ATPType.ATP_VARIATION
         )
         result = repr(cls)
@@ -608,8 +617,9 @@ class TestAutosarClass:
             SWR_MODEL_00003: AUTOSAR Class String Representation
         """
         cls = AutosarClass(
-            name="MyClass",
-            is_abstract=False,
+    name="MyClass",
+    package="M2::Test",
+    is_abstract=False,
             atp_type=ATPType.ATP_MIXED_STRING
         )
         result = repr(cls)
@@ -621,7 +631,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         assert cls.parent is None
 
     def test_init_with_parent(self) -> None:
@@ -630,8 +640,8 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
-        parent_cls = AutosarClass(name="ParentClass", is_abstract=False)
-        child_cls = AutosarClass(name="ChildClass", is_abstract=False, parent=parent_cls)
+        parent_cls = AutosarClass(name="ParentClass", package="M2::Test", is_abstract=False)
+        child_cls = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent=parent_cls)
         assert child_cls.parent is parent_cls
         assert child_cls.parent.name == "ParentClass"
 
@@ -641,8 +651,8 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
-        parent = AutosarClass(name="ParentClass", is_abstract=False)
-        child = AutosarClass(name="ChildClass", is_abstract=False, parent=parent)
+        parent = AutosarClass(name="ParentClass", package="M2::Test", is_abstract=False)
+        child = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent=parent)
         # Verify it's the same object
         assert child.parent is parent
         # Verify we can access parent attributes
@@ -655,8 +665,8 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
-        parent = AutosarClass(name="ParentClass", is_abstract=False)
-        child = AutosarClass(name="ChildClass", is_abstract=False, parent=parent)
+        parent = AutosarClass(name="ParentClass", package="M2::Test", is_abstract=False)
+        child = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent=parent)
         result = repr(child)
         assert "parent=ParentClass" in result
 
@@ -666,7 +676,7 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         result = repr(cls)
         assert "parent=None" in result
 
@@ -676,9 +686,9 @@ class TestAutosarClass:
         Requirements:
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         """
-        parent1 = AutosarClass(name="Parent1", is_abstract=False)
-        parent2 = AutosarClass(name="Parent2", is_abstract=False)
-        child = AutosarClass(name="ChildClass", is_abstract=False, parent=parent1)
+        parent1 = AutosarClass(name="Parent1", package="M2::Test", is_abstract=False)
+        parent2 = AutosarClass(name="Parent2", package="M2::Test", is_abstract=False)
+        child = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent=parent1)
         assert child.parent is parent1
         child.parent = parent2
         assert child.parent is parent2
@@ -699,7 +709,7 @@ class TestAutosarEnumeration:
         Requirements:
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         assert enum.name == "MyEnum"
         assert enum.enumeration_literals == []
 
@@ -709,7 +719,7 @@ class TestAutosarEnumeration:
         Requirements:
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
-        enum = AutosarEnumeration(name="AbstractEnum")
+        enum = AutosarEnumeration(name="AbstractEnum", package="M2::Test")
         assert enum.name == "AbstractEnum"
 
     def test_init_with_literals(self) -> None:
@@ -722,7 +732,7 @@ class TestAutosarEnumeration:
             AutosarEnumLiteral("VALUE1", 0, "First value"),
             AutosarEnumLiteral("VALUE2", 1, "Second value"),
         ]
-        enum = AutosarEnumeration(name="MyEnum", enumeration_literals=literals)
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test", enumeration_literals=literals)
         assert enum.name == "MyEnum"
         assert len(enum.enumeration_literals) == 2
         assert enum.enumeration_literals[0].name == "VALUE1"
@@ -734,17 +744,17 @@ class TestAutosarEnumeration:
         Requirements:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         """
-        enum = AutosarEnumeration(name="MyEnum", note="Documentation note")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test", note="Documentation note")
         assert enum.note == "Documentation note"
 
     def test_init_with_atp_variation(self) -> None:
-        """Test creating enumeration with ATP variation type.
+        """Test creating enumeration with note.
 
         Requirements:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         """
-        enum = AutosarEnumeration(name="MyEnum", atp_type=ATPType.ATP_VARIATION)
-        assert enum.atp_type == ATPType.ATP_VARIATION
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test", note="Test note")
+        assert enum.note == "Test note"
 
     def test_init_with_all_fields(self) -> None:
         """Test creating enumeration with all fields.
@@ -759,12 +769,11 @@ class TestAutosarEnumeration:
         ]
         enum = AutosarEnumeration(
             name="CompleteEnum",
-            atp_type=ATPType.ATP_MIXED,
+            package="M2::Test",
             note="Complete enumeration",
             enumeration_literals=literals
         )
         assert enum.name == "CompleteEnum"
-        assert enum.atp_type == ATPType.ATP_MIXED
         assert enum.note == "Complete enumeration"
         assert len(enum.enumeration_literals) == 2
 
@@ -774,7 +783,7 @@ class TestAutosarEnumeration:
         Requirements:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         """
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         assert str(enum) == "MyEnum"
 
     def test_repr_without_literals(self) -> None:
@@ -783,7 +792,7 @@ class TestAutosarEnumeration:
         Requirements:
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         result = repr(enum)
         assert "AutosarEnumeration" in result
         assert "name='MyEnum'" in result
@@ -799,7 +808,7 @@ class TestAutosarEnumeration:
             AutosarEnumLiteral("VALUE1", 0),
             AutosarEnumLiteral("VALUE2", 1),
         ]
-        enum = AutosarEnumeration(name="MyEnum", enumeration_literals=literals)
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test", enumeration_literals=literals)
         result = repr(enum)
         assert "enumeration_literals=2" in result
 
@@ -812,13 +821,12 @@ class TestAutosarEnumeration:
         literals = [AutosarEnumLiteral("VALUE1", 0)]
         enum = AutosarEnumeration(
             name="CompleteEnum",
-            atp_type=ATPType.ATP_VARIATION,
+            package="M2::Test",
             note="Note",
             enumeration_literals=literals
         )
         result = repr(enum)
         assert "name='CompleteEnum'" in result
-        assert "atp_type=ATP_VARIATION" in result
         assert "enumeration_literals=1" in result
         assert "note=True" in result
 
@@ -828,7 +836,7 @@ class TestAutosarEnumeration:
         Requirements:
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         enum.enumeration_literals.append(AutosarEnumLiteral("VALUE1", 0))
         assert len(enum.enumeration_literals) == 1
         enum.enumeration_literals.append(AutosarEnumLiteral("VALUE2", 1))
@@ -841,10 +849,10 @@ class TestAutosarEnumeration:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         # Check inherited attributes
         assert hasattr(enum, 'name')
-        assert hasattr(enum, 'atp_type')
+        assert hasattr(enum, 'package')
         assert hasattr(enum, 'note')
         # Check enumeration-specific attribute
         assert hasattr(enum, 'enumeration_literals')
@@ -879,8 +887,8 @@ class TestAutosarPackage:
         Requirements:
             SWR_MODEL_00004: AUTOSAR Package Representation
         """
-        cls1 = AutosarClass(name="Class1", is_abstract=False)
-        cls2 = AutosarClass(name="Class2", is_abstract=True)
+        cls1 = AutosarClass(name="Class1", package="M2::Test", is_abstract=False)
+        cls2 = AutosarClass(name="Class2", package="M2::Test", is_abstract=True)
         pkg = AutosarPackage(name="TestPackage", types=[cls1, cls2])
         assert len(pkg.types) == 2
         assert pkg.types[0].name == "Class1"
@@ -931,7 +939,7 @@ class TestAutosarPackage:
             SWR_MODEL_00006: Add Class to Package
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="NewClass", is_abstract=False)
+        cls = AutosarClass(name="NewClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
         assert len(pkg.types) == 1
         assert pkg.types[0] == cls
@@ -943,8 +951,8 @@ class TestAutosarPackage:
             SWR_MODEL_00006: Add Class to Package
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls1 = AutosarClass(name="DuplicateClass", is_abstract=False)
-        cls2 = AutosarClass(name="DuplicateClass", is_abstract=True)
+        cls1 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=False)
+        cls2 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=True)
         pkg.add_class(cls1)
         with pytest.raises(ValueError, match="already exists"):
             pkg.add_class(cls2)
@@ -981,7 +989,7 @@ class TestAutosarPackage:
             SWR_MODEL_00008: Query Package Contents
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="TargetClass", is_abstract=False)
+        cls = AutosarClass(name="TargetClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
         result = pkg.get_class("TargetClass")
         assert result is not None
@@ -1027,7 +1035,7 @@ class TestAutosarPackage:
             SWR_MODEL_00008: Query Package Contents
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="ExistingClass", is_abstract=False)
+        cls = AutosarClass(name="ExistingClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
         assert pkg.has_class("ExistingClass") is True
 
@@ -1067,8 +1075,8 @@ class TestAutosarPackage:
             SWR_MODEL_00009: Package String Representation
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
-        pkg.add_class(AutosarClass(name="Class2", is_abstract=True))
+        pkg.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class2", package="M2::Test", is_abstract=True))
         result = str(pkg)
         assert "TestPackage" in result
         assert "2 types" in result
@@ -1093,7 +1101,7 @@ class TestAutosarPackage:
             SWR_MODEL_00009: Package String Representation
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
         pkg.add_subpackage(AutosarPackage(name="Sub1"))
         result = str(pkg)
         assert "TestPackage" in result
@@ -1117,7 +1125,7 @@ class TestAutosarPackage:
             SWR_MODEL_00009: Package String Representation
         """
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="Class1", is_abstract=False))
+        pkg.add_class(AutosarClass(name="Class1", package="M2::Test", is_abstract=False))
         pkg.add_subpackage(AutosarPackage(name="Sub1"))
         result = repr(pkg)
         assert "AutosarPackage" in result
@@ -1151,7 +1159,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_type(cls)
         assert len(pkg.types) == 1
         assert pkg.types[0].name == "MyClass"
@@ -1163,7 +1171,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         pkg.add_type(enum)
         assert len(pkg.types) == 1
         assert pkg.types[0].name == "MyEnum"
@@ -1175,8 +1183,8 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyType", is_abstract=False)
-        enum = AutosarEnumeration(name="MyType")
+        cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)
+        enum = AutosarEnumeration(name="MyType", package="M2::Test")
 
         pkg.add_type(cls)
         with pytest.raises(ValueError, match="Type 'MyType' already exists"):
@@ -1189,7 +1197,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         pkg.add_enumeration(enum)
         assert len(pkg.types) == 1
         assert isinstance(pkg.types[0], AutosarEnumeration)
@@ -1202,7 +1210,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_type(cls)
         result = pkg.get_type("MyClass")
         assert result is not None
@@ -1226,8 +1234,8 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
-        enum = AutosarEnumeration(name="MyEnum")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         pkg.add_type(cls)
         pkg.add_type(enum)
 
@@ -1244,7 +1252,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         pkg.add_enumeration(enum)
         result = pkg.get_enumeration("MyEnum")
         assert result is not None
@@ -1268,7 +1276,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
         result = pkg.get_enumeration("MyClass")
         assert result is None
@@ -1281,7 +1289,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_type(cls)
         assert pkg.has_type("MyClass") is True
 
@@ -1302,7 +1310,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        enum = AutosarEnumeration(name="MyEnum")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         pkg.add_enumeration(enum)
         assert pkg.has_enumeration("MyEnum") is True
 
@@ -1313,7 +1321,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
         assert pkg.has_enumeration("MyClass") is False
 
@@ -1333,8 +1341,8 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
-        enum = AutosarEnumeration(name="MyEnum")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
 
         pkg.add_type(cls)
         pkg.add_type(enum)
@@ -1350,8 +1358,8 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyType", is_abstract=False)
-        enum = AutosarEnumeration(name="MyType")
+        cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)
+        enum = AutosarEnumeration(name="MyType", package="M2::Test")
 
         pkg.add_type(cls)
         with pytest.raises(ValueError, match="Type 'MyType' already exists"):
@@ -1368,7 +1376,7 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
         pkg.add_class(cls)
         assert len(pkg.types) == 1
         assert pkg.has_class("MyClass") is True
@@ -1380,8 +1388,8 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
-        enum = AutosarEnumeration(name="MyEnum")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
 
         pkg.add_type(cls)
         pkg.add_type(enum)
@@ -1399,8 +1407,8 @@ class TestAutosarPackage:
             SWR_MODEL_00020: AUTOSAR Package Type Support
         """
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyClass", is_abstract=False)
-        enum = AutosarEnumeration(name="MyEnum")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
 
         pkg.add_type(cls)
         pkg.add_type(enum)

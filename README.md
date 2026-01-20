@@ -100,6 +100,8 @@ Generate separate markdown files for each AUTOSAR class:
 autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf --include-class-details -o data/autosar_models.md
 ```
 
+Include the `--include-class-details` flag to generate individual class files in the `output/classes/` directory.
+
 ### Example Output
 
 When you run the command above, you'll see output like:

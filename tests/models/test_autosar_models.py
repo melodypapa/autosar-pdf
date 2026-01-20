@@ -1,4 +1,4 @@
-"""Tests for AutosarAttribute, AutosarClass, AutosarEnumeration, AutosarEnumLiteral, AutosarPackage and AutosarType models.
+"""Tests for AutosarAttribute, AutosarClass, AutosarEnumeration, AutosarEnumLiteral, AutosarPackage and AbstractAutosarBase models.
 
 Test coverage for autosar_models.py targeting 100%.
 """
@@ -834,8 +834,8 @@ class TestAutosarEnumeration:
         enum.enumeration_literals.append(AutosarEnumLiteral("VALUE2", 1))
         assert len(enum.enumeration_literals) == 2
 
-    def test_inheritance_from_autosar_type(self) -> None:
-        """Test that AutosarEnumeration inherits from AutosarType.
+    def test_inheritance_from_abstract_autosar_base(self) -> None:
+        """Test that AutosarEnumeration inherits from AbstractAutosarBase.
 
         Requirements:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class

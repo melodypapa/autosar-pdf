@@ -198,7 +198,7 @@ The ATP type enum shall support the following values:
 
 **Description**: This requirement has been superseded by SWR_MODEL_00019 (AUTOSAR Enumeration Type Representation).
 
-The original approach of adding enumeration literals to AutosarClass has been replaced with a dedicated AutosarEnumeration class that inherits from AutosarType. This provides better type separation and clearer domain modeling.
+The original approach of adding enumeration literals to AutosarClass has been replaced with a dedicated AutosarEnumeration class that inherits from AbstractAutosarBase. This provides better type separation and clearer domain modeling.
 
 **Superseded by**: SWR_MODEL_00019
 
@@ -209,21 +209,19 @@ The original approach of adding enumeration literals to AutosarClass has been re
 
 **Maturity**: accept
 
-**Description**: The system shall provide an abstract base class (`AutosarType`) that encapsulates common properties shared by all AUTOSAR type definitions, including regular classes and enumerations.
+**Description**: The system shall provide an abstract base class (`AbstractAutosarBase`) that encapsulates common properties shared by all AUTOSAR type definitions, including regular classes and enumerations.
 
 The abstract base class shall include the following attributes:
 - `name`: The name of the type (non-empty string)
-- `is_abstract`: Whether the type is abstract (boolean)
 - `atp_type`: ATP marker type enum indicating the AUTOSAR Tool Platform marker (defaults to NONE)
-- `bases`: List of base type names for inheritance tracking (List[str], defaults to empty list)
 - `note`: Optional documentation or comments about the type (str | None, defaults to None)
 
 The abstract base class shall provide:
 - Name validation in `__post_init__` to ensure non-empty names
-- String representation with "(abstract)" suffix for abstract types
+- Abstract `__str__()` method that derived classes must implement
 - Common initialization logic for all derived types
 
-This requirement enables a proper inheritance hierarchy where both `AutosarClass` and `AutosarEnumeration` inherit from `AutosarType`, eliminating code duplication and ensuring consistent behavior across all AUTOSAR type definitions.
+This requirement enables a proper inheritance hierarchy where both `AutosarClass` and `AutosarEnumeration` inherit from `AbstractAutosarBase`, eliminating code duplication and ensuring consistent behavior across all AUTOSAR type definitions.
 
 ---
 
@@ -232,16 +230,16 @@ This requirement enables a proper inheritance hierarchy where both `AutosarClass
 
 **Maturity**: accept
 
-**Description**: The system shall provide a dedicated data model (`AutosarEnumeration`) to represent AUTOSAR enumeration types, inheriting from the `AutosarType` abstract base class.
+**Description**: The system shall provide a dedicated data model (`AutosarEnumeration`) to represent AUTOSAR enumeration types, inheriting from the `AbstractAutosarBase` abstract base class.
 
 The `AutosarEnumeration` class shall include:
-- All inherited attributes from `AutosarType` (name, is_abstract, atp_type, bases, note)
+- All inherited attributes from `AbstractAutosarBase` (name, atp_type, note)
 - `enumeration_literals`: List of enumeration literal values (List[AutosarEnumLiteral], defaults to empty list)
 
 The class shall:
-- Inherit validation and string representation logic from `AutosarType`
+- Inherit validation logic from `AbstractAutosarBase`
+- Implement the abstract `__str__()` method to return the enumeration name
 - Provide a debug representation showing all attributes including enumeration literals count
-- Support abstract enumerations (is_abstract=True) for enumeration metamodels
 
 This allows the system to properly represent enumeration types like `EcucDestinationUriNestingContractEnum` from AUTOSAR CP TPS ECUConfiguration as a distinct type from regular classes, improving type safety and code clarity.
 
@@ -314,6 +312,68 @@ This requirement enables:
 - Efficient parent-child relationship queries
 
 **Note**: This attribute complements the existing `bases` attribute (which stores parent class names as strings) by providing direct object references to the parent class.
+
+---
+
+#### SWR_MODEL_00023
+**Title**: AUTOSAR Document Model (AutosarDoc)
+
+**Maturity**: draft
+
+**Description**: The system shall provide a singleton data model (`AutosarDoc`) to represent the complete AUTOSAR model extracted from PDF files. The `AutosarDoc` class shall serve as the central container for all parsed AUTOSAR data.
+
+The `AutosarDoc` data model shall:
+
+- **Singleton Pattern**: Implement the singleton design pattern to ensure only one instance exists throughout the application lifecycle
+- **Package Hierarchy Storage**: Contain the complete package hierarchy as a list of top-level `AutosarPackage` objects
+- **Class Inheritance Hierarchy**: Contain the complete multi-level class inheritance hierarchy with support for:
+  - Direct access to root classes (classes with no parent)
+  - Traversal of inheritance trees from root to leaf classes
+  - Bidirectional navigation (parent ↔ children) for all classes
+- **Query Methods**: Provide methods to query:
+  - All packages by name
+  - All classes by name across the entire model
+  - Root classes (classes with no parent)
+  - Class hierarchies starting from a given root class
+
+The `AutosarDoc` class shall provide the following attributes:
+
+- `packages`: List of top-level `AutosarPackage` objects representing the package hierarchy
+- `root_classes`: Dictionary mapping root class names to their `AutosarClass` objects
+- `all_classes`: Dictionary mapping all class names to their `AutosarClass` objects for efficient lookup
+
+The singleton instance shall be accessible via:
+- `AutosarDoc.instance()` class method to get or create the singleton instance
+- `AutosarDoc.reset()` class method to clear and reinitialize the instance (useful for testing)
+
+This requirement enables:
+- Centralized access to all parsed AUTOSAR data
+- Efficient queries across packages and classes
+- Global state management for the parsed model
+- Simplified data access for the parser, writer, and CLI components
+
+**Example Usage**:
+```python
+# Get the singleton instance
+doc = AutosarDoc.instance()
+
+# Access package hierarchy
+for pkg in doc.packages:
+    print(f"Package: {pkg.name}")
+
+# Access root classes
+for root_name, root_class in doc.root_classes.items():
+    print(f"Root class: {root_name}")
+
+# Query a specific class
+my_class = doc.get_class("InternalBehavior")
+if my_class:
+    # Traverse parent hierarchy
+    current = my_class
+    while current.parent:
+        print(f"{current.name} -> {current.parent.name}")
+        current = current.parent
+```
 
 ---
 
@@ -392,13 +452,16 @@ The system shall filter out class definitions that do not have an associated pac
 
 **Maturity**: accept
 
-**Description**: The system shall build a hierarchical AUTOSAR package structure from parsed class definitions, creating nested packages based on the package path delimiter ("::").
+**Description**: The system shall build a hierarchical AUTOSAR package structure from parsed class and enumeration definitions, creating nested packages based on the package path delimiter ("::").
+
+Requirements:
+    SWR_MODEL_00020: AUTOSAR Package Type Support
 
 The system shall:
 1. Parse the package path into individual components using "::" as the delimiter
 2. Create or retrieve package objects for each component in the path
 3. Establish parent-child relationships between packages by adding subpackages to their parent packages
-4. Add classes to the appropriate package based on the full package path
+4. Add types (classes and enumerations) to the appropriate package based on the full package path using the unified `types` collection
 
 ---
 
@@ -409,10 +472,13 @@ The system shall:
 
 **Description**: The system shall correctly identify and return only top-level packages from the package hierarchy.
 
+Requirements:
+    SWR_MODEL_00020: AUTOSAR Package Type Support
+
 The system shall:
 1. Return only packages that have no "::" in their full path (indicating they are root-level packages)
-2. Ensure that packages contain either classes or subpackages (or both)
-3. Use proper operator precedence in the selection logic: `if "::" not in path and (pkg.classes or pkg.subpackages)`
+2. Ensure that packages contain either types (classes/enumerations) or subpackages (or both)
+3. Use proper operator precedence in the selection logic: `if "::" not in path and (pkg.types or pkg.subpackages)`
 4. Ensure that intermediate packages in the hierarchy (e.g., `AUTOSARTemplates::SystemTemplate::Fibex`) are not returned as top-level packages
 
 This requirement prevents packages that are nested within other packages from being incorrectly returned as root-level packages.

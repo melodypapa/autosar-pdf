@@ -1206,34 +1206,34 @@ All existing test cases in this document are currently at maturity level **accep
 ---
 
 #### SWUT_MODEL_00034
-**Title**: Test AutosarType Abstract Base Class Properties
+**Title**: Test AbstractAutosarBase Abstract Base Class Properties
 
 **Maturity**: accept
 
-**Description**: Verify that the AutosarType abstract base class provides common properties for all AUTOSAR types.
+**Description**: Verify that the AbstractAutosarBase abstract base class provides common properties for all AUTOSAR types.
 
 **Precondition**: None
 
 **Test Steps**:
-1. Create an AutosarClass (which inherits from AutosarType)
+1. Create an AutosarClass (which inherits from AbstractAutosarBase)
 2. Verify the name attribute is set correctly
-3. Verify the is_abstract attribute is set correctly
-4. Verify the atp_type attribute defaults to ATPType.NONE
-5. Verify the bases attribute is an empty list by default
-6. Verify the note attribute is None by default
+3. Verify the atp_type attribute defaults to ATPType.NONE
+4. Verify the note attribute is None by default
+5. Create an AutosarEnumeration (which also inherits from AbstractAutosarBase)
+6. Verify that enumeration also has the same base attributes (name, atp_type, note)
 
-**Expected Result**: All inherited properties from AutosarType are correctly initialized
+**Expected Result**: All inherited properties from AbstractAutosarBase are correctly initialized in both AutosarClass and AutosarEnumeration
 
 **Requirements Coverage**: SWR_MODEL_00018
 
 ---
 
 #### SWUT_MODEL_00035
-**Title**: Test AutosarType Name Validation
+**Title**: Test AbstractAutosarBase Name Validation
 
 **Maturity**: accept
 
-**Description**: Verify that AutosarType validates non-empty names.
+**Description**: Verify that AbstractAutosarBase validates non-empty names.
 
 **Precondition**: None
 
@@ -1250,11 +1250,11 @@ All existing test cases in this document are currently at maturity level **accep
 ---
 
 #### SWUT_MODEL_00036
-**Title**: Test AutosarType String Representation
+**Title**: Test AutosarClass String Representation
 
 **Maturity**: accept
 
-**Description**: Verify that AutosarType provides proper string representation with abstract suffix.
+**Description**: Verify that AutosarClass implements the abstract __str__() method with proper formatting including "(abstract)" suffix for abstract classes.
 
 **Precondition**: None
 
@@ -1264,9 +1264,9 @@ All existing test cases in this document are currently at maturity level **accep
 3. Create an AutosarClass with name="AbstractClass" and is_abstract=True
 4. Verify str(cls) returns "AbstractClass (abstract)"
 
-**Expected Result**: String representation includes "(abstract)" suffix for abstract types
+**Expected Result**: String representation includes "(abstract)" suffix for abstract classes
 
-**Requirements Coverage**: SWR_MODEL_00018
+**Requirements Coverage**: SWR_MODEL_00001, SWR_MODEL_00003, SWR_MODEL_00018
 
 ---
 
@@ -1280,11 +1280,12 @@ All existing test cases in this document are currently at maturity level **accep
 **Precondition**: None
 
 **Test Steps**:
-1. Create an AutosarEnumeration with name="MyEnum" and is_abstract=False
+1. Create an AutosarEnumeration with name="MyEnum"
 2. Verify the name attribute is set to "MyEnum"
-3. Verify the is_abstract attribute is set to False
-4. Verify the enumeration_literals attribute is an empty list
-5. Verify that AutosarEnumeration inherits from AutosarType
+3. Verify the atp_type attribute defaults to ATPType.NONE
+4. Verify the note attribute is None by default
+5. Verify the enumeration_literals attribute is an empty list
+6. Verify that AutosarEnumeration inherits from AbstractAutosarBase
 
 **Expected Result**: Enumeration is created with all attributes properly initialized
 

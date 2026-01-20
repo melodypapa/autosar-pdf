@@ -875,7 +875,7 @@ The ATP Type section shall:
 
 **Maturity**: accept
 
-**Description**: When the `--write-class-files` flag is specified along with the `-o` / `--output` option, the CLI shall create separate markdown files for each AUTOSAR class in a directory structure that mirrors the package hierarchy. The root directory for the class files shall be the same as the output markdown file location.
+**Description**: When the `--include-class-details` flag is specified along with the `-o` / `--output` option, the CLI shall create separate markdown files for each AUTOSAR class in a directory structure that mirrors the package hierarchy. The root directory for the class files shall be the same as the output markdown file location.
 
 ---
 
@@ -884,7 +884,7 @@ The ATP Type section shall:
 
 **Maturity**: accept
 
-**Description**: The CLI shall support a `--write-class-files` flag to enable creation of separate markdown files for each class. This flag only has effect when used with the `-o` / `--output` option. When not specified, only the main hierarchy output file is created.
+**Description**: The CLI shall support a `--include-class-details` flag to enable creation of separate markdown files for each class. This flag only has effect when used with the `-o` / `--output` option. When not specified, only the main hierarchy output file is created.
 
 ---
 

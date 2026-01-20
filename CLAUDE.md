@@ -221,7 +221,7 @@ PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → M
 - No writer-level deduplication (relies on model-level duplicate prevention)
 - Supports two output modes:
   - Consolidated: All packages and classes in single markdown file
-  - Per-class: Individual markdown files for each class (with `--write-class-files`)
+  - Per-class: Individual markdown files for each class (with `--include-class-details`)
 
 ## CLI Usage
 
@@ -240,7 +240,7 @@ autosar-extract /path/to/pdfs/
 autosar-extract input.pdf -v
 
 # Create separate markdown files for each class
-autosar-extract input.pdf -o output.md --write-class-files
+autosar-extract input.pdf -o output.md --include-class-details
 ```
 
 ### Logging Levels

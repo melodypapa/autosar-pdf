@@ -35,7 +35,7 @@ def main() -> int:
         help="Output file path (default: stdout)",
     )
     parser.add_argument(
-        "--write-class-files",
+        "--include-class-details",
         action="store_true",
         help="Create separate markdown files for each class (requires -o/--output)",
     )
@@ -130,7 +130,7 @@ def main() -> int:
             # SWR_CLI_00010: CLI Class File Output
             # SWR_CLI_00011: CLI Class Files Flag
             # Write each class to separate files if flag is enabled
-            if args.write_class_files:
+            if args.include_class_details:
                 writer.write_packages_to_files(merged_packages, output_path=output_path)
                 logging.info(f"Class files written to directory: {output_path.parent}")
         else:

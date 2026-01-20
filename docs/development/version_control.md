@@ -50,7 +50,7 @@ This project follows [Semantic Versioning 2.0.0](https://semver.org/): `MAJOR.MI
 
 **Examples:**
 - Feature: "Added AutosarDoc class to represent parsed document structure"
-- Feature: "Added --write-class-files CLI option for per-class markdown output"
+- Feature: "Added --include-class-details CLI option for per-class markdown output"
 - Feature: "Added support for ATP marker extraction from PDFs"
 - Feature: "Added enumeration literal extraction with index support"
 - Enhancement: "Improved error messages in parser for better debugging"
@@ -133,7 +133,7 @@ docs: update docstring for AutosarClass parent attribute
 feat: add AutosarDoc class with root_classes collection
 
 # Minor version (enhancement)
-feat: add --write-class-files CLI option for per-class output
+feat: add --include-class-details CLI option for per-class output
 
 # Major version (breaking change)
 BREAKING CHANGE: remove deprecated AutosarPackage.get_class_by_name() method

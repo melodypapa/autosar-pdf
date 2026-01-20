@@ -119,7 +119,7 @@ class TestAutosarCli:
             call_kwargs = mock_logging.basicConfig.call_args[1]
             assert call_kwargs["level"] == mock_logging.DEBUG
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md", "--write-class-files"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md", "--include-class-details"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_output_file_option_with_class_files(self, mock_path: MagicMock) -> None:
         """SWUT_CLI_00005: Test CLI writes output to specified file and creates class files when flag is set.

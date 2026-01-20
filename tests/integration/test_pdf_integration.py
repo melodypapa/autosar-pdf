@@ -7,7 +7,7 @@ to cache parsed PDF data. Each PDF is parsed only once per test session, with
 results shared across all tests that need them.
 """
 
-from autosar_pdf2txt.models import ATPType, AutosarClass
+from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarDoc
 from autosar_pdf2txt.parser import PdfParser
 
 
@@ -22,7 +22,7 @@ class TestPdfIntegration:
     Tests are skipped if files are not available (for CI/CD environments).
     """
 
-    def test_parse_bsw_module_template_pdf_first_class(self, bsw_template_pdf: list) -> None:
+    def test_parse_bsw_module_template_pdf_first_class(self, bsw_template_pdf) -> None:
         """Test parsing real AUTOSAR BSW Module Template PDF and verify first class.
 
         SWIT_00001: Test Parsing Real AUTOSAR PDF and Verifying First Class
@@ -33,11 +33,12 @@ class TestPdfIntegration:
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_MODEL_00001: AUTOSAR Class Representation
+            SWR_MODEL_00023: AUTOSAR Document Model
 
         Args:
-            bsw_template_pdf: Cached parsed BSW Module Template PDF data.
+            bsw_template_pdf: Cached parsed BSW Module Template PDF data (AutosarDoc).
         """
-        packages = bsw_template_pdf
+        packages = bsw_template_pdf.packages
 
         # Verify we got some packages
         assert len(packages) > 0, "Should extract at least one package from PDF"
@@ -71,7 +72,7 @@ class TestPdfIntegration:
         print(f"  Note: {first_class.note}")
         print(f"  Package: {first_package.name}")
 
-    def test_parse_bsw_module_template_pdf_multiple_classes(self, bsw_template_pdf: list) -> None:
+    def test_parse_bsw_module_template_pdf_multiple_classes(self, bsw_template_pdf) -> None:
         """Test that multiple classes are parsed from real AUTOSAR PDF.
 
         SWIT_00002: Test Parsing Real AUTOSAR PDF Extracts Multiple Classes
@@ -80,11 +81,12 @@ class TestPdfIntegration:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+            SWR_MODEL_00023: AUTOSAR Document Model
 
         Args:
-            bsw_template_pdf: Cached parsed BSW Module Template PDF data.
+            bsw_template_pdf: Cached parsed BSW Module Template PDF data (AutosarDoc).
         """
-        packages = bsw_template_pdf
+        packages = bsw_template_pdf.packages
 
         # Count total classes recursively (using cached helper)
         total_classes = count_classes(packages)
@@ -95,7 +97,7 @@ class TestPdfIntegration:
         print(f"\nTotal classes extracted: {total_classes}")
         print(f"Total packages: {len(packages)}")
 
-    def test_parse_bsw_module_template_pdf_has_bases_and_notes(self, bsw_template_pdf: list) -> None:
+    def test_parse_bsw_module_template_pdf_has_bases_and_notes(self, bsw_template_pdf: AutosarDoc) -> None:
         """Test parsing real AUTOSAR PDF has bases and notes.
 
         SWIT_00003: Test Parsing Real AUTOSAR PDF Has Bases and Notes
@@ -109,7 +111,7 @@ class TestPdfIntegration:
         Args:
             bsw_template_pdf: Cached parsed BSW Module Template PDF data.
         """
-        packages = bsw_template_pdf
+        packages = bsw_template_pdf.packages
 
         # Find classes with bases and notes recursively
         classes_with_bases = []
@@ -190,9 +192,10 @@ class TestPdfIntegration:
         monkeypatch.setattr("pdfplumber.open", mock_open)
 
         # Parse PDF
-        packages = parser.parse_pdf("dummy.pdf")
+        doc = parser.parse_pdf("dummy.pdf")
 
         # Verify parsing
+        packages = doc.packages
         assert len(packages) == 1
         m2_pkg = packages[0]
         assert m2_pkg.name == "M2"
@@ -219,7 +222,7 @@ class TestPdfIntegration:
             assert "## ATP Type\n\n" in content
             assert "* atpVariation\n" in content
 
-    def test_parse_ecu_configuration_pdf_fibex_package_structure(self, ecu_configuration_pdf: list) -> None:
+    def test_parse_ecu_configuration_pdf_fibex_package_structure(self, ecu_configuration_pdf: AutosarDoc) -> None:
         """Test parsing ECU Configuration PDF and verify Fibex package structure and ImplementationDataType attributes.
 
         SWIT_00005: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
@@ -238,7 +241,7 @@ class TestPdfIntegration:
         Args:
             ecu_configuration_pdf: Cached parsed ECU Configuration PDF data.
         """
-        packages = ecu_configuration_pdf
+        packages = ecu_configuration_pdf.packages
 
         # Verify we have exactly 1 top-level package (M2)
         assert len(packages) == 1, f"Expected 1 top-level package (M2), got {len(packages)}"

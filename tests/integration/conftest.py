@@ -10,7 +10,7 @@ from typing import Dict, List
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarPackage
+from autosar_pdf2txt.models import AutosarDoc, AutosarPackage
 from autosar_pdf2txt.parser import PdfParser
 
 
@@ -27,7 +27,7 @@ def parser() -> PdfParser:
 
 
 @pytest.fixture(scope="session")
-def bsw_template_pdf(parser: PdfParser) -> List[AutosarPackage]:
+def bsw_template_pdf(parser: PdfParser) -> AutosarDoc:
     """Parse and cache the BSW Module Template PDF.
 
     This fixture parses the PDF once per session and caches the result.
@@ -38,7 +38,7 @@ def bsw_template_pdf(parser: PdfParser) -> List[AutosarPackage]:
         parser: Shared PdfParser instance.
 
     Returns:
-        List of parsed AutosarPackage objects.
+        AutosarDoc containing parsed packages and root classes.
 
     Skips:
         If the PDF file is not found.
@@ -52,7 +52,7 @@ def bsw_template_pdf(parser: PdfParser) -> List[AutosarPackage]:
 
 
 @pytest.fixture(scope="session")
-def ecu_configuration_pdf(parser: PdfParser) -> List[AutosarPackage]:
+def ecu_configuration_pdf(parser: PdfParser) -> AutosarDoc:
     """Parse and cache the ECU Configuration PDF.
 
     This fixture parses the PDF once per session and caches the result.
@@ -61,7 +61,7 @@ def ecu_configuration_pdf(parser: PdfParser) -> List[AutosarPackage]:
         parser: Shared PdfParser instance.
 
     Returns:
-        List of parsed AutosarPackage objects.
+        AutosarDoc containing parsed packages and root classes.
 
     Skips:
         If the PDF file is not found.
@@ -75,24 +75,24 @@ def ecu_configuration_pdf(parser: PdfParser) -> List[AutosarPackage]:
 
 
 @pytest.fixture(scope="session")
-def pdf_cache(parser: PdfParser) -> Dict[str, List[AutosarPackage]]:
+def pdf_cache(parser: PdfParser) -> Dict[str, AutosarDoc]:
     """Parse and cache all available AUTOSAR PDF files.
 
     This fixture provides a dictionary mapping PDF filenames to their
-    parsed package hierarchies. All PDFs are parsed once per session,
+    parsed document structures. All PDFs are parsed once per session,
     enabling tests to access any PDF without redundant parsing.
 
     Args:
         parser: Shared PdfParser instance.
 
     Returns:
-        Dictionary with PDF filenames as keys and parsed package lists as values.
+        Dictionary with PDF filenames as keys and AutosarDoc objects as values.
 
     Skips:
         If no PDF files are found.
     """
     pdf_dir = "examples/pdf"
-    cache: Dict[str, List[AutosarPackage]] = {}
+    cache: Dict[str, AutosarDoc] = {}
 
     if not os.path.exists(pdf_dir):
         pytest.skip(f"PDF directory not found: {pdf_dir}")

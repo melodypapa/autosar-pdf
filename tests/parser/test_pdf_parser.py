@@ -301,7 +301,8 @@ class TestPdfParser:
             )
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
         assert packages[0].name == "AUTOSAR"
 
@@ -319,6 +320,10 @@ class TestPdfParser:
         assert bsw_internal is not None
         assert bsw_internal.bases == ["InternalBehavior"]
         assert bsw_internal.note == "BSW specific behavior"
+
+        # Check root classes
+        assert len(doc.root_classes) == 1
+        assert doc.root_classes[0].name == "InternalBehavior"
 
     def test_extract_with_pdfplumber_exception_handling(self, monkeypatch) -> None:
         """Test exception handling in _extract_with_pdfplumber.
@@ -354,13 +359,14 @@ class TestPdfParser:
         parser = PdfParser()
 
         # Create package and subpackage
-        parent_pkg = parser._build_package_hierarchy([
+        doc = parser._build_package_hierarchy([
             ClassDefinition(
                 name="Class1",
                 package_path="AUTOSAR::Module1",
                 is_abstract=False
             )
         ])
+        parent_pkg = doc.packages
 
         # Manually add Module1 subpackage to trigger duplicate
         module1 = parent_pkg[0].get_subpackage("Module1")
@@ -398,7 +404,8 @@ class TestPdfParser:
         ]
 
         # Should not raise ValueError for duplicate subpackages
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
 
         # Should successfully create packages
         assert len(packages) == 1
@@ -425,7 +432,7 @@ class TestPdfParser:
         from autosar_pdf2txt.models import AutosarClass
 
         # Create package with a class
-        packages = parser._build_package_hierarchy([
+        doc = parser._build_package_hierarchy([
             ClassDefinition(
                 name="ExistingClass",
                 package_path="AUTOSAR",
@@ -433,6 +440,7 @@ class TestPdfParser:
                 base_classes=["Base1"]
             )
         ])
+        packages = doc.packages
 
         # Try to manually add duplicate class (should trigger ValueError)
         duplicate_class = AutosarClass(name="ExistingClass", package="M2::Test",
@@ -462,7 +470,8 @@ class TestPdfParser:
         ]
 
         # Should not raise ValueError for duplicate classes
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
 
         # Should successfully create package with one class
         assert len(packages) == 1
@@ -529,7 +538,8 @@ class TestPdfParser:
         monkeypatch.setattr("pdfplumber.open", mock_open)
 
         # Parse the PDF
-        packages = parser.parse_pdf("dummy.pdf")
+        doc = parser.parse_pdf("dummy.pdf")
+        packages = doc.packages
 
         # Verify results
         assert len(packages) == 1
@@ -555,7 +565,8 @@ class TestPdfParser:
         ]
 
         # Should handle empty parts gracefully
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
 
         assert len(packages) == 1
         assert packages[0].name == "AUTOSAR"
@@ -775,7 +786,9 @@ class TestPdfParser:
             )
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
+
         assert len(packages) == 1
 
         my_class = packages[0].get_class("MyClass")
@@ -885,7 +898,8 @@ class TestPdfParser:
             )
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         my_class = packages[0].get_class("MyClass")
@@ -1274,7 +1288,8 @@ class TestPdfParser:
             )
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         # Check that the package contains an AutosarEnumeration, not an AutosarClass
@@ -1324,7 +1339,8 @@ class TestPdfParser:
             )
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         pkg = packages[0]
@@ -1367,7 +1383,8 @@ class TestPdfParser:
             ),
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         pkg = packages[0]
@@ -1384,8 +1401,7 @@ class TestPdfParser:
         assert derived_class is not None
 
         # Verify parent reference is set correctly
-        assert derived_class.parent is base_class
-        assert derived_class.parent.name == "BaseClass"
+        assert derived_class.parent == "BaseClass"
 
         # Verify base class has no parent
         assert base_class.parent is None
@@ -1421,19 +1437,17 @@ class TestPdfParser:
             ),
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         pkg = packages[0]
-        base_pkg = pkg.get_subpackage("Base")
         derived_pkg = pkg.get_subpackage("Derived")
 
-        base1 = base_pkg.get_class("Base1")
         derived = derived_pkg.get_class("DerivedClass")
 
         # Verify parent is set to the first base
-        assert derived.parent is base1
-        assert derived.parent.name == "Base1"
+        assert derived.parent == "Base1"
 
     def test_parent_resolution_missing_base_leaves_parent_none(self) -> None:
         """Test that parent reference remains None when base class is not found.
@@ -1454,7 +1468,8 @@ class TestPdfParser:
             ),
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         pkg = packages[0]
@@ -1492,7 +1507,8 @@ class TestPdfParser:
             ),
         ]
 
-        packages = parser._build_package_hierarchy(class_defs)
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
         assert len(packages) == 1
 
         pkg = packages[0]

@@ -92,25 +92,34 @@ def main() -> int:
     try:
         # Parse all PDFs
         pdf_parser = PdfParser()
-        all_packages = []
+        all_docs = []
 
         for pdf_path in pdf_paths:
             # SWR_CLI_00007: CLI Progress Feedback
             logging.info(f"Parsing PDF: {pdf_path}")
             logging.debug(f"  Full path: {pdf_path.absolute()}")
-            packages = pdf_parser.parse_pdf(str(pdf_path))
-            all_packages.extend(packages)
-            logging.info(f"  Found {len(packages)} top-level packages")
+            doc = pdf_parser.parse_pdf(str(pdf_path))
+            all_docs.append(doc)
+            logging.info(f"  Found {len(doc.packages)} top-level packages")
+            logging.info(f"  Found {len(doc.root_classes)} root classes")
             if args.verbose:
-                for pkg in packages:
+                for pkg in doc.packages:
                     logging.debug(f"    - {pkg.name}")
 
+        # Merge all documents into a single document
         # SWR_CLI_00007: CLI Progress Feedback
-        logging.info(f"Total: {len(all_packages)} top-level packages")
+        merged_packages = []
+        merged_root_classes = []
+        for doc in all_docs:
+            merged_packages.extend(doc.packages)
+            merged_root_classes.extend(doc.root_classes)
+
+        logging.info(f"Total: {len(merged_packages)} top-level packages")
+        logging.info(f"Total: {len(merged_root_classes)} root classes")
 
         # Write to markdown
         writer = MarkdownWriter()
-        markdown = writer.write_packages(all_packages)
+        markdown = writer.write_packages(merged_packages)
 
         # SWR_CLI_00004: CLI Output File Option
         if args.output:
@@ -122,7 +131,7 @@ def main() -> int:
             # SWR_CLI_00011: CLI Class Files Flag
             # Write each class to separate files if flag is enabled
             if args.write_class_files:
-                writer.write_packages_to_files(all_packages, output_path=output_path)
+                writer.write_packages_to_files(merged_packages, output_path=output_path)
                 logging.info(f"Class files written to directory: {output_path.parent}")
         else:
             print(markdown, end="")

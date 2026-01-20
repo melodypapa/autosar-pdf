@@ -896,14 +896,17 @@ The ATP Type section shall:
 **Maturity**: accept
 
 **Description**: The system shall export the following public API from the root package:
-- `AutosarAttribute`
-- `AutosarClass`
-- `AutosarEnumLiteral`
-- `AutosarEnumeration`
-- `AutosarPackage`
-- `PdfParser`
-- `MarkdownWriter`
-- `__version__`
+- `AttributeKind` (Enum)
+- `AutosarAttribute` (Dataclass)
+- `AutosarClass` (Dataclass)
+- `AutosarDoc` (Dataclass)
+- `AutosarEnumLiteral` (Dataclass)
+- `AutosarEnumeration` (Dataclass)
+- `AutosarPackage` (Dataclass)
+- `AutosarPrimitive` (Dataclass)
+- `PdfParser` (Class)
+- `MarkdownWriter` (Class)
+- `__version__` (String)
 
 ---
 

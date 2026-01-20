@@ -28,31 +28,52 @@ When the user runs `/gh-workflow`, perform the following steps in order:
 - Run `git status` to see modified files
 - Run `git diff` to review unstaged changes
 - Ask the user for a brief summary of the changes if not clear from the diff
+- Determine the commit type based on the changes (feat, fix, docs, etc.)
 
-### 3. Create GitHub Issue
+### 3. Update Version Number
+- Determine if version bump is needed based on commit type:
+  - `feat` → bump MINOR version (0.1.0 → 0.2.0)
+  - `fix` → bump PATCH version (0.1.0 → 0.1.1)
+  - `breaking` → bump MAJOR version (0.1.0 → 1.0.0)
+  - Other types (docs, style, refactor, test, chore) → no version bump
+- Run version bump script: `python scripts/bump_version.py <commit_type>`
+- Script updates both version sources:
+  - `src/autosar_pdf2txt/__init__.py` (runtime version)
+  - `setup.py` (package version)
+- Validates both files are in sync before bumping
+- Stage the updated files (`__init__.py` and `setup.py`)
+- Display version change: `[INFO] Version bumped: 0.1.0 -> 0.2.0`
+
+### 4. Create GitHub Issue
 - Create a GitHub issue using `gh issue create`
 - Title format: `"<type>: <brief description>"` (type can be: feat, fix, docs, refactor, test, chore)
-- Include sections: Summary, Changes, Files Modified, Test Coverage, Requirements (if applicable)
+- Include sections: Summary, Changes, Files Modified, Test Coverage, Requirements (if applicable), Version Change
 - Capture the issue number (e.g., #20)
 
-### 4. Create Feature Branch
+### 5. Create Feature Branch
 - Create and checkout a new feature branch
 - Branch naming convention: `feature/<requirement-id>-short-description` or `feature/<type>-short-description`
 - Example: `feature/swr-writer-00006-class-file-structure` or `feature/add-new-parser`
 
-### 5. Stage and Commit Changes
-- Stage all relevant modified files
+### 6. Stage and Commit Changes
+- Stage all relevant modified files including:
+  - Updated `src/autosar_pdf2txt/__init__.py` (if version bumped)
+  - Updated `setup.py` (if version bumped)
+  - Source code changes
+  - Test changes
 - Create a commit with:
   - Conventional commit format: `<type>: <description>`
   - Detailed commit body describing changes
+  - Version change information if applicable
+  - List of modified files
   - Reference to the issue (e.g., `Closes #20`)
 
-### 6. Push to GitHub Only
+### 7. Push to GitHub Only
 - Push the branch to GitHub remote (origin)
 - **Important**: Do NOT push to gitee remote
 - Use explicit GitHub URL if needed: `git push git@github.com:melodypapa/autosar-pdf.git`
 
-### 7. Create Pull Request
+### 8. Create Pull Request
 - Create a pull request using `gh pr create`
 - Include comprehensive PR description with:
   - Summary section
@@ -60,19 +81,30 @@ When the user runs `/gh-workflow`, perform the following steps in order:
   - Files Modified list
   - Test Coverage information
   - Requirements traceability (if applicable)
+  - **Version Change** section (if version was bumped)
   - Reference to the issue being closed
 - Use `--head` flag if branch tracking is not properly set up
 
-## Commit Types
+## Commit Types and Version Bumping
 
-Use these conventional commit types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+This workflow follows **Semantic Versioning** (https://semver.org/):
+
+**Version Format**: `MAJOR.MINOR.PATCH` (e.g., 0.1.0)
+
+**Commit Types:**
+- `feat`: New feature → **Increment MINOR** (0.1.0 → 0.2.0)
+- `fix`: Bug fix → **Increment PATCH** (0.1.0 → 0.1.1)
+- `breaking`: Breaking change → **Increment MAJOR** (0.1.0 → 1.0.0)
+- `docs`: Documentation changes → No version bump
+- `style`: Code style changes (formatting, etc.) → No version bump
+- `refactor`: Code refactoring → No version bump
+- `test`: Adding or updating tests → No version bump
+- `chore`: Maintenance tasks → No version bump
+
+**Version Bump Rules:**
+- MAJOR version: Incompatible API changes
+- MINOR version: Backwards-compatible functionality additions
+- PATCH version: Backwards-compatible bug fixes
 
 ## Arguments
 
@@ -89,6 +121,74 @@ Use `$ARGUMENTS` to accept optional context:
 /gh-workflow Implement new parser for AUTOSAR models
 /gh-workflow feat: Add support for base class extraction
 ```
+
+## Example Workflow with Version Bump
+
+```
+User: /gh-workflow feat: Add support for primitive types
+
+System: [Step 1] Running quality checks...
+        Check        Status    Details
+        ───────────────────────────────────
+        Ruff         ✅ Pass    No errors
+        Mypy         ✅ Pass    No issues
+        Pytest       ✅ Pass    240/241 tests, 88.1% coverage
+
+        [Step 2] Analyzing current changes...
+        Modified files:
+          - src/autosar_pdf2txt/models/autosar_models.py
+          - src/autosar_pdf2txt/parser/pdf_parser.py
+          - tests/parser/test_pdf_parser.py
+
+        Commit type: feat (new feature)
+
+        [Step 3] Updating version number...
+        [INFO] Current version in __init__.py: 0.1.0
+        [INFO] Current version in setup.py: 0.1.0
+        [INFO] Commit type 'feat' requires MINOR version bump
+        [INFO] Updated version to 0.2.0 in src/autosar_pdf2txt/__init__.py
+        [INFO] Updated version to 0.2.0 in setup.py
+        [SUCCESS] Version bumped: 0.1.0 -> 0.2.0
+        [INFO] Both files updated successfully
+
+        [Step 4] Creating GitHub issue...
+        Issue #53 created: feat: Add support for primitive types
+
+        [Step 5] Creating feature branch...
+        Branch: feature/swr-model-00024-primitive-type-support
+
+        [Step 6] Staging and committing changes...
+        Committed: feat: Add support for primitive types
+        - Added AutosarPrimitive model
+        - Updated parser to recognize 'Primitive <name>' pattern
+        - Updated version: 0.1.0 -> 0.2.0
+        - Files modified:
+          * src/autosar_pdf2txt/__init__.py
+          * setup.py
+          * src/autosar_pdf2txt/models/autosar_models.py
+          * src/autosar_pdf2txt/parser/pdf_parser.py
+          * tests/parser/test_pdf_parser.py
+        Closes #53
+
+        [Step 7] Pushing to GitHub...
+        Branch pushed to origin
+
+        [Step 8] Creating pull request...
+        PR #54 created: https://github.com/melodypapa/autosar-pdf/pull/54
+
+        ✅ Workflow complete!
+```
+
+## Version Bump Examples
+
+| Commit Type | Old Version | New Version | Reason |
+|-------------|-------------|-------------|---------|
+| feat | 0.1.0 | 0.2.0 | New feature added |
+| fix | 0.1.0 | 0.1.1 | Bug fix |
+| breaking | 0.1.0 | 1.0.0 | Breaking API change |
+| docs | 0.1.0 | 0.1.0 | Documentation only (no bump) |
+| test | 0.1.0 | 0.1.0 | Tests only (no bump) |
+
 
 ## Notes
 

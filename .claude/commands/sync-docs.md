@@ -55,7 +55,14 @@ This command analyzes the source code implementation and updates the requirement
 - Ensure integration test cases reference correct requirement IDs
 - Verify end-to-end workflows are documented correctly
 
-### 6. Verify Synchronization
+### 6. Validate Documentation IDs
+- Run ID validation script to check for duplicate requirement and test IDs
+- Verify all IDs are unique and properly formatted
+- Detect gaps in ID sequences
+- Report any ID conflicts with line numbers
+- Fix any duplicate or invalid IDs found
+
+### 7. Verify Synchronization
 - Run all tests to ensure documentation is accurate
 - Run type checking to verify signatures match
 - Check for orphaned requirements or tests
@@ -112,8 +119,16 @@ When end-to-end workflows change:
 
 After synchronization, run:
 ```bash
+# 1. Validate documentation IDs
+python scripts/validate_ids.py
+
+# 2. Run tests
 pytest tests/ --cache-clear
+
+# 3. Check code quality
 ruff check src/ tests/
+
+# 4. Type check
 mypy src/autosar_pdf2txt/
 ```
 
@@ -131,6 +146,14 @@ System: Analyzing source code...
        Updating SWR_MODEL_00018...
        Updating SWUT_MODEL_00034...
        Updating SWIT_PARSER_00012...
+       Validating documentation IDs...
+       [INFO] Checking docs\requirements\requirements.md...
+       [OK] No duplicate IDs found (62 unique IDs)
+       [INFO] Checking docs\test_cases\unit_tests.md...
+       [OK] No duplicate IDs found (125 unique IDs)
+       [INFO] Checking docs\test_cases\integration_tests.md...
+       [OK] No duplicate IDs found (4 unique IDs)
+       [PASS] All IDs are unique!
        Verification: All tests pass ✅
        Synchronization complete
 ```
@@ -154,13 +177,44 @@ System: Detected changes in PDF parsing workflow
        Complete: 2 integration test scenarios updated
 ```
 
+### When Duplicate IDs Are Detected
+```
+User: /sync-docs
+System: Analyzing source code...
+       Documentation synchronized
+       Validating documentation IDs...
+       [INFO] Checking docs\requirements\requirements.md...
+       [OK] No duplicate IDs found (62 unique IDs)
+       [INFO] Checking docs\test_cases\unit_tests.md...
+       [ERROR] Found 23 duplicate ID(s):
+          SWUT_MODEL_00011: lines 214, 721
+          SWUT_MODEL_00012: lines 235, 742
+          SWUT_MODEL_00013: lines 255, 763
+          ...
+       [FAIL] Validation failed: Duplicate IDs found!
+
+       Please fix duplicate IDs to ensure proper traceability.
+       Remember: All requirement and test IDs must be unique.
+
+System: Found duplicate test IDs that need to be renumbered.
+       Renumbering duplicate test IDs to unique values...
+       SWUT_MODEL_00011 → SWUT_MODEL_00036
+       SWUT_MODEL_00012 → SWUT_MODEL_00037
+       SWUT_MODEL_00013 → SWUT_MODEL_00038
+       ...
+       Complete: Fixed 23 duplicate test IDs
+       Verification: All IDs are now unique ✅
+```
+
 ## Notes
 
 - Always run quality checks after synchronization
+- Always validate documentation IDs for uniqueness before committing
 - Document what changed and why
 - If in doubt, ask user before making changes
 - Never change stable requirement IDs
 - Keep maturity levels accurate
+- **CRITICAL**: All requirement and test IDs must be unique - duplicate IDs break traceability
 
 ## Related Commands
 

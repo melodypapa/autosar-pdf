@@ -718,7 +718,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00011
+#### SWUT_MODEL_00036
 **Title**: Test Creating Package with Classes
 
 **Maturity**: accept
@@ -739,7 +739,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00012
+#### SWUT_MODEL_00037
 **Title**: Test Creating Package with Subpackages
 
 **Maturity**: accept
@@ -760,7 +760,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00013
+#### SWUT_MODEL_00038
 **Title**: Test Valid Package Name Validation
 
 **Maturity**: accept
@@ -779,7 +779,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00014
+#### SWUT_MODEL_00039
 **Title**: Test Empty Package Name Raises ValueError
 
 **Maturity**: accept
@@ -798,7 +798,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00015
+#### SWUT_MODEL_00040
 **Title**: Test Whitespace-Only Package Name Raises ValueError
 
 **Maturity**: accept
@@ -817,7 +817,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00016
+#### SWUT_MODEL_00041
 **Title**: Test Adding Class to Package Successfully
 
 **Maturity**: accept
@@ -839,7 +839,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00017
+#### SWUT_MODEL_00042
 **Title**: Test Adding Duplicate Class Raises ValueError
 
 **Maturity**: accept
@@ -860,7 +860,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00018
+#### SWUT_MODEL_00043
 **Title**: Test Adding Subpackage to Package Successfully
 
 **Maturity**: accept
@@ -882,7 +882,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00019
+#### SWUT_MODEL_00044
 **Title**: Test Adding Duplicate Subpackage Raises ValueError
 
 **Maturity**: accept
@@ -903,7 +903,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00020
+#### SWUT_MODEL_00045
 **Title**: Test Finding Existing Class by Name
 
 **Maturity**: accept
@@ -925,7 +925,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00021
+#### SWUT_MODEL_00046
 **Title**: Test Finding Non-Existent Class Returns None
 
 **Maturity**: accept
@@ -945,7 +945,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00022
+#### SWUT_MODEL_00047
 **Title**: Test Finding Existing Subpackage by Name
 
 **Maturity**: accept
@@ -967,7 +967,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00023
+#### SWUT_MODEL_00048
 **Title**: Test Finding Non-Existent Subpackage Returns None
 
 **Maturity**: accept
@@ -987,7 +987,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00024
+#### SWUT_MODEL_00049
 **Title**: Test Checking if Class Exists Returns True
 
 **Maturity**: accept
@@ -1008,7 +1008,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00025
+#### SWUT_MODEL_00050
 **Title**: Test Checking if Non-Existent Class Exists Returns False
 
 **Maturity**: accept
@@ -1028,7 +1028,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00026
+#### SWUT_MODEL_00051
 **Title**: Test Checking if Subpackage Exists Returns True
 
 **Maturity**: accept
@@ -1049,7 +1049,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00027
+#### SWUT_MODEL_00052
 **Title**: Test Checking if Non-Existent Subpackage Exists Returns False
 
 **Maturity**: accept
@@ -1069,7 +1069,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00028
+#### SWUT_MODEL_00053
 **Title**: Test String Representation of Package with Classes
 
 **Maturity**: accept
@@ -1091,7 +1091,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00029
+#### SWUT_MODEL_00054
 **Title**: Test String Representation of Package with Subpackages
 
 **Maturity**: accept
@@ -1113,7 +1113,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00030
+#### SWUT_MODEL_00055
 **Title**: Test String Representation of Package with Both Classes and Subpackages
 
 **Maturity**: accept
@@ -1136,7 +1136,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00031
+#### SWUT_MODEL_00056
 **Title**: Test String Representation of Empty Package
 
 **Maturity**: accept
@@ -1156,7 +1156,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00032
+#### SWUT_MODEL_00057
 **Title**: Test Debug Representation of AUTOSAR Package
 
 **Maturity**: accept
@@ -1180,7 +1180,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00033
+#### SWUT_MODEL_00058
 **Title**: Test Nested Package Structure
 
 **Maturity**: accept
@@ -1205,7 +1205,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00034
+#### SWUT_MODEL_00061
 **Title**: Test AbstractAutosarBase Abstract Base Class Properties
 
 **Maturity**: accept
@@ -1229,7 +1229,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00035
+#### SWUT_MODEL_00062
 **Title**: Test AbstractAutosarBase Name Validation
 
 **Maturity**: accept
@@ -1250,7 +1250,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00036
+#### SWUT_MODEL_00063
 **Title**: Test AutosarClass String Representation
 
 **Maturity**: accept
@@ -1271,7 +1271,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00037
+#### SWUT_MODEL_00064
 **Title**: Test AutosarEnumeration Initialization
 
 **Maturity**: accept
@@ -1294,7 +1294,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00038
+#### SWUT_MODEL_00065
 **Title**: Test AutosarEnumeration with Literals
 
 **Maturity**: accept
@@ -1320,7 +1320,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00039
+#### SWUT_MODEL_00066
 **Title**: Test AutosarPackage add_type Method
 
 **Maturity**: accept
@@ -1345,7 +1345,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00040
+#### SWUT_MODEL_00067
 **Title**: Test AutosarPackage add_enumeration Method
 
 **Maturity**: accept
@@ -1368,7 +1368,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00041
+#### SWUT_MODEL_00068
 **Title**: Test AutosarPackage get_enumeration Method
 
 **Maturity**: accept
@@ -1393,7 +1393,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00042
+#### SWUT_MODEL_00069
 **Title**: Test AutosarPackage has_enumeration Method
 
 **Maturity**: accept
@@ -1419,7 +1419,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00043
+#### SWUT_MODEL_00070
 **Title**: Test AutosarPackage Unified Type Management
 
 **Maturity**: accept

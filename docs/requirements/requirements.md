@@ -767,15 +767,21 @@ This requirement enables:
 - Title: Class name with "(abstract)" suffix for abstract classes
 - Package name: The full package path containing the class
 - Type section: Explicit indicator showing whether the class is "Abstract" or "Concrete"
+- Parent: The immediate parent class name from the parent attribute (included only when parent is not None)
 - ATP Type section: List of ATP markers based on the ATP type enum value, included only when the ATP type is not NONE
 - Base classes: List of base class names that this class inherits from
 - Note: Class documentation/description extracted from the note field
 - Attributes list: Complete list of class attributes showing name, type, and reference indicator for each attribute
 
+The Parent section shall:
+- Be included only when the parent attribute is not None
+- Display the parent class name as a string
+- Appear immediately after the Type section and before the ATP Type section when present
+
 The ATP Type section shall:
 - Be included only when ATP type is ATP_MIXED_STRING or ATP_VARIATION
 - List the applicable marker: atpVariation for ATP_VARIATION, or atpMixedString for ATP_MIXED_STRING
-- Appear immediately after the Type section and before the Base Classes section when present
+- Appear immediately after the Parent section (or Type section if no parent) and before the Base Classes section when present
 
 ---
 

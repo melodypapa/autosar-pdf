@@ -6,6 +6,7 @@ Test coverage for autosar_cli.py targeting 100%.
 from unittest.mock import MagicMock, PropertyMock, patch
 
 from autosar_pdf2txt.cli.autosar_cli import main
+from autosar_pdf2txt.models import AutosarDoc
 
 
 class TestAutosarCli:
@@ -68,7 +69,10 @@ class TestAutosarCli:
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
              patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
              patch("builtins.print"):
-            mock_parser.return_value.parse_pdf.return_value = []
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = []
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "test"
 
             result = main()
@@ -102,7 +106,10 @@ class TestAutosarCli:
              patch("builtins.print"):
             mock_pkg = MagicMock()
             mock_pkg.name = "TestPackage"
-            mock_parser.return_value.parse_pdf.return_value = [mock_pkg]
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             main()
@@ -134,7 +141,10 @@ class TestAutosarCli:
              patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer:
             mock_pkg = MagicMock()
             mock_pkg.name = "TestPackage"
-            mock_parser.return_value.parse_pdf.return_value = [mock_pkg]
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
@@ -173,7 +183,10 @@ class TestAutosarCli:
              patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer:
             mock_pkg = MagicMock()
             mock_pkg.name = "TestPackage"
-            mock_parser.return_value.parse_pdf.return_value = [mock_pkg]
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
@@ -215,7 +228,10 @@ class TestAutosarCli:
              patch("builtins.print"):
             mock_pkg = MagicMock()
             mock_pkg.name = "TestPackage"
-            mock_parser.return_value.parse_pdf.return_value = [mock_pkg]
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             main()
@@ -328,7 +344,10 @@ class TestAutosarCli:
             # Mock successful parsing
             mock_pkg = MagicMock()
             mock_pkg.name = "TestPackage"
-            mock_parser.return_value.parse_pdf.return_value = [mock_pkg]
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 

@@ -779,32 +779,83 @@ class PdfParser:
 
         # Process each package and set parent references
         for pkg in packages:
-            self._set_parent_references(pkg, root_classes)
+            self._set_parent_references(pkg, root_classes, packages)
 
         return root_classes
 
-    def _set_parent_references(self, pkg: AutosarPackage, root_classes: List[AutosarClass]) -> None:
+    def _set_parent_references(self, pkg: AutosarPackage, root_classes: List[AutosarClass], all_packages: List[AutosarPackage]) -> None:
         """Recursively set parent references for all AutosarClass objects in a package.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
         This method sets the `parent` attribute to the name of the first base class
-        and collects root classes (classes with empty bases).
+        if it exists and is a class (not an enumeration), and collects root classes
+        (classes with empty bases).
 
         Args:
             pkg: The package to process.
             root_classes: List to populate with root AutosarClass objects.
+            all_packages: List of all top-level packages for searching base classes.
         """
         for typ in pkg.types:
             if isinstance(typ, AutosarClass):
                 if typ.bases:
-                    # Set parent to the name of the first base class
-                    typ.parent = typ.bases[0]
+                    # Only set parent if the base class exists and is a class (not enumeration)
+                    base_name = typ.bases[0]
+                    base_class = self._find_class_in_all_packages(all_packages, base_name)
+                    if base_class is not None:
+                        typ.parent = base_name
                 else:
                     # No bases means this is a root class
                     root_classes.append(typ)
 
         # Recursively process subpackages
         for subpkg in pkg.subpackages:
-            self._set_parent_references(subpkg, root_classes)
+            self._set_parent_references(subpkg, root_classes, all_packages)
+
+    def _find_class_in_all_packages(self, packages: List[AutosarPackage], class_name: str) -> Optional[AutosarClass]:
+        """Recursively search for a class by name across all packages.
+
+        Args:
+            packages: List of top-level packages to search in.
+            class_name: The name of the class to find.
+
+        Returns:
+            The AutosarClass if found, None otherwise.
+        """
+        for pkg in packages:
+            # Check current package
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass) and typ.name == class_name:
+                    return typ
+
+            # Recursively search subpackages
+            result = self._find_class_in_package(pkg, class_name)
+            if result is not None:
+                return result
+
+        return None
+
+    def _find_class_in_package(self, pkg: AutosarPackage, class_name: str) -> Optional[AutosarClass]:
+        """Recursively search for a class by name in a package and its subpackages.
+
+        Args:
+            pkg: The package to search in.
+            class_name: The name of the class to find.
+
+        Returns:
+            The AutosarClass if found, None otherwise.
+        """
+        # Check current package
+        for typ in pkg.types:
+            if isinstance(typ, AutosarClass) and typ.name == class_name:
+                return typ
+
+        # Recursively search subpackages
+        for subpkg in pkg.subpackages:
+            result = self._find_class_in_package(subpkg, class_name)
+            if result is not None:
+                return result
+
+        return None

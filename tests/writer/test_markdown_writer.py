@@ -472,6 +472,57 @@ class TestMarkdownWriterFiles:
         assert "* BaseClass1\n" in content
         assert "* BaseClass2\n" in content
 
+    def test_write_class_with_parent(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00023: Test writing a class with parent to file.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_MODEL_00022: AUTOSAR Class Parent Attribute
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False)
+        cls.bases = ["ParentClass"]
+        cls.parent = "ParentClass"
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "ChildClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
+        assert "## Parent\n\n" in content
+        assert "ParentClass\n\n" in content
+
+    def test_write_class_without_parent(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00024: Test writing a class without parent to file.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_MODEL_00022: AUTOSAR Class Parent Attribute
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "RootClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        assert "## Package\n\n" in content
+        assert "TestPackage\n\n" in content
+        assert "## Type\n\n" in content
+        assert "Concrete\n\n" in content
+        assert "## Parent\n\n" not in content
+
     def test_write_class_with_note(self, tmp_path: Path) -> None:
         """SWUT_WRITER_00022: Test writing a class with a note to file.
 

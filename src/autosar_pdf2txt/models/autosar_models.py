@@ -28,6 +28,24 @@ class ATPType(Enum):
     ATP_MIXED = "atpMixed"
 
 
+class AttributeKind(Enum):
+    """AUTOSAR attribute kind enumeration.
+
+    Requirements:
+        SWR_MODEL_00010: AUTOSAR Attribute Representation
+
+    This enum represents the kind of AUTOSAR attribute, indicating whether it is
+    a regular attribute or an aggregated attribute.
+
+    Attributes:
+        ATTR: Regular attribute
+        AGGR: Aggregated attribute
+    """
+
+    ATTR = "attr"
+    AGGR = "aggr"
+
+
 @dataclass
 class AutosarEnumLiteral:
     """Represents an enumeration literal value.
@@ -145,15 +163,21 @@ class AutosarAttribute:
         name: The name of the attribute.
         type: The data type of the attribute.
         is_ref: Whether the attribute is a reference type.
+        multiplicity: The multiplicity of the attribute (e.g., "0..1", "*", "0..*").
+        kind: The kind of attribute (attr or aggr).
+        note: The description or note for the attribute.
 
     Examples:
-        >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True)
-        >>> non_ref_attr = AutosarAttribute("id", "uint32", False)
+        >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True, "0..1", AttributeKind.ATTR, "Data read port")
+        >>> non_ref_attr = AutosarAttribute("id", "uint32", False, "0..1", AttributeKind.ATTR, "Unique identifier")
     """
 
     name: str
     type: str
     is_ref: bool
+    multiplicity: str
+    kind: AttributeKind
+    note: str
 
     def __post_init__(self) -> None:
         """Validate the attribute fields.
@@ -177,10 +201,11 @@ class AutosarAttribute:
             SWR_MODEL_00013: AUTOSAR Attribute String Representation
 
         Returns:
-            Attribute name and type with '(ref)' suffix if reference type.
+            Attribute name and type with '(ref)' suffix if reference type,
+            plus multiplicity, kind, and note.
         """
-        suffix = " (ref)" if self.is_ref else ""
-        return f"{self.name}: {self.type}{suffix}"
+        ref_suffix = " (ref)" if self.is_ref else ""
+        return f"{self.name}: {self.type}{ref_suffix} [{self.multiplicity}] ({self.kind.value}) - {self.note}"
 
     def __repr__(self) -> str:
         """Return detailed representation for debugging.
@@ -188,7 +213,11 @@ class AutosarAttribute:
         Requirements:
             SWR_MODEL_00013: AUTOSAR Attribute String Representation
         """
-        return f"AutosarAttribute(name='{self.name}', type='{self.type}', is_ref={self.is_ref})"
+        return (
+            f"AutosarAttribute(name='{self.name}', type='{self.type}', "
+            f"is_ref={self.is_ref}, multiplicity='{self.multiplicity}', "
+            f"kind={self.kind}, note='{self.note}')"
+        )
 
 
 @dataclass
@@ -318,28 +347,83 @@ class AutosarEnumeration(AbstractAutosarBase):
 
 
 @dataclass
+class AutosarPrimitive(AbstractAutosarBase):
+    """Represents an AUTOSAR primitive type.
+
+    Requirements:
+        SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+        SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+
+    Inherits from AbstractAutosarBase to provide common type properties (name, package, note)
+    and represents primitive data types in AUTOSAR.
+
+    Attributes:
+        name: The name of the primitive type (inherited from AbstractAutosarBase).
+        package: The full package path (inherited from AbstractAutosarBase).
+        note: Optional documentation or comments (inherited from AbstractAutosarBase).
+        attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
+
+    Examples:
+        >>> primitive = AutosarPrimitive("Limit", "M2::DataTypes")
+        >>> primitive_with_note = AutosarPrimitive("Interval", "M2::DataTypes", note="Interval type")
+        >>> attr = AutosarAttribute("intervalType", "String", False)
+        >>> primitive_with_attr = AutosarPrimitive("Limit", "M2::DataTypes", attributes={"intervalType": attr})
+    """
+
+    attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
+
+    def __str__(self) -> str:
+        """Return string representation of the primitive type.
+
+        Requirements:
+            SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+
+        Returns:
+            Primitive type name.
+        """
+        return f"{self.name}"
+
+    def __repr__(self) -> str:
+        """Return detailed representation for debugging.
+
+        Requirements:
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+        """
+        attrs_count = len(self.attributes)
+        note_present = self.note is not None
+        return (
+            f"AutosarPrimitive(name='{self.name}', "
+            f"package='{self.package}', "
+            f"attributes={attrs_count}, note={note_present})"
+        )
+
+
+@dataclass
 class AutosarPackage:
     """Represents an AUTOSAR package containing types and subpackages.
 
     Requirements:
         SWR_MODEL_00004: AUTOSAR Package Representation
         SWR_MODEL_00020: AUTOSAR Package Type Support
+        SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
 
     Attributes:
         name: The name of the package.
-        types: List of types (AutosarClass or AutosarEnumeration) in this package.
+        types: List of types (AutosarClass, AutosarEnumeration, or AutosarPrimitive) in this package.
         subpackages: List of subpackages in this package.
 
     Examples:
         >>> pkg = AutosarPackage("BswBehavior")
         >>> pkg.add_type(AutosarClass("BswInternalBehavior", False))
         >>> pkg.add_type(AutosarEnumeration("MyEnum", False))
+        >>> pkg.add_type(AutosarPrimitive("Limit", "M2::DataTypes"))
         >>> subpkg = AutosarPackage("SubBehavior")
         >>> pkg.add_subpackage(subpkg)
     """
 
     name: str
-    types: List[Union[AutosarClass, AutosarEnumeration]] = field(default_factory=list)
+    types: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = field(default_factory=list)
     subpackages: List["AutosarPackage"] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -354,15 +438,16 @@ class AutosarPackage:
         if not self.name or not self.name.strip():
             raise ValueError("Package name cannot be empty")
 
-    def add_type(self, typ: Union[AutosarClass, AutosarEnumeration]) -> None:
-        """Add a type (class or enumeration) to the package.
+    def add_type(self, typ: Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]) -> None:
+        """Add a type (class, enumeration, or primitive) to the package.
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
 
         Args:
-            typ: The AutosarClass or AutosarEnumeration to add.
+            typ: The AutosarClass, AutosarEnumeration, or AutosarPrimitive to add.
 
         Raises:
             ValueError: If a type with the same name already exists.
@@ -421,18 +506,19 @@ class AutosarPackage:
             raise ValueError(f"Subpackage '{pkg.name}' already exists in package '{self.name}'")
         self.subpackages.append(pkg)
 
-    def get_type(self, name: str) -> Optional[Union[AutosarClass, AutosarEnumeration]]:
-        """Get a type (class or enumeration) by name.
+    def get_type(self, name: str) -> Optional[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
+        """Get a type (class, enumeration, or primitive) by name.
 
         Requirements:
             SWR_MODEL_00008: Query Package Contents
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
 
         Args:
             name: The name of the type to find.
 
         Returns:
-            The AutosarClass or AutosarEnumeration if found, None otherwise.
+            The AutosarClass, AutosarEnumeration, or AutosarPrimitive if found, None otherwise.
         """
         for typ in self.types:
             if typ.name == name:
@@ -477,6 +563,37 @@ class AutosarPackage:
                 return typ
         return None
 
+    def add_primitive(self, primitive: AutosarPrimitive) -> None:
+        """Add a primitive type to the package.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+
+        Args:
+            primitive: The AutosarPrimitive to add.
+
+        Raises:
+            ValueError: If a primitive type with the same name already exists.
+        """
+        self.add_type(primitive)
+
+    def get_primitive(self, name: str) -> Optional[AutosarPrimitive]:
+        """Get a primitive type by name.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+
+        Args:
+            name: The name of the primitive type to find.
+
+        Returns:
+            The AutosarPrimitive if found, None otherwise.
+        """
+        for typ in self.types:
+            if isinstance(typ, AutosarPrimitive) and typ.name == name:
+                return typ
+        return None
+
     def get_subpackage(self, name: str) -> Optional["AutosarPackage"]:
         """Get a subpackage by name.
 
@@ -495,11 +612,12 @@ class AutosarPackage:
         return None
 
     def has_type(self, name: str) -> bool:
-        """Check if a type (class or enumeration) exists in the package.
+        """Check if a type (class, enumeration, or primitive) exists in the package.
 
         Requirements:
             SWR_MODEL_00008: Query Package Contents
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
 
         Args:
             name: The name of the type to check.
@@ -541,6 +659,20 @@ class AutosarPackage:
         """
         return any(isinstance(typ, AutosarEnumeration) and typ.name == name for typ in self.types)
 
+    def has_primitive(self, name: str) -> bool:
+        """Check if a primitive type exists in the package.
+
+        Requirements:
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+
+        Args:
+            name: The name of the primitive type to check.
+
+        Returns:
+            True if the primitive type exists, False otherwise.
+        """
+        return any(isinstance(typ, AutosarPrimitive) and typ.name == name for typ in self.types)
+
     def has_subpackage(self, name: str) -> bool:
         """Check if a subpackage exists in the package.
 
@@ -561,6 +693,7 @@ class AutosarPackage:
         Requirements:
             SWR_MODEL_00009: Package String Representation
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
         """
         parts = [f"Package '{self.name}'"]
         if self.types:
@@ -575,6 +708,7 @@ class AutosarPackage:
         Requirements:
             SWR_MODEL_00009: Package String Representation
             SWR_MODEL_00020: AUTOSAR Package Type Support
+            SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
         """
         return (
             f"AutosarPackage(name='{self.name}', "

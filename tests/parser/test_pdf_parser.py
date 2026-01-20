@@ -5,7 +5,7 @@ Test coverage for pdf_parser.py targeting PDF parsing functionality.
 
 import pytest
 
-from autosar_pdf2txt.models import ATPType
+from autosar_pdf2txt.models import ATPType, AttributeKind
 from autosar_pdf2txt.parser import PdfParser
 from autosar_pdf2txt.parser.pdf_parser import ClassDefinition
 
@@ -892,8 +892,8 @@ class TestPdfParser:
                 package_path="AUTOSAR",
                 is_abstract=False,
                 attributes={
-                    "attr1": AutosarAttribute("attr1", "String", False),
-                    "attr2": AutosarAttribute("attr2", "PPortPrototype", True)
+                    "attr1": AutosarAttribute("attr1", "String", False, multiplicity="1", kind=AttributeKind.ATTR, note=""),
+                    "attr2": AutosarAttribute("attr2", "PPortPrototype", True, multiplicity="1", kind=AttributeKind.ATTR, note="")
                 }
             )
         ]

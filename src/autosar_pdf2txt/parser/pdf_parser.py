@@ -8,12 +8,14 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 from autosar_pdf2txt.models import (
     ATPType,
+    AttributeKind,
     AutosarAttribute,
     AutosarClass,
     AutosarDoc,
     AutosarEnumLiteral,
     AutosarEnumeration,
     AutosarPackage,
+    AutosarPrimitive,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,10 +31,11 @@ class ClassDefinition:
         SWR_PARSER_00014: Enumeration Literal Header Recognition
         SWR_PARSER_00015: Enumeration Literal Extraction from PDF
         SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+        SWR_MODEL_00024: AUTOSAR Primitive Type Representation
         SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
 
     Attributes:
-        name: The name of the class or enumeration.
+        name: The name of the class, enumeration, or primitive type.
         package_path: Full package path (e.g., "M2::AUTOSARTemplates::BswModuleTemplate::BswBehavior").
         is_abstract: Whether the type is abstract.
         atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
@@ -41,6 +44,7 @@ class ClassDefinition:
         note: Documentation note extracted from the Note column.
         attributes: Dictionary of class attributes (key: attribute name, value: AutosarAttribute).
         is_enumeration: Whether this is an enumeration type (True) or a class type (False).
+        is_primitive: Whether this is a primitive type (True) or a class/enumeration type (False).
         enumeration_literals: List of enumeration literals (for enumeration types only).
     """
 
@@ -53,6 +57,7 @@ class ClassDefinition:
     note: Optional[str] = None
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     is_enumeration: bool = False
+    is_primitive: bool = False
     enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
 
 
@@ -310,6 +315,9 @@ class PdfParser:
         class_definition_complete = False
         pending_attr_name: Optional[str] = None
         pending_attr_type: Optional[str] = None
+        pending_attr_multiplicity: Optional[str] = None
+        pending_attr_kind: Optional[AttributeKind] = None
+        pending_attr_note: Optional[str] = None
 
         for i, line in enumerate(lines):
             line = line.strip()
@@ -326,12 +334,14 @@ class PdfParser:
             if class_match or primitive_match or enumeration_match:
                 # Determine which pattern matched and extract class name
                 is_enumeration = False
+                is_primitive = False
                 if class_match:
                     raw_class_name = class_match.group(1).strip()
                     is_abstract = class_match.group(2) is not None
                 elif primitive_match:
                     raw_class_name = primitive_match.group(1).strip()
                     is_abstract = False
+                    is_primitive = True
                 else:  # enumeration_match
                     # Since one of the three patterns matched, this must be not None
                     assert enumeration_match is not None  # Help mypy type checker
@@ -352,11 +362,17 @@ class PdfParser:
                         attr = AutosarAttribute(
                             name=pending_attr_name,
                             type=pending_attr_type,
-                            is_ref=is_ref
+                            is_ref=is_ref,
+                            multiplicity=pending_attr_multiplicity or "1",
+                            kind=pending_attr_kind or AttributeKind.ATTR,
+                            note=pending_attr_note or ""
                         )
                         current_class.attributes[pending_attr_name] = attr
                     pending_attr_name = None
                     pending_attr_type = None
+                    pending_attr_multiplicity = None
+                    pending_attr_kind = None
+                    pending_attr_note = None
 
                 # Look ahead to see if this is followed by a package path within the next 5 lines
                 # This helps avoid treating page headers as new class definitions
@@ -425,7 +441,8 @@ class PdfParser:
                         package_path="",
                         is_abstract=is_abstract,
                         atp_type=atp_type,
-                        is_enumeration=is_enumeration
+                        is_enumeration=is_enumeration,
+                        is_primitive=is_primitive
                     )
                     # Reset attribute section flag and pending attributes when starting a new class
                     in_attribute_section = False
@@ -475,6 +492,9 @@ class PdfParser:
                 in_attribute_section = True
                 pending_attr_name = None
                 pending_attr_type = None
+                pending_attr_multiplicity = None
+                pending_attr_kind = None
+                pending_attr_note = None
                 continue
 
             # Check for enumeration literal header
@@ -546,7 +566,10 @@ class PdfParser:
                             attr = AutosarAttribute(
                                 name=pending_attr_name,
                                 type=pending_attr_type,
-                                is_ref=is_ref
+                                is_ref=is_ref,
+                                multiplicity=pending_attr_multiplicity or "1",
+                                kind=pending_attr_kind or AttributeKind.ATTR,
+                                note=pending_attr_note or ""
                             )
                             current_class.attributes[pending_attr_name] = attr
                         else:
@@ -555,6 +578,9 @@ class PdfParser:
                     class_definition_complete = True
                     pending_attr_name = None
                     pending_attr_type = None
+                    pending_attr_multiplicity = None
+                    pending_attr_kind = None
+                    pending_attr_note = None
                     continue
                 # This might be an attribute line or continuation
                 attr_match = self.ATTRIBUTE_PATTERN.match(line)
@@ -605,7 +631,10 @@ class PdfParser:
                                 attr = AutosarAttribute(
                                     name=pending_attr_name,
                                     type=pending_attr_type,
-                                    is_ref=is_ref
+                                    is_ref=is_ref,
+                                    multiplicity=pending_attr_multiplicity or "1",
+                                    kind=pending_attr_kind or AttributeKind.ATTR,
+                                    note=pending_attr_note or ""
                                 )
                                 current_class.attributes[pending_attr_name] = attr
                             else:
@@ -614,6 +643,31 @@ class PdfParser:
                         # Save as pending (might be a multi-line attribute)
                         pending_attr_name = attr_name
                         pending_attr_type = attr_type
+                        # Extract multiplicity, kind, and note from the attribute line
+                        # Format: name type mult kind note
+                        multiplicity = "1"
+                        kind = AttributeKind.ATTR
+                        note = ""
+                        
+                        if len(words) > 2:
+                            # Check if third word is multiplicity or kind
+                            if words[2] in ["0..1", "0..*", "*"]:
+                                multiplicity = words[2]
+                                # Fourth word is kind
+                                if len(words) > 3 and words[3] in ["attr", "aggr"]:
+                                    kind = AttributeKind.ATTR if words[3] == "attr" else AttributeKind.AGGR
+                                    # Fifth word onwards is note
+                                    if len(words) > 4:
+                                        note = " ".join(words[4:])
+                            elif words[2] in ["attr", "aggr"]:
+                                kind = AttributeKind.ATTR if words[2] == "attr" else AttributeKind.AGGR
+                                # Third word onwards is note
+                                if len(words) > 3:
+                                    note = " ".join(words[3:])
+                        
+                        pending_attr_multiplicity = multiplicity
+                        pending_attr_kind = kind
+                        pending_attr_note = note
                     elif pending_attr_name is not None and pending_attr_type is not None:
                         # This is a continuation line for the pending attribute
                         if len(words) > 0:
@@ -658,7 +712,10 @@ class PdfParser:
                     attr = AutosarAttribute(
                         name=pending_attr_name,
                         type=pending_attr_type,
-                        is_ref=is_ref
+                        is_ref=is_ref,
+                        multiplicity=pending_attr_multiplicity or "1",
+                        kind=pending_attr_kind or AttributeKind.ATTR,
+                        note=pending_attr_note or ""
                     )
                     current_class.attributes[pending_attr_name] = attr
                 else:
@@ -718,20 +775,28 @@ class PdfParser:
 
                 parent_package = package_map[current_path]
 
-            # Add class or enumeration to the last package
+            # Add class, enumeration, or primitive to the last package
             if parent_package is not None:
                 class_key = (parent_package.name, class_def.name)
                 if class_key not in processed_classes:
                     # SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+                    # SWR_MODEL_00024: AUTOSAR Primitive Type Representation
                     # SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-                    # Create AutosarEnumeration for enumeration types, AutosarClass for class types
-                    autosar_type: Union[AutosarClass, AutosarEnumeration]
+                    # Create AutosarEnumeration for enumeration types, AutosarPrimitive for primitive types, AutosarClass for class types
+                    autosar_type: Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]
                     if class_def.is_enumeration:
                         autosar_type = AutosarEnumeration(
                             name=class_def.name,
                             package=class_def.package_path,
                             note=class_def.note,
                             enumeration_literals=class_def.enumeration_literals.copy()
+                        )
+                    elif class_def.is_primitive:
+                        autosar_type = AutosarPrimitive(
+                            name=class_def.name,
+                            package=class_def.package_path,
+                            note=class_def.note,
+                            attributes=class_def.attributes.copy()
                         )
                     else:
                         autosar_type = AutosarClass(

@@ -5,7 +5,7 @@ Test coverage for markdown_writer.py targeting 100%.
 
 from pathlib import Path
 
-from autosar_pdf2txt.models import ATPType, AutosarAttribute, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import ATPType, AttributeKind, AutosarAttribute, AutosarClass, AutosarPackage
 from autosar_pdf2txt.writer.markdown_writer import MarkdownWriter
 
 
@@ -422,8 +422,8 @@ class TestMarkdownWriterFiles:
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
-        cls.attributes["attr1"] = AutosarAttribute(name="attr1", type="String", is_ref=False)
-        cls.attributes["attr2"] = AutosarAttribute(name="attr2", type="Integer", is_ref=True)
+        cls.attributes["attr1"] = AutosarAttribute(name="attr1", type="String", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
+        cls.attributes["attr2"] = AutosarAttribute(name="attr2", type="Integer", is_ref=True, multiplicity="1", kind=AttributeKind.ATTR, note="")
         pkg.add_class(cls)
 
         writer = MarkdownWriter()
@@ -437,8 +437,9 @@ class TestMarkdownWriterFiles:
         assert "## Type\n\n" in content
         assert "Concrete\n\n" in content
         assert "## Attributes\n\n" in content
-        assert "* attr1 : String\n" in content
-        assert "* attr2 : Integer (ref)\n" in content
+        assert "| Attribute | Type | Mult. | Kind | Note |" in content
+        assert "| attr1 | String |" in content
+        assert "| attr2 (ref) | Integer |" in content
 
     def test_write_class_with_base_classes(self, tmp_path: Path) -> None:
         """SWUT_WRITER_00021: Test writing a class with base classes to file.
@@ -501,7 +502,7 @@ class TestMarkdownWriterFiles:
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="CompleteClass", package="M2::Test", is_abstract=True)
         cls.bases = ["BaseClass"]
-        cls.attributes["attr1"] = AutosarAttribute(name="attr1", type="String", is_ref=False)
+        cls.attributes["attr1"] = AutosarAttribute(name="attr1", type="String", is_ref=False, multiplicity="1", kind=AttributeKind.ATTR, note="")
         cls.note = "Complete documentation."
 
         pkg.add_class(cls)
@@ -520,7 +521,8 @@ class TestMarkdownWriterFiles:
         assert "## Base Classes\n\n" in content
         assert "* BaseClass\n" in content
         assert "## Attributes\n\n" in content
-        assert "* attr1 : String\n" in content
+        assert "| Attribute | Type | Mult. | Kind | Note |" in content
+        assert "| attr1 | String |" in content
         assert "## Note\n\n" in content
         assert "Complete documentation." in content
 
@@ -540,9 +542,7 @@ class TestMarkdownWriterFiles:
         pkg = AutosarPackage(name="AUTOSAR")
         cls = AutosarClass(name="BswInternalBehavior", package="M2::Test", is_abstract=True)
         cls.bases = ["IBswInternalBehavior", "IReferable"]
-        cls.attributes["swDataDefProps"] = AutosarAttribute(
-            name="swDataDefProps", type="SwDataDefProps", is_ref=True
-        )
+        cls.attributes["swDataDefProps"] = AutosarAttribute(name="swDataDefProps", type="SwDataDefProps", is_ref=True, multiplicity="1", kind=AttributeKind.ATTR, note="")
         cls.note = "This class represents the internal behavior of a BSW module."
 
         pkg.add_class(cls)
@@ -589,8 +589,9 @@ class TestMarkdownWriterFiles:
         # Verify note content
         assert "This class represents the internal behavior of a BSW module." in content
 
-        # Verify attributes list with reference indicator
-        assert "* swDataDefProps : SwDataDefProps (ref)\n" in content
+        # Verify attributes table with reference indicator
+        assert "| Attribute | Type | Mult. | Kind | Note |" in content
+        assert "| swDataDefProps (ref) | SwDataDefProps |" in content
 
     def test_concrete_class_type_indicator(self, tmp_path: Path) -> None:
         """SWUT_WRITER_00025: Test that concrete classes have correct type indicator.

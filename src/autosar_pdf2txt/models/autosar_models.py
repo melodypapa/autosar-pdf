@@ -210,7 +210,7 @@ class AutosarClass(AbstractAutosarBase):
         atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
         attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
         bases: List of base class names for inheritance tracking.
-        parent: Reference to the immediate parent AutosarClass object (None for root classes).
+        parent: Name of the immediate parent class from the bases list (None for root classes).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
@@ -219,6 +219,7 @@ class AutosarClass(AbstractAutosarBase):
         >>> attr = AutosarAttribute("dataReadPort", "PPortPrototype", True)
         >>> cls_with_attr = AutosarClass("Component", "M2::SWR", False, attributes={"dataReadPort": attr})
         >>> cls_with_bases = AutosarClass("DerivedClass", "M2::SWR", False, bases=["BaseClass"])
+        >>> cls_with_parent = AutosarClass("ChildClass", "M2::SWR", False, bases=["BaseClass"], parent="BaseClass")
         >>> cls_with_note = AutosarClass("MyClass", "M2::SWR", False, note="Documentation note")
         >>> cls_with_atp = AutosarClass("MyClass", "M2::SWR", False, atp_type=ATPType.ATP_VARIATION)
     """
@@ -227,7 +228,7 @@ class AutosarClass(AbstractAutosarBase):
     atp_type: ATPType = ATPType.NONE
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     bases: List[str] = field(default_factory=list)
-    parent: Optional["AutosarClass"] = None
+    parent: Optional[str] = None
 
     def __str__(self) -> str:
         """Return string representation of the class.
@@ -251,11 +252,10 @@ class AutosarClass(AbstractAutosarBase):
         attrs_count = len(self.attributes)
         bases_count = len(self.bases)
         note_present = self.note is not None
-        parent_name = self.parent.name if self.parent else None
         return (
             f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
             f"atp_type={self.atp_type.name}, "
-            f"attributes={attrs_count}, bases={bases_count}, parent={parent_name}, note={note_present})"
+            f"attributes={attrs_count}, bases={bases_count}, parent={self.parent}, note={note_present})"
         )
 
 
@@ -579,4 +579,100 @@ class AutosarPackage:
         return (
             f"AutosarPackage(name='{self.name}', "
             f"types={len(self.types)}, subpackages={len(self.subpackages)})"
+        )
+
+
+@dataclass
+class AutosarDoc:
+    """Represents an AUTOSAR document containing packages and root classes.
+
+    Requirements:
+        SWR_MODEL_00023: AUTOSAR Document Representation
+
+    This class encapsulates the complete AUTOSAR model structure including
+    the package hierarchy and root classes (classes with no bases).
+
+    Attributes:
+        packages: List of top-level AutosarPackage objects.
+        root_classes: List of root AutosarClass objects (classes with empty bases).
+
+    Examples:
+        >>> doc = AutosarDoc(packages=[pkg1, pkg2], root_classes=[root_cls])
+    """
+
+    packages: List[AutosarPackage]
+    root_classes: List[AutosarClass]
+
+    def __post_init__(self) -> None:
+        """Validate the document fields.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+
+        Raises:
+            ValueError: If packages or root_classes contain duplicate names.
+        """
+        # Check for duplicate package names
+        pkg_names = [pkg.name for pkg in self.packages]
+        if len(pkg_names) != len(set(pkg_names)):
+            raise ValueError("Duplicate package names found in packages")
+
+        # Check for duplicate root class names
+        root_cls_names = [cls.name for cls in self.root_classes]
+        if len(root_cls_names) != len(set(root_cls_names)):
+            raise ValueError("Duplicate root class names found in root_classes")
+
+    def get_package(self, name: str) -> Optional[AutosarPackage]:
+        """Get a package by name.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+
+        Args:
+            name: The name of the package to find.
+
+        Returns:
+            The AutosarPackage if found, None otherwise.
+        """
+        for pkg in self.packages:
+            if pkg.name == name:
+                return pkg
+        return None
+
+    def get_root_class(self, name: str) -> Optional[AutosarClass]:
+        """Get a root class by name.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+
+        Args:
+            name: The name of the root class to find.
+
+        Returns:
+            The AutosarClass if found, None otherwise.
+        """
+        for cls in self.root_classes:
+            if cls.name == name:
+                return cls
+        return None
+
+    def __str__(self) -> str:
+        """Return string representation of the document.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+
+        Returns:
+            Document summary with package and root class counts.
+        """
+        return f"AutosarDoc({len(self.packages)} packages, {len(self.root_classes)} root classes)"
+
+    def __repr__(self) -> str:
+        """Return detailed representation for debugging.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        return (
+            f"AutosarDoc(packages={len(self.packages)}, root_classes={len(self.root_classes)})"
         )

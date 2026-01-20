@@ -10,6 +10,7 @@ from autosar_pdf2txt.models import (
     ATPType,
     AutosarAttribute,
     AutosarClass,
+    AutosarDoc,
     AutosarEnumLiteral,
     AutosarEnumeration,
     AutosarPackage,
@@ -193,7 +194,7 @@ class PdfParser:
             or attr_name in partial_names
         )
 
-    def parse_pdf(self, pdf_path: str) -> List[AutosarPackage]:
+    def parse_pdf(self, pdf_path: str) -> AutosarDoc:
         """Parse a PDF file and extract the package hierarchy.
 
         Requirements:
@@ -204,7 +205,7 @@ class PdfParser:
             pdf_path: Path to the PDF file.
 
         Returns:
-            List of top-level AutosarPackage objects.
+            AutosarDoc containing packages and root classes.
 
         Raises:
             FileNotFoundError: If the PDF file doesn't exist.
@@ -668,7 +669,7 @@ class PdfParser:
 
     def _build_package_hierarchy(
         self, class_defs: List[ClassDefinition]
-    ) -> List[AutosarPackage]:
+    ) -> AutosarDoc:
         """Build AutosarPackage hierarchy from class definitions.
 
         Requirements:
@@ -680,7 +681,7 @@ class PdfParser:
             class_defs: List of ClassDefinition objects.
 
         Returns:
-            List of top-level AutosarPackage objects.
+            AutosarDoc containing packages and root classes.
         """
         # Filter out class definitions without package paths
         # These are typically false positives from page headers/footers
@@ -753,70 +754,57 @@ class PdfParser:
         ]
 
         # SWR_PARSER_00017: AUTOSAR Class Parent Resolution
-        # After building all packages and classes, resolve parent references
-        self._resolve_parent_references(top_level_packages)
+        # After building all packages and classes, resolve parent references and collect root classes
+        root_classes = self._resolve_parent_references(top_level_packages)
 
-        return top_level_packages
+        return AutosarDoc(packages=top_level_packages, root_classes=root_classes)
 
-    def _resolve_parent_references(self, packages: List[AutosarPackage]) -> None:
+    def _resolve_parent_references(self, packages: List[AutosarPackage]) -> List[AutosarClass]:
         """Resolve parent references for all classes in the package hierarchy.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
-        This method sets the `parent` attribute for each AutosarClass to reference
-        its immediate parent AutosarClass object based on the class's `bases` list.
+        This method sets the `parent` attribute for each AutosarClass to the name
+        of its immediate parent class based on the class's `bases` list.
+        It also collects root classes (classes with empty bases).
 
         Args:
             packages: List of top-level AutosarPackage objects.
+
+        Returns:
+            List of root AutosarClass objects (classes with empty bases).
         """
-        # Build a map of all class names to their objects for efficient lookup
-        class_map: Dict[str, AutosarClass] = {}
+        root_classes: List[AutosarClass] = []
 
-        # First pass: collect all classes from all packages
+        # Process each package and set parent references
         for pkg in packages:
-            self._collect_classes(pkg, class_map)
+            self._set_parent_references(pkg, root_classes)
 
-        # Second pass: set parent references for each class
-        for pkg in packages:
-            self._set_parent_references(pkg, class_map)
+        return root_classes
 
-    def _collect_classes(self, pkg: AutosarPackage, class_map: Dict[str, AutosarClass]) -> None:
-        """Recursively collect all AutosarClass objects into a map.
-
-        Requirements:
-            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
-
-        Args:
-            pkg: The package to collect classes from.
-            class_map: Dictionary to populate with class name -> AutosarClass mappings.
-        """
-        for typ in pkg.types:
-            if isinstance(typ, AutosarClass):
-                # Only add AutosarClass to the map (not AutosarEnumeration)
-                class_map[typ.name] = typ
-
-        # Recursively collect from subpackages
-        for subpkg in pkg.subpackages:
-            self._collect_classes(subpkg, class_map)
-
-    def _set_parent_references(self, pkg: AutosarPackage, class_map: Dict[str, AutosarClass]) -> None:
+    def _set_parent_references(self, pkg: AutosarPackage, root_classes: List[AutosarClass]) -> None:
         """Recursively set parent references for all AutosarClass objects in a package.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
+        This method sets the `parent` attribute to the name of the first base class
+        and collects root classes (classes with empty bases).
+
         Args:
             pkg: The package to process.
-            class_map: Dictionary mapping class names to AutosarClass objects.
+            root_classes: List to populate with root AutosarClass objects.
         """
         for typ in pkg.types:
-            if isinstance(typ, AutosarClass) and typ.bases:
-                # Set parent to the first base class (if found)
-                first_base_name = typ.bases[0]
-                if first_base_name in class_map:
-                    typ.parent = class_map[first_base_name]
+            if isinstance(typ, AutosarClass):
+                if typ.bases:
+                    # Set parent to the name of the first base class
+                    typ.parent = typ.bases[0]
+                else:
+                    # No bases means this is a root class
+                    root_classes.append(typ)
 
         # Recursively process subpackages
         for subpkg in pkg.subpackages:
-            self._set_parent_references(subpkg, class_map)
+            self._set_parent_references(subpkg, root_classes)

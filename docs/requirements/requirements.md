@@ -28,6 +28,7 @@ All existing requirements in this document are currently at maturity level **acc
 - `atp_type`: ATP marker type enum indicating the AUTOSAR Tool Platform marker (defaults to NONE)
 - `attributes`: Dictionary of AUTOSAR attributes where key is the attribute name and value is the AUTOSAR attribute object
 - `bases`: List of base class names for inheritance tracking (List[str], defaults to empty list)
+- `parent`: Name of the immediate parent class from the bases list (Optional[str], None for root classes)
 - `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
 
 The ATP type enum shall support the following values:
@@ -65,8 +66,10 @@ The ATP type enum shall support the following values:
 
 **Description**: The system shall provide a data model to represent an AUTOSAR package with the following attributes:
 - `name`: The name of the package (non-empty string)
-- `classes`: List of AutosarClass objects contained in the package
+- `types`: List of AutosarClass and AutosarEnumeration objects contained in the package (unified type collection)
 - `subpackages`: List of AutosarPackage objects (nested packages)
+
+**Note**: The `types` attribute provides a unified collection for both classes and enumerations. For backward compatibility, the package also provides class-specific methods (add_class, get_class, has_class) that work with this unified types collection.
 
 ---
 
@@ -299,82 +302,52 @@ The inheritance hierarchy is represented through the `bases` list in each `Autos
 
 **Maturity**: accept
 
-**Description**: The system shall provide a `parent` attribute in the `AutosarClass` data model to indicate the only parent of this class.
+**Description**: The system shall provide a `parent` attribute in the `AutosarClass` data model to indicate the parent of this class.
 
 The `AutosarClass` data model shall:
-- Add a `parent` attribute that stores a reference to the immediate parent `AutosarClass` object
+- Add a `parent` attribute that stores the name of the immediate parent class as a string
 - The `parent` attribute shall be optional (None for root classes with no parent)
-- The `parent` attribute shall be a single `AutosarClass` reference (not a list), supporting only single inheritance
-- When a class has multiple bases (multiple inheritance), the `parent` attribute shall reference the first/primary parent
+- The `parent` attribute shall be a single string value (not a list), representing the name of the first base class
+- When a class has multiple bases (multiple inheritance), the `parent` attribute shall contain the name of the first/primary parent
+- The `parent` attribute value must be one of the values in the `bases` list
 
 This requirement enables:
-- Direct traversal from child to parent without searching through package hierarchies
-- Simplified access to the immediate parent class object (not just the name)
+- Direct reference to the parent class by name
+- Simplified parent traversal without requiring object references
 - Efficient parent-child relationship queries
 
-**Note**: This attribute complements the existing `bases` attribute (which stores parent class names as strings) by providing direct object references to the parent class.
+**Note**: This attribute complements the existing `bases` attribute (which stores all parent class names as a list) by providing a direct reference to the primary parent.
 
 ---
 
 #### SWR_MODEL_00023
 **Title**: AUTOSAR Document Model (AutosarDoc)
 
-**Maturity**: draft
+**Maturity**: accept
 
-**Description**: The system shall provide a singleton data model (`AutosarDoc`) to represent the complete AUTOSAR model extracted from PDF files. The `AutosarDoc` class shall serve as the central container for all parsed AUTOSAR data.
+**Description**: The system shall provide a data model (`AutosarDoc`) to represent the complete AUTOSAR model extracted from PDF files. The `AutosarDoc` class shall serve as the container for all parsed AUTOSAR data.
 
 The `AutosarDoc` data model shall:
 
-- **Singleton Pattern**: Implement the singleton design pattern to ensure only one instance exists throughout the application lifecycle
-- **Package Hierarchy Storage**: Contain the complete package hierarchy as a list of top-level `AutosarPackage` objects
-- **Class Inheritance Hierarchy**: Contain the complete multi-level class inheritance hierarchy with support for:
-  - Direct access to root classes (classes with no parent)
-  - Traversal of inheritance trees from root to leaf classes
-  - Bidirectional navigation (parent ↔ children) for all classes
+- **Package Hierarchy Storage**: Contain the package hierarchy as a list of top-level `AutosarPackage` objects
+- **Root Class Collection**: Contain a list of root `AutosarClass` objects (classes with empty `bases` list)
 - **Query Methods**: Provide methods to query:
-  - All packages by name
-  - All classes by name across the entire model
-  - Root classes (classes with no parent)
-  - Class hierarchies starting from a given root class
+  - Packages by name via `get_package()`
+  - Root classes by name via `get_root_class()`
 
 The `AutosarDoc` class shall provide the following attributes:
 
 - `packages`: List of top-level `AutosarPackage` objects representing the package hierarchy
-- `root_classes`: Dictionary mapping root class names to their `AutosarClass` objects
-- `all_classes`: Dictionary mapping all class names to their `AutosarClass` objects for efficient lookup
+- `root_classes`: List of root `AutosarClass` objects (classes with no bases)
 
-The singleton instance shall be accessible via:
-- `AutosarDoc.instance()` class method to get or create the singleton instance
-- `AutosarDoc.reset()` class method to clear and reinitialize the instance (useful for testing)
+The `AutosarDoc` class shall validate that:
+- No duplicate package names exist in the packages list
+- No duplicate root class names exist in the root_classes list
 
 This requirement enables:
-- Centralized access to all parsed AUTOSAR data
-- Efficient queries across packages and classes
-- Global state management for the parsed model
+- Structured access to all parsed AUTOSAR data
+- Easy identification of root classes (classes with no parent)
 - Simplified data access for the parser, writer, and CLI components
-
-**Example Usage**:
-```python
-# Get the singleton instance
-doc = AutosarDoc.instance()
-
-# Access package hierarchy
-for pkg in doc.packages:
-    print(f"Package: {pkg.name}")
-
-# Access root classes
-for root_name, root_class in doc.root_classes.items():
-    print(f"Root class: {root_name}")
-
-# Query a specific class
-my_class = doc.get_class("InternalBehavior")
-if my_class:
-    # Traverse parent hierarchy
-    current = my_class
-    while current.parent:
-        print(f"{current.name} -> {current.parent.name}")
-        current = current.parent
-```
 
 ---
 

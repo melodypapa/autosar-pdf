@@ -29,6 +29,7 @@ All existing requirements in this document are currently at maturity level **acc
 - `attributes`: Dictionary of AUTOSAR attributes where key is the attribute name and value is the AUTOSAR attribute object
 - `bases`: List of base class names for inheritance tracking (List[str], defaults to empty list)
 - `parent`: Name of the immediate parent class from the bases list (Optional[str], None for root classes)
+- `children`: List of child class names that inherit from this class (List[str], defaults to empty list)
 - `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
 
 The ATP type enum shall support the following values:
@@ -408,6 +409,28 @@ The `AutosarPackage` class shall:
 - Update string representation to show "X types" instead of "X classes"
 
 This requirement provides a unified interface for managing classes, enumerations, and primitives while maintaining backward compatibility through the existing `add_class()` and `add_enumeration()` methods.
+
+---
+
+#### SWR_MODEL_00026
+**Title**: AUTOSAR Class Children Attribute
+
+**Maturity**: accept
+
+**Description**: The system shall provide a `children` attribute in the `AutosarClass` data model to track child classes that inherit from this class.
+
+The `AutosarClass` data model shall:
+- Add a `children` attribute that stores a list of child class names (List[str])
+- The `children` attribute shall default to an empty list
+- Child class names are strings representing the names of classes that have this class in their `bases` list
+- The `children` attribute complements the `bases` attribute by providing a reverse reference for navigation
+
+This requirement enables:
+- Direct reference to all child classes by name
+- Efficient parent-child relationship queries in both directions
+- Simplified traversal of the inheritance hierarchy from parent to children
+
+**Note**: This attribute complements the existing `bases` attribute (which stores parent class names) and `parent` attribute (which stores the immediate parent name) by providing a list of all direct children of this class.
 
 ---
 

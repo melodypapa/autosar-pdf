@@ -8,6 +8,7 @@ Requirements:
     SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
     SWR_MODEL_00022: AUTOSAR Class Parent Attribute
     SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+    SWR_MODEL_00026: AUTOSAR Class Children Attribute
 """
 
 from dataclasses import dataclass, field
@@ -26,6 +27,7 @@ class AutosarClass(AbstractAutosarBase):
         SWR_MODEL_00001: AUTOSAR Class Representation
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         SWR_MODEL_00022: AUTOSAR Class Parent Attribute
+        SWR_MODEL_00026: AUTOSAR Class Children Attribute
 
     Inherits from AbstractAutosarBase to provide common type properties (name, package, note)
     and adds class-specific attributes including inheritance support and ATP markers.
@@ -38,6 +40,7 @@ class AutosarClass(AbstractAutosarBase):
         attributes: Dictionary of AUTOSAR attributes (key: attribute name, value: AutosarAttribute).
         bases: List of base class names for inheritance tracking.
         parent: Name of the immediate parent class from the bases list (None for root classes).
+        children: List of child class names that inherit from this class.
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
@@ -49,6 +52,7 @@ class AutosarClass(AbstractAutosarBase):
         >>> cls_with_parent = AutosarClass("ChildClass", "M2::SWR", False, bases=["BaseClass"], parent="BaseClass")
         >>> cls_with_note = AutosarClass("MyClass", "M2::SWR", False, note="Documentation note")
         >>> cls_with_atp = AutosarClass("MyClass", "M2::SWR", False, atp_type=ATPType.ATP_VARIATION)
+        >>> cls_with_children = AutosarClass("BaseClass", "M2::SWR", False, children=["DerivedClass"])
     """
 
     is_abstract: bool = False
@@ -56,6 +60,7 @@ class AutosarClass(AbstractAutosarBase):
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     bases: List[str] = field(default_factory=list)
     parent: Optional[str] = None
+    children: List[str] = field(default_factory=list)
 
     def __init__(
         self,
@@ -66,6 +71,7 @@ class AutosarClass(AbstractAutosarBase):
         attributes: Optional[Dict[str, AutosarAttribute]] = None,
         bases: Optional[List[str]] = None,
         parent: Optional[str] = None,
+        children: Optional[List[str]] = None,
         note: Optional[str] = None,
     ) -> None:
         """Initialize the AUTOSAR class.
@@ -73,6 +79,7 @@ class AutosarClass(AbstractAutosarBase):
         Requirements:
             SWR_MODEL_00001: AUTOSAR Class Representation
             SWR_MODEL_00002: AUTOSAR Class Name Validation
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
 
         Args:
             name: The name of the class.
@@ -82,6 +89,7 @@ class AutosarClass(AbstractAutosarBase):
             attributes: Dictionary of attributes.
             bases: List of base class names.
             parent: Name of immediate parent class.
+            children: List of child class names that inherit from this class.
             note: Optional documentation.
 
         Raises:
@@ -93,6 +101,7 @@ class AutosarClass(AbstractAutosarBase):
         self.attributes = attributes or {}
         self.bases = bases or []
         self.parent = parent
+        self.children = children or []
 
     def __str__(self) -> str:
         """Return string representation of the class.
@@ -112,14 +121,17 @@ class AutosarClass(AbstractAutosarBase):
         Requirements:
             SWR_MODEL_00003: AUTOSAR Class String Representation
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
         """
         attrs_count = len(self.attributes)
         bases_count = len(self.bases)
+        children_count = len(self.children)
         note_present = self.note is not None
         return (
             f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
             f"atp_type={self.atp_type.name}, "
-            f"attributes={attrs_count}, bases={bases_count}, parent={self.parent}, note={note_present})"
+            f"attributes={attrs_count}, bases={bases_count}, parent={self.parent}, "
+            f"children={children_count}, note={note_present})"
         )
 
 

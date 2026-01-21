@@ -7,12 +7,18 @@ to cache parsed PDF data. Each PDF is parsed only once per test session, with
 results shared across all tests that need them.
 """
 
-from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarDoc
+from typing import Dict, List
+
+from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarDoc, AutosarPackage
 from autosar_pdf2txt.parser import PdfParser
 
 
 # Import helper functions from conftest
-from tests.integration.conftest import find_first_class, count_classes
+from tests.integration.conftest import (
+    collect_classes_with_predicate,
+    count_classes,
+    find_first_class,
+)
 
 
 class TestPdfIntegration:
@@ -113,23 +119,11 @@ class TestPdfIntegration:
         """
         packages = bsw_template_pdf.packages
 
-        # Find classes with bases and notes recursively
-        classes_with_bases = []
-        classes_with_notes = []
+        # Use optimized helper to collect classes with bases
+        classes_with_bases = collect_classes_with_predicate(packages, lambda cls: cls.bases)
 
-        def collect_classes(pkg):
-            for cls in pkg.types:
-                # Only AutosarClass has bases attribute, not AutosarEnumeration
-                if isinstance(cls, AutosarClass):
-                    if cls.bases:
-                        classes_with_bases.append(cls)
-                if cls.note:
-                    classes_with_notes.append(cls)
-            for subpkg in pkg.subpackages:
-                collect_classes(subpkg)
-
-        for pkg in packages:
-            collect_classes(pkg)
+        # Use optimized helper to collect classes with notes
+        classes_with_notes = collect_classes_with_predicate(packages, lambda cls: cls.note)
 
         # Verify we have classes with bases
         assert len(classes_with_bases) > 0, "Should find classes with base classes"
@@ -222,7 +216,7 @@ class TestPdfIntegration:
             assert "## ATP Type\n\n" in content
             assert "* atpVariation\n" in content
 
-    def test_parse_ecu_configuration_pdf_fibex_package_structure(self, ecu_configuration_pdf: AutosarDoc) -> None:
+    def test_parse_ecu_configuration_pdf_fibex_package_structure(self, ecu_configuration_fibex_packages: Dict[str, AutosarPackage]) -> None:
         """Test parsing ECU Configuration PDF and verify Fibex package structure and ImplementationDataType attributes.
 
         SWIT_00005: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
@@ -239,36 +233,11 @@ class TestPdfIntegration:
             SWR_MODEL_00004: AUTOSAR Package Representation
 
         Args:
-            ecu_configuration_pdf: Cached parsed ECU Configuration PDF data.
+            ecu_configuration_fibex_packages: Pre-cached Fibex package structure.
         """
-        packages = ecu_configuration_pdf.packages
-
-        # Verify we have exactly 1 top-level package (M2)
-        assert len(packages) == 1, f"Expected 1 top-level package (M2), got {len(packages)}"
-
-        # Find M2 package
-        m2_pkg = packages[0]
-        assert m2_pkg.name == "M2", f"Expected top-level package 'M2', got '{m2_pkg.name}'"
-
-        # Find AUTOSARTemplates subpackage under M2
-        autosar_templates_pkg = m2_pkg.get_subpackage("AUTOSARTemplates")
-        assert autosar_templates_pkg is not None, "AUTOSARTemplates should be a subpackage of M2"
-
-        # Find SystemTemplate subpackage
-        system_template_pkg = autosar_templates_pkg.get_subpackage("SystemTemplate")
-        assert system_template_pkg is not None, "SystemTemplate should be a subpackage of AUTOSARTemplates"
-
-        # Find Fibex subpackage
-        fibex_pkg = system_template_pkg.get_subpackage("Fibex")
-        assert fibex_pkg is not None, "Fibex should be a subpackage of SystemTemplate"
-
-        # Find FibexCore subpackage
-        fibex_core_pkg = fibex_pkg.get_subpackage("FibexCore")
-        assert fibex_core_pkg is not None, "FibexCore should be a subpackage of Fibex"
-
-        # Find CoreCommunication subpackage
-        core_comm_pkg = fibex_core_pkg.get_subpackage("CoreCommunication")
-        assert core_comm_pkg is not None, "CoreCommunication should be a subpackage of FibexCore"
+        # Use pre-cached packages for faster access
+        core_comm_pkg = ecu_configuration_fibex_packages['core_comm']
+        impl_data_types_pkg = ecu_configuration_fibex_packages['impl_data_types']
 
         # Verify CoreCommunication has classes
         assert len(core_comm_pkg.types) > 0, "CoreCommunication should contain classes"
@@ -280,17 +249,6 @@ class TestPdfIntegration:
             assert expected_class in fibex_class_names, \
                 f"Expected class '{expected_class}' not found in CoreCommunication. Found: {fibex_class_names}"
 
-        # Verify Fibex is NOT a top-level package
-        top_level_names = [pkg.name for pkg in packages]
-        assert "Fibex" not in top_level_names, \
-            f"Fibex should not be a top-level package. Top-level packages: {top_level_names}"
-        assert "SystemTemplate" not in top_level_names, \
-            f"SystemTemplate should not be a top-level package. Top-level packages: {top_level_names}"
-        assert "FibexCore" not in top_level_names, \
-            f"FibexCore should not be a top-level package. Top-level packages: {top_level_names}"
-        assert "AUTOSARTemplates" not in top_level_names, \
-            f"AUTOSARTemplates should not be a top-level package. Top-level packages: {top_level_names}"
-
         # Verify package hierarchy path
         print("\nFibex package hierarchy verified:")
         print("  Top-level: M2")
@@ -300,14 +258,6 @@ class TestPdfIntegration:
         print("             └─ FibexCore")
         print(f"                └─ CoreCommunication ({len(core_comm_pkg.types)} classes)")
         print(f"                   Classes: {', '.join(sorted(fibex_class_names))}")
-
-        # Find CommonStructure subpackage under AUTOSARTemplates
-        common_structure_pkg = autosar_templates_pkg.get_subpackage("CommonStructure")
-        assert common_structure_pkg is not None, "CommonStructure should be a subpackage of AUTOSARTemplates"
-
-        # Find ImplementationDataTypes subpackage under CommonStructure
-        impl_data_types_pkg = common_structure_pkg.get_subpackage("ImplementationDataTypes")
-        assert impl_data_types_pkg is not None, "ImplementationDataTypes should be a subpackage of CommonStructure"
 
         # Find ImplementationDataType class
         impl_data_type = impl_data_types_pkg.get_class("ImplementationDataType")
@@ -337,7 +287,7 @@ class TestPdfIntegration:
         for attr_name, attr in impl_data_type.attributes.items():
             print(f"    - {attr_name}: {attr.type} (ref: {attr.is_ref})")
 
-    def test_multi_line_note_extraction(self, ecu_configuration_pdf: AutosarDoc) -> None:
+    def test_multi_line_note_extraction(self, ecu_configuration_bsw_implementation: AutosarClass) -> None:
         """Test multi-line note extraction from real AUTOSAR PDF.
 
         SWIT_00006: Test Multi-Line Note Extraction from Real AUTOSAR PDF
@@ -349,30 +299,9 @@ class TestPdfIntegration:
             SWR_MODEL_00001: AUTOSAR Class Representation
 
         Args:
-            ecu_configuration_pdf: Cached parsed ECU Configuration PDF data.
+            ecu_configuration_bsw_implementation: Pre-cached BswImplementation class.
         """
-        packages = ecu_configuration_pdf.packages
-
-        # Find M2 package
-        m2_pkg = packages[0]
-        assert m2_pkg.name == "M2"
-
-        # Navigate to BswImplementation class
-        # Path: M2 → AUTOSARTemplates → BswModuleTemplate → BswImplementation → BswImplementation (class)
-        # Note: BswImplementation is both a package name and a class name
-        autosar_templates_pkg = m2_pkg.get_subpackage("AUTOSARTemplates")
-        assert autosar_templates_pkg is not None, "AUTOSARTemplates should exist"
-
-        bsw_module_template_pkg = autosar_templates_pkg.get_subpackage("BswModuleTemplate")
-        assert bsw_module_template_pkg is not None, "BswModuleTemplate should exist"
-
-        # BswImplementation is a subpackage (with same name as the class)
-        bsw_implementation_pkg = bsw_module_template_pkg.get_subpackage("BswImplementation")
-        assert bsw_implementation_pkg is not None, "BswImplementation package should exist in BswModuleTemplate"
-
-        # Get the BswImplementation class from the BswImplementation package
-        bsw_implementation = bsw_implementation_pkg.get_class("BswImplementation")
-        assert bsw_implementation is not None, "BswImplementation class should exist in BswImplementation package"
+        bsw_implementation = ecu_configuration_bsw_implementation
 
         # Verify class name
         assert bsw_implementation.name == "BswImplementation", \
@@ -451,7 +380,7 @@ class TestPdfIntegration:
         print(f"  Note character count: {attr_char_count}")
         print(f"  Full attribute note:\n    {attr_note}")
 
-    def test_generic_structure_template_filters_invalid_package_paths(self, generic_structure_template_pdf: AutosarDoc) -> None:
+    def test_generic_structure_template_filters_invalid_package_paths(self, generic_structure_template_pdf: AutosarDoc, generic_structure_reference_base: AutosarClass) -> None:
         """Test that invalid package paths are filtered from GenericStructureTemplate PDF.
 
         This is a regression test for package path validation. The GenericStructureTemplate
@@ -467,6 +396,7 @@ class TestPdfIntegration:
 
         Args:
             generic_structure_template_pdf: Cached parsed GenericStructureTemplate PDF data.
+            generic_structure_reference_base: Pre-cached ReferenceBase class.
         """
         packages = generic_structure_template_pdf.packages
 
@@ -479,7 +409,7 @@ class TestPdfIntegration:
             for subpkg in pkg.subpackages:
                 collect_all_package_names(subpkg, names_list)
 
-        all_package_names = []
+        all_package_names: List[str] = []
         for pkg in packages:
             collect_all_package_names(pkg, all_package_names)
 
@@ -494,26 +424,10 @@ class TestPdfIntegration:
             assert invalid_name not in all_package_names, \
                 f"Invalid package name '{invalid_name}' should have been filtered out"
 
-        # Verify ReferenceBase class exists in the correct location
-        # Path: M2 → AUTOSARTemplates → GenericStructure → GeneralTemplateClasses → ARPackage → ReferenceBase
-        m2_pkg = packages[0]
-        assert m2_pkg.name == "M2", f"Expected top-level package 'M2', got '{m2_pkg.name}'"
+        # Use cached ReferenceBase class for faster verification
+        reference_base = generic_structure_reference_base
 
-        autosar_templates_pkg = m2_pkg.get_subpackage("AUTOSARTemplates")
-        assert autosar_templates_pkg is not None, "AUTOSARTemplates should exist under M2"
-
-        generic_structure_pkg = autosar_templates_pkg.get_subpackage("GenericStructure")
-        assert generic_structure_pkg is not None, "GenericStructure should exist under AUTOSARTemplates"
-
-        general_template_classes_pkg = generic_structure_pkg.get_subpackage("GeneralTemplateClasses")
-        assert general_template_classes_pkg is not None, "GeneralTemplateClasses should exist under GenericStructure"
-
-        ar_package_pkg = general_template_classes_pkg.get_subpackage("ARPackage")
-        assert ar_package_pkg is not None, "ARPackage should exist under GeneralTemplateClasses"
-
-        # Verify ReferenceBase class exists
-        reference_base = ar_package_pkg.get_class("ReferenceBase")
-        assert reference_base is not None, "ReferenceBase class should exist in ARPackage"
+        # Verify ReferenceBase class details
         assert reference_base.name == "ReferenceBase", \
             f"Expected class name 'ReferenceBase', got '{reference_base.name}'"
 

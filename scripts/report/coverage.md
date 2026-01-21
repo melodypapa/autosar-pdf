@@ -4,9 +4,9 @@ COVERAGE REPORT - MARKDOWN FORMAT
 
 ## Overall Coverage: 92.4%
 
-**Total Statements**: 878
+**Total Statements**: 881
 
-**Statements Covered**: 811
+**Statements Covered**: 814
 
 **Statements Missing**: 67
 
@@ -22,7 +22,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 | ✓ `src\autosar_pdf2txt\models\base.py` | 14 | 14 | 0 | 100.0% |
 | ✗ `src\autosar_pdf2txt\models\containers.py` | 96 | 84 | 12 | 87.5% |
 | ✓ `src\autosar_pdf2txt\models\enums.py` | 10 | 10 | 0 | 100.0% |
-| ✓ `src\autosar_pdf2txt\models\types.py` | 51 | 51 | 0 | 100.0% |
+| ✓ `src\autosar_pdf2txt\models\types.py` | 54 | 54 | 0 | 100.0% |
 | ✓ `src\autosar_pdf2txt\parser\__init__.py` | 2 | 2 | 0 | 100.0% |
 | ✗ `src\autosar_pdf2txt\parser\pdf_parser.py` | 413 | 401 | 12 | 97.1% |
 | ✓ `src\autosar_pdf2txt\writer\__init__.py` | 2 | 2 | 0 | 100.0% |

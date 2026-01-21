@@ -359,12 +359,13 @@ class PdfParser:
                         pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
                         not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
                         is_ref = self._is_reference_type(pending_attr_type)
+                        kind = pending_attr_kind or (AttributeKind.REF if is_ref else AttributeKind.ATTR)
                         attr = AutosarAttribute(
                             name=pending_attr_name,
                             type=pending_attr_type,
                             is_ref=is_ref,
                             multiplicity=pending_attr_multiplicity or "1",
-                            kind=pending_attr_kind or AttributeKind.ATTR,
+                            kind=kind,
                             note=pending_attr_note or ""
                         )
                         current_class.attributes[pending_attr_name] = attr
@@ -485,23 +486,25 @@ class PdfParser:
                 # Notes can span multiple lines, capture all lines until we hit another pattern
                 note_text = note_match.group(1).strip()
 
-                # Look ahead to capture continuation lines
+                # Look ahead to capture continuation lines (including Tags: line)
                 for j in range(i + 1, len(lines)):
                     next_line = lines[j].strip()
 
-                    # Stop if we hit another known pattern
+                    # Stop if we hit another known pattern (but include Tags: line)
+                    # Note: Tags: should be included in the note, so we don't stop at it
+                    # We stop AFTER Tags: at Base, Attribute, Class, etc.
                     if (next_line.startswith("Base ") or
                         next_line.startswith("Subclasses ") or
-                        next_line.startswith("Tags:") or
                         next_line.startswith("Attribute ") or
                         next_line.startswith("Class ") or
                         next_line.startswith("Primitive ") or
                         next_line.startswith("Enumeration ") or
                         next_line.startswith("Table ") or
-                        next_line.startswith("Package ")):
+                        next_line.startswith("Package ") or
+                        next_line.startswith("Aggregated ")):
                         break
 
-                    # Append the continuation line
+                    # Append the continuation line (including Tags: line)
                     if next_line:
                         note_text += " " + next_line
 
@@ -586,12 +589,13 @@ class PdfParser:
                             not pending_attr_name.isdigit() and
                             not should_filter):
                             is_ref = self._is_reference_type(pending_attr_type)
+                            kind = pending_attr_kind or (AttributeKind.REF if is_ref else AttributeKind.ATTR)
                             attr = AutosarAttribute(
                                 name=pending_attr_name,
                                 type=pending_attr_type,
                                 is_ref=is_ref,
                                 multiplicity=pending_attr_multiplicity or "1",
-                                kind=pending_attr_kind or AttributeKind.ATTR,
+                                kind=kind,
                                 note=pending_attr_note or ""
                             )
                             current_class.attributes[pending_attr_name] = attr
@@ -651,12 +655,13 @@ class PdfParser:
                                 not pending_attr_name.isdigit() and
                                 not should_filter):
                                 is_ref = self._is_reference_type(pending_attr_type)
+                                kind = pending_attr_kind or (AttributeKind.REF if is_ref else AttributeKind.ATTR)
                                 attr = AutosarAttribute(
                                     name=pending_attr_name,
                                     type=pending_attr_type,
                                     is_ref=is_ref,
                                     multiplicity=pending_attr_multiplicity or "1",
-                                    kind=pending_attr_kind or AttributeKind.ATTR,
+                                    kind=kind,
                                     note=pending_attr_note or ""
                                 )
                                 current_class.attributes[pending_attr_name] = attr
@@ -671,19 +676,29 @@ class PdfParser:
                         multiplicity = "1"
                         kind = AttributeKind.ATTR
                         note = ""
-                        
+
                         if len(words) > 2:
                             # Check if third word is multiplicity or kind
                             if words[2] in ["0..1", "0..*", "*"]:
                                 multiplicity = words[2]
                                 # Fourth word is kind
-                                if len(words) > 3 and words[3] in ["attr", "aggr"]:
-                                    kind = AttributeKind.ATTR if words[3] == "attr" else AttributeKind.AGGR
+                                if len(words) > 3 and words[3] in ["attr", "aggr", "ref"]:
+                                    if words[3] == "attr":
+                                        kind = AttributeKind.ATTR
+                                    elif words[3] == "aggr":
+                                        kind = AttributeKind.AGGR
+                                    else:  # words[3] == "ref"
+                                        kind = AttributeKind.REF
                                     # Fifth word onwards is note
                                     if len(words) > 4:
                                         note = " ".join(words[4:])
-                            elif words[2] in ["attr", "aggr"]:
-                                kind = AttributeKind.ATTR if words[2] == "attr" else AttributeKind.AGGR
+                            elif words[2] in ["attr", "aggr", "ref"]:
+                                if words[2] == "attr":
+                                    kind = AttributeKind.ATTR
+                                elif words[2] == "aggr":
+                                    kind = AttributeKind.AGGR
+                                else:  # words[2] == "ref"
+                                    kind = AttributeKind.REF
                                 # Third word onwards is note
                                 if len(words) > 3:
                                     note = " ".join(words[3:])
@@ -705,7 +720,14 @@ class PdfParser:
                             elif first_word == "Element" and pending_attr_name == "isStructWithOptional":
                                 # This is a continuation of the attribute name
                                 pending_attr_name += first_word
-                            # Otherwise it's just description continuation, ignore
+                            else:
+                                # This is a continuation of the attribute note/description
+                                # Append the entire line to the pending note
+                                continuation_text = " ".join(words)
+                                if pending_attr_note:
+                                    pending_attr_note += " " + continuation_text
+                                else:
+                                    pending_attr_note = continuation_text
                 elif pending_attr_name is not None and pending_attr_type is not None:
                     # No match but we have a pending attribute, check if it's a continuation
                     words = line.split()
@@ -718,6 +740,13 @@ class PdfParser:
                         elif first_word == "Element" and pending_attr_name == "isStructWithOptional":
                             # This is a continuation of the attribute name
                             pending_attr_name += first_word
+                        else:
+                            # This is a continuation of the attribute note/description
+                            continuation_text = " ".join(words)
+                            if pending_attr_note:
+                                pending_attr_note += " " + continuation_text
+                            else:
+                                pending_attr_note = continuation_text
                 else:
                     # No pending attribute and no new attribute match, skip
                     continue
@@ -732,12 +761,13 @@ class PdfParser:
                     pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
                     not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
                     is_ref = self._is_reference_type(pending_attr_type)
+                    kind = pending_attr_kind or (AttributeKind.REF if is_ref else AttributeKind.ATTR)
                     attr = AutosarAttribute(
                         name=pending_attr_name,
                         type=pending_attr_type,
                         is_ref=is_ref,
                         multiplicity=pending_attr_multiplicity or "1",
-                        kind=pending_attr_kind or AttributeKind.ATTR,
+                        kind=kind,
                         note=pending_attr_note or ""
                     )
                     current_class.attributes[pending_attr_name] = attr

@@ -209,7 +209,7 @@ Future integration tests should cover:
 
 **Maturity**: accept
 
-**Description**: Integration test that verifies multi-line note extraction from a real AUTOSAR PDF file, ensuring that notes spanning multiple lines are captured completely until encountering another known pattern.
+**Description**: Integration test that verifies multi-line note extraction from a real AUTOSAR PDF file, ensuring that notes spanning multiple lines are captured completely until encountering another known pattern. This test also verifies that the Tags field is included in the class note, and that attribute notes spanning multiple lines are also captured correctly.
 
 **Precondition**: File examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf exists
 
@@ -219,18 +219,32 @@ Future integration tests should cover:
 3. Find the BswImplementation class (search through M2 → AUTOSARTemplates → BswModuleTemplate → BswImplementation)
 4. Verify the class exists with name="BswImplementation"
 5. Verify the class has a note (note is not None and not empty)
-6. Verify the note contains the complete multi-line text:
+6. Verify the class note contains the complete multi-line text:
    - "Contains the implementation specific information in addition to the generic specification"
    - "(BswModule Description and BswBehavior)"
    - "It is possible to have several different BswImplementations referring to the same BswBehavior"
-7. Verify the note word count is at least 20 words (ensures multi-line capture)
-8. Verify the note character count is approximately 225 characters (full note length)
-9. Print the extracted note for visual verification
+7. Verify the class note includes the Tags field:
+   - "Tags: atp.recommendedPackage=BswImplementations"
+8. Verify the class note word count is at least 20 words (ensures multi-line capture)
+9. Verify the class note character count is approximately 273 characters (full note length including Tags)
+10. Verify the arRelease attribute has a multi-line note:
+    - Verify the attribute exists (arRelease in attributes)
+    - Verify the attribute note contains text from multiple lines
+    - Verify the attribute note contains "Version of the AUTOSAR Release"
+    - Verify the attribute note contains "The numbering contains three"
+    - Verify the attribute note word count is at least 20 words
+    - Verify the attribute note character count is approximately 159 characters
+11. Print the extracted class note and attribute note for visual verification
 
-**Expected Result**: BswImplementation class is extracted with complete multi-line note:
-- Note contains all expected phrases across multiple lines
-- Note is not truncated at line breaks
-- Note word count ≥ 20 words
-- Note character count ≈ 225 characters
+**Expected Result**: BswImplementation class is extracted with complete multi-line notes including Tags:
+- Class note contains all expected phrases across multiple lines
+- Class note is not truncated at line breaks
+- Class note includes Tags field: "Tags: atp.recommendedPackage=BswImplementations"
+- Class note word count ≥ 20 words
+- Class note character count ≈ 273 characters (increased from 225 due to Tags field)
+- arRelease attribute has multi-line note captured completely
+- arRelease attribute note contains "Version of the AUTOSAR Release" and "The numbering contains three"
+- arRelease attribute note word count ≥ 20 words
+- arRelease attribute note character count ≈ 159 characters
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00010, SWR_MODEL_00001, SWR_MODEL_00010

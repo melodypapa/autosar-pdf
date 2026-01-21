@@ -836,6 +836,8 @@ class TestPdfParser:
             SWR_PARSER_00012: Multi-Line Attribute Handling
             SWR_MODEL_00010: AUTOSAR Attribute Representation
         """
+        from autosar_pdf2txt.models import AttributeKind
+
         parser = PdfParser()
         text = """
         Class BswModuleDescription
@@ -849,20 +851,24 @@ class TestPdfParser:
         assert len(class_defs) == 1
         assert class_defs[0].name == "BswModuleDescription"
         assert len(class_defs[0].attributes) == 2
-        
+
         # Check first attribute (reference type)
         attr1 = class_defs[0].attributes.get("bswModule")
         assert attr1 is not None
         assert attr1.name == "bswModule"
         assert attr1.type == "BswModuleDependency"
         assert attr1.is_ref is True  # Contains "Ref"
-        
+        assert attr1.kind == AttributeKind.AGGR
+        assert attr1.multiplicity == "*"
+
         # Check second attribute (non-reference type)
         attr2 = class_defs[0].attributes.get("bswDocumentation")
         assert attr2 is not None
         assert attr2.name == "bswDocumentation"
         assert attr2.type == "SwComponent"
         assert attr2.is_ref is False  # "SwComponent" is not a reference type
+        assert attr2.kind == AttributeKind.AGGR
+        assert attr2.multiplicity == "0..1"
         
     def test_extract_class_with_reference_attribute(self) -> None:
         """Test extracting class with reference attribute.
@@ -901,6 +907,122 @@ class TestPdfParser:
         assert attr2.name == "invocationTriggerMode"
         assert attr2.type == "ModeDeclarationGroup"
         assert attr2.is_ref is True
+
+    def test_extract_class_with_ref_kind_attribute(self) -> None:
+        """Test extracting class with REF kind attributes.
+
+        SWUT_PARSER_00051: Test Extracting Class with REF Kind Attributes
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_MODEL_00010: AUTOSAR Attribute Representation
+        """
+        from autosar_pdf2txt.models import AttributeKind
+
+        parser = PdfParser()
+        text = """
+        Class BswImplementation
+        Package M2::AUTOSARTemplates::BswModuleTemplate::BswImplementation
+        Note Contains the implementation specific information
+        Attribute Type Mult. Kind Note
+        behavior BswInternalBehavior 0..1 ref The behavior of this implementation
+        arRelease RevisionLabelString 0..1 attr Version of the AUTOSAR Release
+        preconfigured EcucModule * ref Preconfigured modules
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "BswImplementation"
+        assert len(class_defs[0].attributes) == 3
+
+        # Check REF kind attribute (behavior)
+        attr1 = class_defs[0].attributes.get("behavior")
+        assert attr1 is not None
+        assert attr1.name == "behavior"
+        assert attr1.type == "BswInternalBehavior"
+        assert attr1.kind == AttributeKind.REF
+        assert attr1.multiplicity == "0..1"
+
+        # Check ATTR kind attribute (arRelease)
+        attr2 = class_defs[0].attributes.get("arRelease")
+        assert attr2 is not None
+        assert attr2.name == "arRelease"
+        assert attr2.type == "RevisionLabelString"
+        assert attr2.kind == AttributeKind.ATTR
+        assert attr2.multiplicity == "0..1"
+
+        # Check REF kind attribute (preconfigured)
+        attr3 = class_defs[0].attributes.get("preconfigured")
+        assert attr3 is not None
+        assert attr3.name == "preconfigured"
+        assert attr3.type == "EcucModule"
+        assert attr3.kind == AttributeKind.REF
+        assert attr3.multiplicity == "*"
+
+    def test_extract_class_with_tags_in_note(self) -> None:
+        """Test extracting class with Tags field included in note.
+
+        SWUT_PARSER_00052: Test Extracting Class with Tags in Note
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class BswImplementation
+        Package M2::AUTOSARTemplates::BswModuleTemplate::BswImplementation
+        Note Contains the implementation specific information
+        Tags: atp.recommendedPackage=BswImplementations
+        Base ARElement
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "BswImplementation"
+
+        # Verify that Tags field is included in the note
+        assert "Tags:" in class_defs[0].note
+        assert "atp.recommendedPackage=BswImplementations" in class_defs[0].note
+        assert "Contains the implementation specific information" in class_defs[0].note
+
+    def test_extract_class_with_multi_line_attribute_notes(self) -> None:
+        """Test extracting class with multi-line attribute notes.
+
+        SWUT_PARSER_00053: Test Extracting Class with Multi-Line Attribute Notes
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_MODEL_00010: AUTOSAR Attribute Representation
+        """
+        parser = PdfParser()
+        text = """
+        Class BswImplementation
+        Package M2::AUTOSARTemplates::BswModuleTemplate::BswImplementation
+        Note Contains the implementation specific information
+        Attribute Type Mult. Kind Note
+        arRelease RevisionLabelString 0..1 attr Version of the AUTOSAR Release on which this
+        Version implementation is based. The numbering contains three
+        levels (major, minor, revision) which are defined by
+        AUTOSAR.
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "BswImplementation"
+
+        # Verify arRelease attribute has multi-line note
+        attr = class_defs[0].attributes.get("arRelease")
+        assert attr is not None
+        assert attr.name == "arRelease"
+        assert attr.type == "RevisionLabelString"
+        assert attr.multiplicity == "0..1"
+        assert attr.kind.value == "attr"
+        # Verify the note contains text from multiple lines
+        assert "Version of the AUTOSAR Release" in attr.note
+        assert "The numbering contains three" in attr.note
+        assert "AUTOSAR" in attr.note
+        # Verify note length (should be longer than single-line note)
+        assert len(attr.note) > 100, f"Expected note longer than 100 chars, got {len(attr.note)}"
+        assert len(attr.note.split()) > 15, f"Expected more than 15 words, got {len(attr.note.split())}"
 
     def test_build_packages_with_attributes(self) -> None:
         """Test that attributes are transferred to AutosarClass objects.

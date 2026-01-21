@@ -2557,11 +2557,11 @@ All existing test cases in this document are currently at maturity level **accep
 1. Create a PdfParser instance
 2. Parse text with class definition including attribute section
 3. Verify attributes are extracted correctly
-4. Verify attribute names, types, and reference flags are correct
+4. Verify attribute names, types, multiplicities, kinds, and reference flags are correct
 
-**Expected Result**: Attributes are extracted with correct name, type, and is_ref flag
+**Expected Result**: Attributes are extracted with correct name, type, multiplicity, kind (attr/aggr), and is_ref flag
 
-**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_MODEL_00010
 
 ---
 
@@ -2583,6 +2583,80 @@ All existing test cases in this document are currently at maturity level **accep
 **Expected Result**: Reference types are correctly identified by checking for patterns like Prototype, Ref, Dependency, Group, etc.
 
 **Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010
+
+---
+
+#### SWUT_PARSER_00051
+**Title**: Test Extracting Class with REF Kind Attributes
+
+**Maturity**: accept
+
+**Description**: Verify that attributes with "ref" in the Kind column are extracted and assigned the AttributeKind.REF enum value.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class containing attributes that have "ref" specified in the Kind column
+3. Verify that attributes with kind="ref" have AttributeKind.REF
+4. Verify that attributes with kind="attr" have AttributeKind.ATTR
+5. Verify that attribute multiplicity is correctly extracted
+6. Verify that attribute notes are correctly extracted
+
+**Expected Result**: Attributes are extracted with correct kind values:
+- "behavior" attribute has kind=AttributeKind.REF
+- "arRelease" attribute has kind=AttributeKind.ATTR
+- "preconfigured" attribute has kind=AttributeKind.REF
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_MODEL_00010
+
+---
+
+#### SWUT_PARSER_00052
+**Title**: Test Extracting Class with Tags in Note
+
+**Maturity**: accept
+
+**Description**: Verify that the Tags field is included in the class note when present in PDF class definitions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition containing Note and Tags fields
+3. Verify that the Tags field is included in the note
+4. Verify that the note contains both the description and Tags information
+
+**Expected Result**: The note contains both the description text and the Tags field (e.g., "Tags: atp.recommendedPackage=BswImplementations")
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00053
+**Title**: Test Extracting Class with Multi-Line Attribute Notes
+
+**Maturity**: accept
+
+**Description**: Verify that attribute notes spanning multiple lines in the PDF are captured completely, ensuring that the full attribute description is preserved.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with class definition containing attribute with multi-line note
+3. Verify that the attribute note contains text from all lines
+4. Verify specific phrases from different lines are present in the note
+5. Verify note length is sufficient to confirm multi-line capture
+
+**Expected Result**: Attribute notes are extracted with complete text from multiple lines:
+- Note contains "Version of the AUTOSAR Release"
+- Note contains "The numbering contains three"
+- Note contains "AUTOSAR"
+- Note length > 100 characters
+- Note word count > 15 words
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_MODEL_00010
 
 ---
 

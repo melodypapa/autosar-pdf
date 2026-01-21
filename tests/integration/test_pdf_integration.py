@@ -387,21 +387,22 @@ class TestPdfIntegration:
         expected_phrases = [
             "Contains the implementation specific information in addition to the generic specification",
             "BswModule Description and BswBehavior",
-            "It is possible to have several different BswImplementations referring to the same BswBehavior"
+            "It is possible to have several different BswImplementations referring to the same BswBehavior",
+            "Tags: atp.recommendedPackage=BswImplementations"
         ]
 
         for phrase in expected_phrases:
             assert phrase in note, f"Expected phrase '{phrase}' not found in note. Got: '{note}'"
 
-        # Verify note word count (ensures multi-line capture)
+        # Verify note word count (ensures multi-line capture including Tags)
         word_count = len(note.split())
         assert word_count >= 20, f"Expected at least 20 words in note, got {word_count}. Note: '{note}'"
 
-        # Verify note character count (ensures full note is captured, not truncated)
+        # Verify note character count (ensures full note is captured including Tags field)
         char_count = len(note)
-        # The expected note is approximately 225 characters
-        assert 200 <= char_count <= 250, \
-            f"Expected note to be approximately 225 characters, got {char_count}. Note: '{note}'"
+        # The expected note is approximately 273 characters (increased from 225 due to Tags field)
+        assert 260 <= char_count <= 290, \
+            f"Expected note to be approximately 273 characters, got {char_count}. Note: '{note}'"
 
         # Print for visual verification
         print("\nMulti-line note extraction verified:")
@@ -409,3 +410,43 @@ class TestPdfIntegration:
         print(f"  Note word count: {word_count}")
         print(f"  Note character count: {char_count}")
         print(f"  Full note:\n    {note}")
+
+        # Verify arRelease attribute has multi-line note
+        arRelease_attr = bsw_implementation.attributes.get("arRelease")
+        assert arRelease_attr is not None, "arRelease attribute should exist"
+        assert arRelease_attr.name == "arRelease", f"Expected attribute name 'arRelease', got '{arRelease_attr.name}'"
+        assert arRelease_attr.type == "RevisionLabelString", f"Expected type 'RevisionLabelString', got '{arRelease_attr.type}'"
+
+        # Verify attribute note exists and is multi-line
+        assert arRelease_attr.note is not None, "arRelease attribute should have a note"
+        assert len(arRelease_attr.note) > 100, f"Expected arRelease note to be multi-line (> 100 chars), got {len(arRelease_attr.note)}"
+
+        # Verify attribute note contains expected multi-line content
+        attr_note = arRelease_attr.note
+        expected_attr_phrases = [
+            "Version of the AUTOSAR Release",
+            "The numbering contains three"
+        ]
+
+        for phrase in expected_attr_phrases:
+            assert phrase in attr_note, f"Expected phrase '{phrase}' not found in arRelease note. Got: '{attr_note}'"
+
+        # Verify attribute note word count (ensures multi-line capture)
+        attr_word_count = len(attr_note.split())
+        assert attr_word_count >= 20, f"Expected at least 20 words in arRelease note, got {attr_word_count}. Note: '{attr_note}'"
+
+        # Verify attribute note character count
+        attr_char_count = len(attr_note)
+        # The expected note is approximately 159 characters
+        assert 140 <= attr_char_count <= 180, \
+            f"Expected arRelease note to be approximately 159 characters, got {attr_char_count}. Note: '{attr_note}'"
+
+        # Print attribute note for visual verification
+        print("\nMulti-line attribute note extraction verified:")
+        print(f"  Attribute: {arRelease_attr.name}")
+        print(f"  Type: {arRelease_attr.type}")
+        print(f"  Multiplicity: {arRelease_attr.multiplicity}")
+        print(f"  Kind: {arRelease_attr.kind.value}")
+        print(f"  Note word count: {attr_word_count}")
+        print(f"  Note character count: {attr_char_count}")
+        print(f"  Full attribute note:\n    {attr_note}")

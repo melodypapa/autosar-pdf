@@ -35,15 +35,17 @@ class AttributeKind(Enum):
         SWR_MODEL_00010: AUTOSAR Attribute Representation
 
     This enum represents the kind of AUTOSAR attribute, indicating whether it is
-    a regular attribute or an aggregated attribute.
+    a regular attribute, an aggregated attribute, or a reference attribute.
 
     Attributes:
         ATTR: Regular attribute
         AGGR: Aggregated attribute
+        REF: Reference attribute
     """
 
     ATTR = "attr"
     AGGR = "aggr"
+    REF = "ref"
 
 
 @dataclass

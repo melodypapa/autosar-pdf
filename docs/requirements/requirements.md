@@ -132,8 +132,16 @@ The ATP type enum shall support the following values:
 - `type`: The data type of the attribute (non-empty string)
 - `is_ref`: Boolean flag indicating whether the attribute is a reference type
 - `multiplicity`: The multiplicity of the attribute (e.g., "0..1", "*", "0..*")
-- `kind`: The kind of attribute as an enum (AttributeKind.ATTR or AttributeKind.AGGR)
+- `kind`: The kind of attribute as an AttributeKind enum value:
+  - `AttributeKind.ATTR`: Regular attribute (non-aggregated)
+  - `AttributeKind.AGGR`: Aggregated attribute (contains sub-attributes)
+  - `AttributeKind.REF`: Reference attribute (points to another AUTOSAR element)
 - `note`: The description or note for the attribute
+
+The AttributeKind enum shall define the following values:
+- `ATTR`: Represents a regular attribute with a simple data type
+- `AGGR`: Represents an aggregated attribute that contains nested attributes
+- `REF`: Represents a reference attribute that points to another AUTOSAR element
 
 ---
 

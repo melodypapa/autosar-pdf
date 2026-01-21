@@ -1,27 +1,34 @@
-"""AUTOSAR data models."""
+"""AUTOSAR data models for packages and classes."""
 
-from autosar_pdf2txt.models.autosar_models import (
-    ATPType,
-    AbstractAutosarBase,
-    AttributeKind,
-    AutosarAttribute,
-    AutosarClass,
-    AutosarDoc,
-    AutosarEnumLiteral,
-    AutosarEnumeration,
-    AutosarPackage,
-    AutosarPrimitive,
-)
+# Export enumerations
+from autosar_pdf2txt.models.enums import ATPType, AttributeKind
+
+# Export base class
+from autosar_pdf2txt.models.base import AbstractAutosarBase
+
+# Export attribute classes
+from autosar_pdf2txt.models.attributes import AutosarAttribute, AutosarEnumLiteral
+
+# Export type classes
+from autosar_pdf2txt.models.types import AutosarClass, AutosarEnumeration, AutosarPrimitive
+
+# Export container classes
+from autosar_pdf2txt.models.containers import AutosarPackage, AutosarDoc
 
 __all__ = [
+    # Enumerations
     "ATPType",
-    "AbstractAutosarBase",
     "AttributeKind",
+    # Base class
+    "AbstractAutosarBase",
+    # Attribute classes
     "AutosarAttribute",
-    "AutosarClass",
-    "AutosarDoc",
     "AutosarEnumLiteral",
+    # Type classes
+    "AutosarClass",
     "AutosarEnumeration",
-    "AutosarPackage",
     "AutosarPrimitive",
+    # Container classes
+    "AutosarPackage",
+    "AutosarDoc",
 ]

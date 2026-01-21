@@ -19,7 +19,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 def _get_test_env() -> Dict[str, str]:
@@ -36,7 +36,7 @@ def _get_test_env() -> Dict[str, str]:
     return env
 
 
-def run_command(cmd: List[str], capture: bool = True, env: Dict[str, str] | None = None) -> subprocess.CompletedProcess:
+def run_command(cmd: List[str], capture: bool = True, env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
     """Run a command and return the result.
 
     Args:
@@ -145,7 +145,7 @@ def parse_coverage_report(json_path: Path) -> Dict[str, Dict]:
     return data.get("files", {})
 
 
-def generate_markdown_coverage_report(output_file: str | None = None) -> None:
+def generate_markdown_coverage_report(output_file: Optional[str] = None) -> None:
     """Generate markdown coverage report and print to stdout or save to file.
 
     Args:

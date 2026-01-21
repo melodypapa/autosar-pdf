@@ -248,3 +248,45 @@ Future integration tests should cover:
 - arRelease attribute note character count ≈ 159 characters
 
 **Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00010, SWR_MODEL_00001, SWR_MODEL_00010
+
+---
+
+#### SWIT_00007
+**Title**: Test Package Path Validation Filters Invalid Entries
+
+**Maturity**: accept
+
+**Description**: Regression test for package path validation that verifies invalid package paths containing spaces, special characters, and PDF artifacts are filtered out during parsing. The GenericStructureTemplate PDF contains descriptive text like "live in various packages which do not have a common" and "can coexist in the context of a ReferenceBase.(cid:99)()" that was incorrectly parsed as package names before the fix.
+
+**Precondition**: File examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
+3. Collect all package names recursively from the parsed packages
+4. Verify that invalid package names are NOT present:
+   - "live in various packages which do not have a common" (spaces, lowercase)
+   - "can coexist in the context of a ReferenceBase.(cid:99)()" (special characters, PDF artifacts)
+5. Verify that M2 is the top-level package
+6. Navigate through the package hierarchy: M2 → AUTOSARTemplates → GenericStructure → GeneralTemplateClasses → ARPackage
+7. Verify ReferenceBase class exists in ARPackage
+8. Verify ReferenceBase has the expected base class "ARObject"
+9. Verify ReferenceBase has the expected attributes: globalElement, globalIn, isDefault, package, shortLabel
+
+**Expected Result**:
+1. Invalid package names are filtered out and not present in the parsed output
+2. Valid package structure is preserved:
+   - M2 (top-level)
+     └─ AUTOSARTemplates
+        └─ GenericStructure
+           └─ GeneralTemplateClasses
+              └─ ARPackage
+                 └─ ReferenceBase (with correct attributes)
+3. ReferenceBase class is correctly extracted with:
+   - Name: "ReferenceBase"
+   - Base class: "ARObject"
+   - Attributes: globalElement, globalIn, isDefault, package, shortLabel
+4. Total packages extracted: 98
+5. No invalid packages in the output
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00006, SWR_MODEL_00004

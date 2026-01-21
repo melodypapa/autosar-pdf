@@ -75,6 +75,31 @@ def ecu_configuration_pdf(parser: PdfParser) -> AutosarDoc:
 
 
 @pytest.fixture(scope="session")
+def generic_structure_template_pdf(parser: PdfParser) -> AutosarDoc:
+    """Parse and cache the GenericStructureTemplate PDF.
+
+    This fixture parses the PDF once per session and caches the result.
+    This PDF contains descriptive text that can be incorrectly parsed as
+    package names, serving as a regression test for package path validation.
+
+    Args:
+        parser: Shared PdfParser instance.
+
+    Returns:
+        AutosarDoc containing parsed packages and root classes.
+
+    Skips:
+        If the PDF file is not found.
+    """
+    pdf_path = "examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf"
+
+    if not os.path.exists(pdf_path):
+        pytest.skip(f"PDF file not found: {pdf_path}")
+
+    return parser.parse_pdf(pdf_path)
+
+
+@pytest.fixture(scope="session")
 def pdf_cache(parser: PdfParser) -> Dict[str, AutosarDoc]:
     """Parse and cache all available AUTOSAR PDF files.
 

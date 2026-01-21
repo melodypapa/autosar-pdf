@@ -1670,3 +1670,37 @@ class TestPdfParser:
         # Parent should remain None because MyEnum is an enumeration, not a class
         assert my_class.parent is None
 
+    def test_is_valid_package_path(self) -> None:
+        """Test package path validation.
+
+        SWUT_PARSER_00047: Test Package Path Validation
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+        """
+        parser = PdfParser()
+
+        # Valid package paths
+        assert parser._is_valid_package_path("M2::AUTOSAR::DataTypes") is True
+        assert parser._is_valid_package_path("AUTOSAR::Templates") is True
+        assert parser._is_valid_package_path("M2::MSR") is True
+        assert parser._is_valid_package_path("Some_Package") is True
+        assert parser._is_valid_package_path("_PrivatePackage") is True
+
+        # Invalid package paths - spaces
+        assert parser._is_valid_package_path("live in various packages which do not have a common") is False
+        assert parser._is_valid_package_path("Package With Spaces") is False
+
+        # Invalid package paths - special characters
+        assert parser._is_valid_package_path("can coexist in the context of a ReferenceBase.(cid:99)()") is False
+        assert parser._is_valid_package_path("Package.With.Dots") is False
+        assert parser._is_valid_package_path("Package(With)Parens") is False
+
+        # Invalid package paths - lowercase start
+        assert parser._is_valid_package_path("lowercase::Package") is False
+        assert parser._is_valid_package_path("anotherPackage") is False
+
+        # Invalid package paths - empty parts
+        assert parser._is_valid_package_path("AUTOSAR::") is False
+        assert parser._is_valid_package_path("::AUTOSAR") is False
+

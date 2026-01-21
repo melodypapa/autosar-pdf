@@ -199,6 +199,61 @@ class PdfParser:
             or attr_name in partial_names
         )
 
+    def _is_valid_package_path(self, package_path: str) -> bool:
+        """Check if a package path is valid and should be accepted.
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+
+        Args:
+            package_path: The package path to validate (e.g., "M2::AUTOSAR::DataTypes").
+
+        Returns:
+            True if the package path is valid, False if it should be filtered out.
+
+        Valid package paths:
+        - Contain only alphanumeric characters, underscores, and :: separators
+        - Each part starts with an uppercase letter or underscore
+        - No spaces or special characters (parentheses, PDF artifacts like (cid:99))
+        - Parts follow PascalCase naming convention
+
+        Invalid examples:
+        - "live in various packages which do not have a common" (spaces, lowercase)
+        - "can coexist in the context of a ReferenceBase.(cid:99)()" (special characters)
+        """
+        # Filter out paths with obvious invalid characters
+        if "(" in package_path or ")" in package_path:
+            return False
+        if "(cid:" in package_path:
+            return False
+        if "." in package_path:
+            return False
+
+        # Split into parts and validate each
+        parts = package_path.split("::")
+
+        for part in parts:
+            part = part.strip()
+
+            # Empty part is invalid
+            if not part:
+                return False
+
+            # Check for spaces
+            if " " in part:
+                return False
+
+            # Valid package names are PascalCase or contain underscores
+            # Must start with uppercase letter or underscore
+            if not (part[0].isupper() or part[0] == "_"):
+                return False
+
+            # Must contain only alphanumeric characters and underscores
+            if not all(c.isalnum() or c == "_" for c in part):
+                return False
+
+        return True
+
     def parse_pdf(self, pdf_path: str) -> AutosarDoc:
         """Parse a PDF file and extract the package hierarchy.
 
@@ -375,13 +430,19 @@ class PdfParser:
                     pending_attr_kind = None
                     pending_attr_note = None
 
-                # Look ahead to see if this is followed by a package path within the next 5 lines
+                # Look ahead to see if this is followed by a valid package path within the next 5 lines
                 # This helps avoid treating page headers as new class definitions
                 is_valid_class = False
                 for j in range(i + 1, min(len(lines), i + 6)):
-                    if self.PACKAGE_PATTERN.match(lines[j].strip()):
-                        is_valid_class = True
-                        break
+                    package_match = self.PACKAGE_PATTERN.match(lines[j].strip())
+                    if package_match:
+                        m2_prefix = package_match.group(1) or ""
+                        package_path = package_match.group(2).strip()
+                        full_package_path = m2_prefix + package_path
+                        # Only accept if the package path is valid
+                        if self._is_valid_package_path(full_package_path):
+                            is_valid_class = True
+                            break
 
                 # Only create a new class if it's followed by a package path
                 if is_valid_class:
@@ -459,7 +520,13 @@ class PdfParser:
                 # Include M2 prefix if present to preserve the full package hierarchy
                 m2_prefix = package_match.group(1) or ""
                 package_path = package_match.group(2).strip()
-                current_class.package_path = m2_prefix + package_path
+                full_package_path = m2_prefix + package_path
+
+                # Validate package path before accepting it
+                # This filters out descriptive text that looks like a package path
+                # but contains spaces, special characters, or invalid naming
+                if self._is_valid_package_path(full_package_path):
+                    current_class.package_path = full_package_path
                 continue
 
             # Check for base classes

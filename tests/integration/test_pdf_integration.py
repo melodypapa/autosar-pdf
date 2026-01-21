@@ -450,3 +450,88 @@ class TestPdfIntegration:
         print(f"  Note word count: {attr_word_count}")
         print(f"  Note character count: {attr_char_count}")
         print(f"  Full attribute note:\n    {attr_note}")
+
+    def test_generic_structure_template_filters_invalid_package_paths(self, generic_structure_template_pdf: AutosarDoc) -> None:
+        """Test that invalid package paths are filtered from GenericStructureTemplate PDF.
+
+        This is a regression test for package path validation. The GenericStructureTemplate
+        PDF contains descriptive text like "live in various packages which do not have a common"
+        that was incorrectly parsed as package names before the fix.
+
+        SWIT_00007: Test Package Path Validation Filters Invalid Entries
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_MODEL_00004: AUTOSAR Package Representation
+
+        Args:
+            generic_structure_template_pdf: Cached parsed GenericStructureTemplate PDF data.
+        """
+        packages = generic_structure_template_pdf.packages
+
+        # Verify we have packages
+        assert len(packages) > 0, "Should extract at least one package from PDF"
+
+        # Collect all package names recursively
+        def collect_all_package_names(pkg, names_list):
+            names_list.append(pkg.name)
+            for subpkg in pkg.subpackages:
+                collect_all_package_names(subpkg, names_list)
+
+        all_package_names = []
+        for pkg in packages:
+            collect_all_package_names(pkg, all_package_names)
+
+        # Verify no invalid package names exist
+        # These were the false positives from the PDF before the fix
+        invalid_names = [
+            "live in various packages which do not have a common",
+            "can coexist in the context of a ReferenceBase.(cid:99)()",
+        ]
+
+        for invalid_name in invalid_names:
+            assert invalid_name not in all_package_names, \
+                f"Invalid package name '{invalid_name}' should have been filtered out"
+
+        # Verify ReferenceBase class exists in the correct location
+        # Path: M2 → AUTOSARTemplates → GenericStructure → GeneralTemplateClasses → ARPackage → ReferenceBase
+        m2_pkg = packages[0]
+        assert m2_pkg.name == "M2", f"Expected top-level package 'M2', got '{m2_pkg.name}'"
+
+        autosar_templates_pkg = m2_pkg.get_subpackage("AUTOSARTemplates")
+        assert autosar_templates_pkg is not None, "AUTOSARTemplates should exist under M2"
+
+        generic_structure_pkg = autosar_templates_pkg.get_subpackage("GenericStructure")
+        assert generic_structure_pkg is not None, "GenericStructure should exist under AUTOSARTemplates"
+
+        general_template_classes_pkg = generic_structure_pkg.get_subpackage("GeneralTemplateClasses")
+        assert general_template_classes_pkg is not None, "GeneralTemplateClasses should exist under GenericStructure"
+
+        ar_package_pkg = general_template_classes_pkg.get_subpackage("ARPackage")
+        assert ar_package_pkg is not None, "ARPackage should exist under GeneralTemplateClasses"
+
+        # Verify ReferenceBase class exists
+        reference_base = ar_package_pkg.get_class("ReferenceBase")
+        assert reference_base is not None, "ReferenceBase class should exist in ARPackage"
+        assert reference_base.name == "ReferenceBase", \
+            f"Expected class name 'ReferenceBase', got '{reference_base.name}'"
+
+        # Verify ReferenceBase has the expected base class
+        assert len(reference_base.bases) > 0, "ReferenceBase should have base classes"
+        assert "ARObject" in reference_base.bases, \
+            f"Expected 'ARObject' in ReferenceBase bases, got {reference_base.bases}"
+
+        # Verify ReferenceBase has attributes
+        assert len(reference_base.attributes) > 0, "ReferenceBase should have attributes"
+        expected_attributes = ["globalElement", "globalIn", "isDefault", "package", "shortLabel"]
+        for attr in expected_attributes:
+            assert attr in reference_base.attributes, \
+                f"Expected attribute '{attr}' not found in ReferenceBase"
+
+        print("\nPackage path validation verified:")
+        print(f"  Total packages: {len(all_package_names)}")
+        print("  Invalid packages filtered: 0")
+        print("  ReferenceBase class found: True")
+        print("  ReferenceBase location: M2::AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::ARPackage")
+        print(f"  ReferenceBase attributes: {len(reference_base.attributes)}")

@@ -2797,3 +2797,57 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00013
 
+---
+
+#### SWUT_PARSER_00047
+**Title**: Test Package Path Validation
+
+**Maturity**: accept
+
+**Description**: Verify that the package path validation function correctly identifies valid and invalid package paths, filtering out paths with spaces, special characters, PDF artifacts, or invalid naming conventions.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Test valid package paths:
+   - "M2::AUTOSAR::DataTypes" (valid nested path)
+   - "AUTOSAR::Templates" (valid simple path)
+   - "M2::MSR" (valid path)
+   - "Some_Package" (valid with underscore)
+   - "_PrivatePackage" (valid starting with underscore)
+3. Verify all valid paths return True
+4. Test invalid package paths with spaces:
+   - "live in various packages which do not have a common" (contains spaces)
+   - "Package With Spaces" (contains spaces)
+5. Verify paths with spaces return False
+6. Test invalid package paths with special characters:
+   - "can coexist in the context of a ReferenceBase.(cid:99)()" (contains parentheses and PDF artifact)
+   - "Package.With.Dots" (contains dots)
+   - "Package(With)Parens" (contains parentheses)
+7. Verify paths with special characters return False
+8. Test invalid package paths with lowercase start:
+   - "lowercase::Package" (starts with lowercase)
+   - "anotherPackage" (starts with lowercase)
+9. Verify paths starting with lowercase return False
+10. Test invalid package paths with empty parts:
+    - "AUTOSAR::" (empty part after ::)
+    - "::AUTOSAR" (empty part before ::)
+11. Verify paths with empty parts return False
+
+**Expected Result**:
+- Valid package paths return True:
+  - "M2::AUTOSAR::DataTypes" → True
+  - "AUTOSAR::Templates" → True
+  - "M2::MSR" → True
+  - "Some_Package" → True
+  - "_PrivatePackage" → True
+
+- Invalid package paths return False:
+  - Paths with spaces → False
+  - Paths with special characters → False
+  - Paths starting with lowercase → False
+  - Paths with empty parts → False
+
+**Requirements Coverage**: SWR_PARSER_00006
+

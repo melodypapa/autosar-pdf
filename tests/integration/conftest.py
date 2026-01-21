@@ -6,7 +6,7 @@ PDF parsing across multiple tests.
 """
 
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 
@@ -116,7 +116,7 @@ def pdf_cache(parser: PdfParser) -> Dict[str, AutosarDoc]:
     return cache
 
 
-def find_first_class(packages: List[AutosarPackage]) -> tuple[AutosarPackage | None, AutosarPackage | None]:
+def find_first_class(packages: List[AutosarPackage]) -> Tuple[Optional[AutosarPackage], Optional[AutosarPackage]]:
     """Find the first class with actual data in a package hierarchy.
 
     This is a helper function for tests that need to locate the first

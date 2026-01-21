@@ -336,3 +336,76 @@ class TestPdfIntegration:
         print(f"  Total attributes: {len(impl_data_type.attributes)}")
         for attr_name, attr in impl_data_type.attributes.items():
             print(f"    - {attr_name}: {attr.type} (ref: {attr.is_ref})")
+
+    def test_multi_line_note_extraction(self, ecu_configuration_pdf: AutosarDoc) -> None:
+        """Test multi-line note extraction from real AUTOSAR PDF.
+
+        SWIT_00006: Test Multi-Line Note Extraction from Real AUTOSAR PDF
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_MODEL_00001: AUTOSAR Class Representation
+
+        Args:
+            ecu_configuration_pdf: Cached parsed ECU Configuration PDF data.
+        """
+        packages = ecu_configuration_pdf.packages
+
+        # Find M2 package
+        m2_pkg = packages[0]
+        assert m2_pkg.name == "M2"
+
+        # Navigate to BswImplementation class
+        # Path: M2 → AUTOSARTemplates → BswModuleTemplate → BswImplementation → BswImplementation (class)
+        # Note: BswImplementation is both a package name and a class name
+        autosar_templates_pkg = m2_pkg.get_subpackage("AUTOSARTemplates")
+        assert autosar_templates_pkg is not None, "AUTOSARTemplates should exist"
+
+        bsw_module_template_pkg = autosar_templates_pkg.get_subpackage("BswModuleTemplate")
+        assert bsw_module_template_pkg is not None, "BswModuleTemplate should exist"
+
+        # BswImplementation is a subpackage (with same name as the class)
+        bsw_implementation_pkg = bsw_module_template_pkg.get_subpackage("BswImplementation")
+        assert bsw_implementation_pkg is not None, "BswImplementation package should exist in BswModuleTemplate"
+
+        # Get the BswImplementation class from the BswImplementation package
+        bsw_implementation = bsw_implementation_pkg.get_class("BswImplementation")
+        assert bsw_implementation is not None, "BswImplementation class should exist in BswImplementation package"
+
+        # Verify class name
+        assert bsw_implementation.name == "BswImplementation", \
+            f"Expected class name 'BswImplementation', got '{bsw_implementation.name}'"
+
+        # Verify note exists
+        assert bsw_implementation.note is not None, "BswImplementation should have a note"
+        assert len(bsw_implementation.note) > 0, "Note should not be empty"
+
+        # Verify the note contains expected multi-line content
+        note = bsw_implementation.note
+        expected_phrases = [
+            "Contains the implementation specific information in addition to the generic specification",
+            "BswModule Description and BswBehavior",
+            "It is possible to have several different BswImplementations referring to the same BswBehavior"
+        ]
+
+        for phrase in expected_phrases:
+            assert phrase in note, f"Expected phrase '{phrase}' not found in note. Got: '{note}'"
+
+        # Verify note word count (ensures multi-line capture)
+        word_count = len(note.split())
+        assert word_count >= 20, f"Expected at least 20 words in note, got {word_count}. Note: '{note}'"
+
+        # Verify note character count (ensures full note is captured, not truncated)
+        char_count = len(note)
+        # The expected note is approximately 225 characters
+        assert 200 <= char_count <= 250, \
+            f"Expected note to be approximately 225 characters, got {char_count}. Note: '{note}'"
+
+        # Print for visual verification
+        print("\nMulti-line note extraction verified:")
+        print(f"  Class: {bsw_implementation.name}")
+        print(f"  Note word count: {word_count}")
+        print(f"  Note character count: {char_count}")
+        print(f"  Full note:\n    {note}")

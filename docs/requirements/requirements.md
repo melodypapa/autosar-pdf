@@ -443,7 +443,7 @@ This requirement provides a unified interface for managing classes, enumerations
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>` (extracted from the Base column in class tables)
 - Subclasses: `Subclasses <class_list>`
-- Notes: Extracted from the Note column in class tables as free-form documentation text
+- Notes: Extracted from the Note column in class tables as free-form documentation text. Notes may span multiple lines in the PDF and are captured completely until encountering another known pattern (Base, Subclasses, Tags:, Attribute, Class, Primitive, Enumeration, Table, Package).
 
 The system shall preserve the "M2::" prefix in package paths when present, treating "M2" as the root metamodel package. This ensures that the complete package hierarchy is maintained, with "M2" as the top-level package containing all AUTOSAR packages (e.g., M2 → AUTOSARTemplates → BswModuleTemplate).
 

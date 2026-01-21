@@ -110,6 +110,36 @@ class TestPdfParser:
         assert class_defs[0].base_classes == ["InternalBehavior"]
         assert class_defs[0].note == "Implementation for basic software entities"
 
+    def test_extract_class_with_multi_line_note(self) -> None:
+        """Test extracting class with multi-line note.
+
+        SWUT_PARSER_00050: Test Extracting Class with Multi-Line Note
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        parser = PdfParser()
+        text = """
+        Class BswImplementation
+        Package M2::AUTOSARTemplates::BswModuleTemplate::BswImplementation
+        Note Contains the implementation specific information in addition to the generic specification (BswModule
+        Description and BswBehavior). It is possible to have several different BswImplementations referring to
+        the same BswBehavior.
+        Base ARElement
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "BswImplementation"
+        # Verify the multi-line note is captured completely
+        expected_note = (
+            "Contains the implementation specific information in addition to the generic specification "
+            "(BswModule Description and BswBehavior). It is possible to have several different "
+            "BswImplementations referring to the same BswBehavior."
+        )
+        assert class_defs[0].note == expected_note, f"Expected '{expected_note}', got '{class_defs[0].note}'"
+        # Verify note word count is at least 20 words (ensures multi-line capture)
+        assert len(class_defs[0].note.split()) >= 20
+
     def test_extract_class_without_base_or_note(self) -> None:
         """Test extracting class without base classes or note.
 

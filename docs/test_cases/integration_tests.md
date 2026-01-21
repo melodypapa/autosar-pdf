@@ -112,6 +112,34 @@ Future integration tests should cover:
 ---
 
 #### SWIT_00004
+**Title**: Test End-to-End Parsing and Writing with ATP Patterns
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies end-to-end parsing and writing with ATP patterns, ensuring the complete workflow from PDF parsing to markdown file generation works correctly.
+
+**Precondition**: pdfplumber library is available
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Mock pdfplumber to return class with ATP patterns
+3. Parse the mocked PDF data
+4. Verify ATP pattern is correctly extracted (atpVariation)
+5. Create a MarkdownWriter instance
+6. Write packages to temporary directory
+7. Verify individual class file contains ATP section with atpVariation marker
+
+**Expected Result**: End-to-end workflow succeeds:
+- ATP pattern is correctly extracted from PDF
+- Class has atp_type set to ATPType.ATP_VARIATION
+- Markdown file is generated with correct ATP section
+- ATP marker appears in output as "* atpVariation"
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_MODEL_00001, SWR_WRITER_00005
+
+---
+
+#### SWIT_00005
 **Title**: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
 
 **Maturity**: accept
@@ -173,3 +201,36 @@ Future integration tests should cover:
 3. Broken attribute fragments are filtered out and not present
 
 **Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_PARSER_00011, SWR_PARSER_00012, SWR_MODEL_00004
+
+---
+
+#### SWIT_00006
+**Title**: Test Multi-Line Note Extraction from Real AUTOSAR PDF
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies multi-line note extraction from a real AUTOSAR PDF file, ensuring that notes spanning multiple lines are captured completely until encountering another known pattern.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf exists
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf
+3. Find the BswImplementation class (search through M2 → AUTOSARTemplates → BswModuleTemplate → BswImplementation)
+4. Verify the class exists with name="BswImplementation"
+5. Verify the class has a note (note is not None and not empty)
+6. Verify the note contains the complete multi-line text:
+   - "Contains the implementation specific information in addition to the generic specification"
+   - "(BswModule Description and BswBehavior)"
+   - "It is possible to have several different BswImplementations referring to the same BswBehavior"
+7. Verify the note word count is at least 20 words (ensures multi-line capture)
+8. Verify the note character count is approximately 225 characters (full note length)
+9. Print the extracted note for visual verification
+
+**Expected Result**: BswImplementation class is extracted with complete multi-line note:
+- Note contains all expected phrases across multiple lines
+- Note is not truncated at line breaks
+- Note word count ≥ 20 words
+- Note character count ≈ 225 characters
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001

@@ -6,64 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `autosar-pdf2txt` is a Python package for extracting AUTOSAR model hierarchies from PDF files and converting them to markdown format. The project uses a dataclass-based model for representing AUTOSAR packages and classes with ATP (AUTOSAR Tool Platform) marker support, a PDF parser for extraction using pdfplumber, and a markdown writer for output with support for both consolidated and per-class file generation.
 
-## Stable Identifiers
-
-**CRITICAL: All unique IDs are permanent and immutable.**
-
-Once assigned, requirement IDs, test IDs, and coding rule IDs must never be changed, even if:
-- The associated requirement, test, or rule is removed from the codebase
-- The requirement is superseded by a new requirement
-- The test is no longer applicable
-- The coding rule is modified or replaced
-
-### ID Formats
-
-**Requirements:** `SWR_<MODULE>_<NUMBER>`
-- Example: `SWR_MODEL_00001`, `SWR_PARSER_00003`
-
-**Tests:** `SWUT_<MODULE>_<NUMBER>` (Software Unit Test)
-- Example: `SWUT_MODEL_00001`, `SWUT_PARSER_00002`
-
-**Coding Rules:** `CODING_RULE_<CATEGORY>_<NUMBER>`
-- Example: `CODING_RULE_IMPORT_00001`, `CODING_RULE_STYLE_00003`
-
-### Maturity Levels
-
-Each requirement, test case, and coding rule has a maturity level that indicates its status:
-
-**Maturity Levels:**
-- **draft**: Newly created, under review, or not yet implemented
-- **accept**: Accepted, implemented, and validated
-- **invalid**: Deprecated, superseded, or no longer applicable
-
-**Examples:**
-```markdown
-#### SWR_MODEL_00001
-**Title**: AUTOSAR Class Representation
-
-**Maturity**: accept
-
-**Description**: The system shall provide a data model...
-```
-
-```markdown
-### CODING_RULE_IMPORT_00001: Import Order
-
-**Maturity**: accept
-
-**Imports must be organized into three distinct sections...**
-```
-
-### Purpose of Stable IDs
-
-Stable IDs ensure:
-- **Traceability**: Links between requirements, code, and tests remain valid over time
-- **Historical accuracy**: Old documentation and references remain meaningful
-- **Audit trails**: Change history can be tracked accurately
-- **Cross-references**: External systems can reference IDs without fear of breakage
-
-When adding new items, always use the next available number in the sequence. Never reuse a deleted ID.
-
 ## Development Commands
 
 ### Installation
@@ -338,7 +280,7 @@ autosar-extract input.pdf -o output.md --include-class-details
 - Subclasses: `Subclasses <class_list>`
 - Notes: `Note <text>` (documentation/comments)
 - Attribute header: `Attribute Type Mult. Kind Note` (SWR_PARSER_00010)
-- Attributes: `<name> <type> <mult> <kind> <description>` (SWR_PARSER_00010, SWR_PARSER_00011, SWR_PARSER_00012)
+- Attributes: `<name> <type> <mult> <kind> <description>` (SWR_PARSER_00011, SWR_PARSER_00012)
 
 ### PDF Text Extraction Strategy
 The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_tolerance=1`) instead of raw text extraction to properly handle word spacing and avoid concatenated words due to tight kerning in PDF files (SWR_PARSER_00009).
@@ -347,68 +289,18 @@ The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_to
 - Recognizes attribute section by the "Attribute Type Mult. Kind Note" header (SWR_PARSER_00010)
 - Filters out metadata lines containing special characters (`:`, `;`) or starting with numbers (SWR_PARSER_00011)
 - Handles multi-line attribute definitions by detecting and filtering broken attribute fragments (SWR_PARSER_00012)
-- Common filtered fragments: "Element", "SizeProfile", "data", "If", "has", "to", "ImplementationDataType", "intention"
+- Common filtered fragments: "Element", "SizeProfile", "data", "If", "has", "to", "ImplementationDataType"
 
 ## Requirement Traceability
 
-All code includes requirement IDs in docstrings for traceability to `docs/requirement/requirements.md`. Coding standards are defined in `docs/development/coding_rules.md` with stable identifiers.
+All code includes requirement IDs in docstrings for traceability to `docs/requirements/requirements.md`. Coding standards are defined in `docs/development/coding_rules.md` with stable identifiers.
 
 **Requirements by Module:**
 - **Model**: SWR_MODEL_00001 - SWR_MODEL_00013
-  - SWR_MODEL_00001: AUTOSAR Class Representation
-  - SWR_MODEL_00002: AUTOSAR Class Name Validation
-  - SWR_MODEL_00003: AUTOSAR Class String Representation
-  - SWR_MODEL_00004: AUTOSAR Package Representation
-  - SWR_MODEL_00005: AUTOSAR Package Name Validation
-  - SWR_MODEL_00006: Add Class to Package
-  - SWR_MODEL_00007: Add Subpackage to Package
-  - SWR_MODEL_00008: Query Package Contents
-  - SWR_MODEL_00009: Package String Representation
-  - SWR_MODEL_00010: AUTOSAR Attribute Representation
-  - SWR_MODEL_00011: AUTOSAR Attribute Name Validation
-  - SWR_MODEL_00012: AUTOSAR Attribute Type Validation
-  - SWR_MODEL_00013: AUTOSAR Attribute String Representation
-
-- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00013
-  - SWR_PARSER_00001: PDF Parser Initialization
-  - SWR_PARSER_00002: Backend Validation
-  - SWR_PARSER_00003: PDF File Parsing
-  - SWR_PARSER_00004: Class Definition Pattern Recognition
-  - SWR_PARSER_00005: Class Definition Data Model
-  - SWR_PARSER_00006: Package Hierarchy Building
-  - SWR_PARSER_00007: PDF Backend Support - pdfplumber
-  - SWR_PARSER_00008: PDF Backend Support - pdfplumber (duplicate of SWR_PARSER_00007)
-  - SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
-  - SWR_PARSER_00010: Attribute Extraction from PDF
-  - SWR_PARSER_00011: Metadata Filtering in Attribute Extraction
-  - SWR_PARSER_00012: Multi-Line Attribute Handling
-  - SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-
+- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00017
 - **Writer**: SWR_WRITER_00001 - SWR_WRITER_00006
-  - SWR_WRITER_00001: Markdown Writer Initialization
-  - SWR_WRITER_00002: Markdown Package Hierarchy Output
-  - SWR_WRITER_00003: Markdown Class Output Format
-  - SWR_WRITER_00004: Bulk Package Writing
-  - SWR_WRITER_00005: Directory-Based Class File Output
-  - SWR_WRITER_00006: Individual Class Markdown File Content
-
 - **CLI**: SWR_CLI_00001 - SWR_CLI_00011
-  - SWR_CLI_00001: CLI Entry Point
-  - SWR_CLI_00002: CLI File Input Support
-  - SWR_CLI_00003: CLI Directory Input Support
-  - SWR_CLI_00004: CLI Output File Option
-  - SWR_CLI_00005: CLI Verbose Mode
-  - SWR_CLI_00006: CLI Input Validation
-  - SWR_CLI_00007: CLI Progress Feedback
-  - SWR_CLI_00008: CLI Logging
-  - SWR_CLI_00009: CLI Error Handling
-  - SWR_CLI_00010: CLI Class File Output
-  - SWR_CLI_00011: CLI Class Files Flag
-
 - **Package**: SWR_PACKAGE_00001 - SWR_PACKAGE_00003
-  - SWR_PACKAGE_00001: Package API Export
-  - SWR_PACKAGE_00002: Python Version Support
-  - SWR_PACKAGE_00003: Package Metadata
 
 ## Quality Checks
 
@@ -458,20 +350,6 @@ All of the following must pass before committing:
 2. ✅ Mypy type checking: No issues
 3. ✅ Pytest: All tests pass
 4. ✅ Coverage: ≥95%
-
-**Example with Requirements Traceability:**
-```python
-def __init__(self) -> None:
-    """Initialize the PDF parser.
-
-    Requirements:
-        SWR_PARSER_00001: PDF Parser Initialization
-        SWR_PARSER_00007: PDF Backend Support - pdfplumber
-
-    Raises:
-        ImportError: If pdfplumber is not installed.
-    """
-```
 
 ## Documentation Structure
 
@@ -625,5 +503,3 @@ def parse_pdf(self, pdf_path: str) -> List[AutosarPackage]:
 2. Identify uncovered lines in specific files
 3. Add tests for uncovered code paths
 4. Re-run tests: `python scripts/run_tests.py --unit`
-
-

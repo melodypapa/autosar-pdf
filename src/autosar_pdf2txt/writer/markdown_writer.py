@@ -3,7 +3,7 @@
 import re
 from io import StringIO
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarEnumeration, AutosarPackage
 
@@ -115,6 +115,110 @@ class MarkdownWriter:
         for pkg in packages:
             self._write_package(pkg, [], 0, output)
         return output.getvalue()
+
+    def write_class_hierarchy(self, root_classes: List[AutosarClass], all_classes: Optional[List[AutosarClass]] = None) -> str:
+        """Write class hierarchy from root classes to markdown format.
+
+        Args:
+            root_classes: List of root AutosarClass objects (classes with no bases).
+            all_classes: Optional list of all AutosarClass objects. If not provided,
+                only root classes will be written without descendants.
+
+        Returns:
+            Markdown formatted string representing the class hierarchy with proper indentation.
+            Returns empty string if no root classes provided.
+
+        Examples:
+            >>> writer = MarkdownWriter()
+            >>> root_cls = AutosarClass("RootClass", False)
+            >>> markdown = writer.write_class_hierarchy([root_cls])
+        """
+        if not root_classes:
+            return ""
+
+        output = StringIO()
+        output.write("## Class Hierarchy\n\n")
+
+        # Build a mapping of class name to class for quick lookup
+        all_classes_map = {}
+        if all_classes:
+            for cls in all_classes:
+                all_classes_map[cls.name] = cls
+        else:
+            # If all_classes not provided, only use root classes
+            for root_cls in root_classes:
+                all_classes_map[root_cls.name] = root_cls
+
+        # Write each root class and its descendants
+        for root_cls in root_classes:
+            self._write_class_hierarchy_recursive(root_cls, all_classes_map, [], 0, output)
+
+        return output.getvalue()
+
+    def _collect_classes_from_package(self, pkg: AutosarPackage) -> List[AutosarClass]:
+        """Collect all AutosarClass objects from a package and its subpackages.
+
+        Args:
+            pkg: The package to collect classes from.
+
+        Returns:
+            List of all AutosarClass objects in the package hierarchy.
+        """
+        classes = []
+
+        # Collect classes from this package
+        for typ in pkg.types:
+            if isinstance(typ, AutosarClass):
+                classes.append(typ)
+
+        # Recursively collect from subpackages
+        for subpkg in pkg.subpackages:
+            classes.extend(self._collect_classes_from_package(subpkg))
+
+        return classes
+
+    def _write_class_hierarchy_recursive(
+        self,
+        cls: AutosarClass,
+        all_classes_map: Dict[str, AutosarClass],
+        visited: List[str],
+        level: int,
+        output: StringIO,
+    ) -> None:
+        """Write a class and its descendants recursively to the output.
+
+        Args:
+            cls: The class to write.
+            all_classes_map: Dictionary mapping class names to class objects.
+            visited: List of visited class names to detect cycles.
+            level: Current indentation level (0 for root classes).
+            output: StringIO buffer to write to.
+        """
+        # Detect and handle cycles
+        if cls.name in visited:
+            indent = "  " * level
+            output.write(f"{indent}* {cls.name} (cycle detected)\n")
+            return
+
+        # Write class line with abstract marker
+        indent = "  " * level
+        abstract_suffix = " (abstract)" if cls.is_abstract else ""
+        output.write(f"{indent}* {cls.name}{abstract_suffix}\n")
+
+        # Find subclasses (classes that have this class as parent)
+        subclasses = []
+        for other_cls in all_classes_map.values():
+            if other_cls.parent == cls.name:
+                subclasses.append(other_cls)
+
+        # Sort subclasses by name for consistent output
+        subclasses.sort(key=lambda c: c.name)
+
+        # Recursively write subclasses
+        for subclass in subclasses:
+            self._write_class_hierarchy_recursive(
+                subclass, all_classes_map, visited + [cls.name], level + 1, output
+            )
 
     def _write_package(
         self,

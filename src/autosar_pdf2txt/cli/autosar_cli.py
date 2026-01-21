@@ -40,6 +40,11 @@ def main() -> int:
         help="Create separate markdown files for each class (requires -o/--output)",
     )
     parser.add_argument(
+        "--include-class-hierarchy",
+        action="store_true",
+        help="Include class hierarchy from root classes in the output",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -120,6 +125,17 @@ def main() -> int:
         # Write to markdown
         writer = MarkdownWriter()
         markdown = writer.write_packages(merged_packages)
+
+        # Add class hierarchy if requested
+        if args.include_class_hierarchy:
+            # Collect all classes from packages for building hierarchy
+            all_classes = []
+            for pkg in merged_packages:
+                all_classes.extend(writer._collect_classes_from_package(pkg))
+
+            class_hierarchy = writer.write_class_hierarchy(merged_root_classes, all_classes)
+            if class_hierarchy:
+                markdown += "\n\n" + class_hierarchy
 
         # SWR_CLI_00004: CLI Output File Option
         if args.output:

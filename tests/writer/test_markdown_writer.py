@@ -314,6 +314,108 @@ class TestMarkdownWriter:
         assert result.count("* CommonClass") == 2
 
 
+class TestMarkdownWriterClassHierarchy:
+    """Tests for MarkdownWriter class hierarchy output.
+
+    Requirements:
+        SWR_WRITER_00002: Markdown Package Hierarchy Output
+    """
+
+    def test_write_class_hierarchy_empty(self) -> None:
+        """Test writing class hierarchy with no root classes."""
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([])
+        assert result == ""
+
+    def test_write_class_hierarchy_single_root(self) -> None:
+        """Test writing class hierarchy with a single root class."""
+        root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([root_cls])
+        assert "## Class Hierarchy" in result
+        assert "* RootClass" in result
+
+    def test_write_class_hierarchy_with_abstract(self) -> None:
+        """Test writing class hierarchy with abstract class."""
+        root_cls = AutosarClass(name="AbstractClass", package="M2::Test", is_abstract=True)
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([root_cls])
+        assert "## Class Hierarchy" in result
+        assert "* AbstractClass (abstract)" in result
+
+    def test_write_class_hierarchy_with_subclasses(self) -> None:
+        """Test writing class hierarchy with subclasses."""
+        root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+        child_cls = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent="RootClass")
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([root_cls], [root_cls, child_cls])
+        assert "## Class Hierarchy" in result
+        assert "* RootClass" in result
+        assert "  * ChildClass" in result
+
+    def test_write_class_hierarchy_multiple_levels(self) -> None:
+        """Test writing class hierarchy with multiple levels."""
+        root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+        child_cls = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent="RootClass")
+        grandchild_cls = AutosarClass(name="GrandchildClass", package="M2::Test", is_abstract=False, parent="ChildClass")
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([root_cls], [root_cls, child_cls, grandchild_cls])
+        assert "## Class Hierarchy" in result
+        assert "* RootClass" in result
+        assert "  * ChildClass" in result
+        assert "    * GrandchildClass" in result
+
+    def test_write_class_hierarchy_multiple_roots(self) -> None:
+        """Test writing class hierarchy with multiple root classes."""
+        root1 = AutosarClass(name="Root1", package="M2::Test", is_abstract=False)
+        root2 = AutosarClass(name="Root2", package="M2::Test", is_abstract=False)
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([root1, root2], [root1, root2])
+        assert "## Class Hierarchy" in result
+        assert "* Root1" in result
+        assert "* Root2" in result
+
+    def test_write_class_hierarchy_without_all_classes(self) -> None:
+        """Test writing class hierarchy without providing all_classes parameter."""
+        root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([root_cls])
+        assert "## Class Hierarchy" in result
+        assert "* RootClass" in result
+        # Should not include subclasses since all_classes not provided
+
+    def test_collect_classes_from_package(self) -> None:
+        """Test collecting classes from a package."""
+        pkg = AutosarPackage(name="TestPackage")
+        cls1 = AutosarClass(name="Class1", package="M2::Test", is_abstract=False)
+        cls2 = AutosarClass(name="Class2", package="M2::Test", is_abstract=True)
+        pkg.add_type(cls1)
+        pkg.add_type(cls2)
+
+        writer = MarkdownWriter()
+        classes = writer._collect_classes_from_package(pkg)
+        assert len(classes) == 2
+        assert cls1 in classes
+        assert cls2 in classes
+
+    def test_collect_classes_from_nested_package(self) -> None:
+        """Test collecting classes from nested packages."""
+        subpkg = AutosarPackage(name="SubPackage")
+        subcls = AutosarClass(name="SubClass", package="M2::Test::Sub", is_abstract=False)
+        subpkg.add_type(subcls)
+
+        root_pkg = AutosarPackage(name="RootPackage")
+        rootcls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+        root_pkg.add_type(rootcls)
+        root_pkg.add_subpackage(subpkg)
+
+        writer = MarkdownWriter()
+        classes = writer._collect_classes_from_package(root_pkg)
+        assert len(classes) == 2
+        assert rootcls in classes
+        assert subcls in classes
+
+
 class TestMarkdownWriterFiles:
     """Tests for MarkdownWriter directory-based file output.
 

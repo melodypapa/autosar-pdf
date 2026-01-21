@@ -367,6 +367,7 @@ class TestAutosarClass:
         SWR_MODEL_00002: AUTOSAR Class Name Validation
         SWR_MODEL_00003: AUTOSAR Class String Representation
         SWR_MODEL_00022: AUTOSAR Class Parent Attribute
+        SWR_MODEL_00026: AUTOSAR Class Children Attribute
     """
 
     def test_init_concrete_class(self) -> None:
@@ -795,6 +796,89 @@ class TestAutosarClass:
         child.parent = parent2
         assert child.parent is parent2
         assert child.parent.name == "Parent2"
+
+    def test_init_default_children_is_empty_list(self) -> None:
+        """Test that children defaults to empty list.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        """
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        assert cls.children == []
+
+    def test_init_with_children(self) -> None:
+        """Test creating a class with children.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        """
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            children=["Child1", "Child2"]
+        )
+        assert len(cls.children) == 2
+        assert "Child1" in cls.children
+        assert "Child2" in cls.children
+
+    def test_children_mutation(self) -> None:
+        """Test that children list can be mutated.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        """
+        cls = AutosarClass(name="ParentClass", package="M2::Test", is_abstract=False)
+        assert cls.children == []
+        cls.children.append("Child1")
+        cls.children.append("Child2")
+        assert len(cls.children) == 2
+        cls.children.remove("Child1")
+        assert len(cls.children) == 1
+        assert "Child2" in cls.children
+
+    def test_repr_shows_children_count(self) -> None:
+        """Test that __repr__ includes children count.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        """
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            children=["Child1", "Child2", "Child3"]
+        )
+        result = repr(cls)
+        assert "children=3" in result
+
+    def test_repr_shows_children_zero_when_no_children(self) -> None:
+        """Test that __repr__ shows children=0 when no children.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        """
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        result = repr(cls)
+        assert "children=0" in result
+
+    def test_children_can_be_reassigned(self) -> None:
+        """Test that children can be reassigned.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        """
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            children=["Child1", "Child2"]
+        )
+        assert len(cls.children) == 2
+        cls.children = ["Child3", "Child4", "Child5"]
+        assert len(cls.children) == 3
+        assert "Child3" in cls.children
+        assert "Child1" not in cls.children
 
 
 class TestAutosarEnumeration:

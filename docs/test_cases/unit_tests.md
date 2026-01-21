@@ -474,6 +474,261 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_MODEL_00071
+**Title**: Test Default Parent Is None
+
+**Maturity**: accept
+
+**Description**: Verify that parent defaults to None.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", package="M2::Test", is_abstract=False
+2. Verify cls.parent is None
+
+**Expected Result**: Parent is None by default
+
+**Requirements Coverage**: SWR_MODEL_00022
+
+---
+
+#### SWUT_MODEL_00072
+**Title**: Test Creating Class with Parent
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with a parent.
+
+**Precondition**: A parent AutosarClass instance exists
+
+**Test Steps**:
+1. Create parent_cls with name="ParentClass", package="M2::Test", is_abstract=False
+2. Create child_cls with name="ChildClass", package="M2::Test", is_abstract=False, parent=parent_cls
+3. Verify child_cls.parent is parent_cls
+4. Verify child_cls.parent.name is "ParentClass"
+
+**Expected Result**: Class is created with parent reference
+
+**Requirements Coverage**: SWR_MODEL_00022
+
+---
+
+#### SWUT_MODEL_00073
+**Title**: Test Parent Reference Maintains Object
+
+**Maturity**: accept
+
+**Description**: Verify that parent maintains the actual object reference.
+
+**Precondition**: Parent and child AutosarClass instances exist
+
+**Test Steps**:
+1. Create parent with name="ParentClass", package="M2::Test", is_abstract=False
+2. Create child with name="ChildClass", package="M2::Test", is_abstract=False, parent=parent
+3. Verify child.parent is parent (same object)
+4. Verify accessing parent attributes works (e.g., parent.name)
+
+**Expected Result**: Parent reference is maintained correctly
+
+**Requirements Coverage**: SWR_MODEL_00022
+
+---
+
+#### SWUT_MODEL_00074
+**Title**: Test Debug Representation Shows Parent Name
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ includes parent name when parent is set.
+
+**Precondition**: Parent and child AutosarClass instances exist
+
+**Test Steps**:
+1. Create parent with name="ParentClass", package="M2::Test", is_abstract=False
+2. Create child with name="ChildClass", package="M2::Test", is_abstract=False, parent=parent
+3. Call repr(child)
+4. Verify "parent=ParentClass" is in the result
+
+**Expected Result**: Debug representation includes parent name
+
+**Requirements Coverage**: SWR_MODEL_00022
+
+---
+
+#### SWUT_MODEL_00075
+**Title**: Test Debug Representation Shows Parent None When No Parent
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ shows parent=None when no parent.
+
+**Precondition**: An AutosarClass instance without parent exists
+
+**Test Steps**:
+1. Create cls with name="MyClass", package="M2::Test", is_abstract=False
+2. Call repr(cls)
+3. Verify "parent=None" is in the result
+
+**Expected Result**: Debug representation shows parent=None
+
+**Requirements Coverage**: SWR_MODEL_00022
+
+---
+
+#### SWUT_MODEL_00076
+**Title**: Test Parent Can Be Reassigned
+
+**Maturity**: accept
+
+**Description**: Verify that parent can be reassigned after class creation.
+
+**Precondition**: Two potential parent AutosarClass instances exist
+
+**Test Steps**:
+1. Create parent1 with name="Parent1", package="M2::Test", is_abstract=False
+2. Create parent2 with name="Parent2", package="M2::Test", is_abstract=False
+3. Create child with name="ChildClass", package="M2::Test", is_abstract=False, parent=parent1
+4. Verify child.parent is parent1
+5. Set child.parent = parent2
+6. Verify child.parent is parent2
+7. Verify child.parent.name is "Parent2"
+
+**Expected Result**: Parent can be reassigned
+
+**Requirements Coverage**: SWR_MODEL_00022
+
+---
+
+#### SWUT_MODEL_00077
+**Title**: Test Default Children Is Empty List
+
+**Maturity**: accept
+
+**Description**: Verify that children defaults to empty list.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", package="M2::Test", is_abstract=False
+2. Verify cls.children is []
+3. Verify len(cls.children) is 0
+
+**Expected Result**: Children is empty list by default
+
+**Requirements Coverage**: SWR_MODEL_00026
+
+---
+
+#### SWUT_MODEL_00078
+**Title**: Test Creating Class with Children
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with children.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False, children=["Child1", "Child2"]
+2. Verify len(cls.children) is 2
+3. Verify "Child1" is in cls.children
+4. Verify "Child2" is in cls.children
+
+**Expected Result**: Class is created with children list
+
+**Requirements Coverage**: SWR_MODEL_00026
+
+---
+
+#### SWUT_MODEL_00079
+**Title**: Test Children List Mutation
+
+**Maturity**: accept
+
+**Description**: Verify that the children list can be mutated after class creation.
+
+**Precondition**: An AutosarClass instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False
+2. Verify cls.children is []
+3. Append "Child1" to cls.children
+4. Append "Child2" to cls.children
+5. Verify len(cls.children) is 2
+6. Remove "Child1" from cls.children
+7. Verify len(cls.children) is 1
+8. Verify "Child2" is in cls.children
+
+**Expected Result**: Children list can be mutated
+
+**Requirements Coverage**: SWR_MODEL_00026
+
+---
+
+#### SWUT_MODEL_00080
+**Title**: Test Debug Representation Shows Children Count
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ includes children count.
+
+**Precondition**: An AutosarClass instance with children exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False, children=["Child1", "Child2", "Child3"]
+2. Call repr(cls)
+3. Verify "children=3" is in the result
+
+**Expected Result**: Debug representation shows children count
+
+**Requirements Coverage**: SWR_MODEL_00026
+
+---
+
+#### SWUT_MODEL_00081
+**Title**: Test Debug Representation Shows Children Zero When No Children
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ shows children=0 when no children.
+
+**Precondition**: An AutosarClass instance without children exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", package="M2::Test", is_abstract=False
+2. Call repr(cls)
+3. Verify "children=0" is in the result
+
+**Expected Result**: Debug representation shows children=0
+
+**Requirements Coverage**: SWR_MODEL_00026
+
+---
+
+#### SWUT_MODEL_00082
+**Title**: Test Children Can Be Reassigned
+
+**Maturity**: accept
+
+**Description**: Verify that children can be reassigned after class creation.
+
+**Precondition**: An AutosarClass instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False, children=["Child1", "Child2"]
+2. Verify len(cls.children) is 2
+3. Set cls.children = ["Child3", "Child4", "Child5"]
+4. Verify len(cls.children) is 3
+5. Verify "Child3" is in cls.children
+6. Verify "Child1" is not in cls.children
+
+**Expected Result**: Children can be reassigned
+
+**Requirements Coverage**: SWR_MODEL_00026
+
+---
+
 ### 2. Attribute Tests
 
 #### SWUT_MODEL_00024

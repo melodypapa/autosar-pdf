@@ -1178,6 +1178,101 @@ class TestMarkdownWriterFiles:
         assert type_idx < atp_idx
         assert atp_idx < base_idx
 
+    def test_write_class_with_children(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00047: Test writing a class with children to a file.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            children=["ChildClass1", "ChildClass2", "ChildClass3"]
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "ParentClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Children section exists
+        assert "## Children\n\n" in content
+        assert "* ChildClass1\n" in content
+        assert "* ChildClass2\n" in content
+        assert "* ChildClass3\n" in content
+
+    def test_write_class_without_children_no_section(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00048: Test writing a class without children doesn't create Children section.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="MyClass",
+            package="M2::Test",
+            is_abstract=False
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Children section does NOT exist
+        assert "## Children\n\n" not in content
+
+    def test_children_section_order(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00049: Test Children section appears after Base Classes and before Note.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="MyClass",
+            package="M2::Test",
+            is_abstract=True,
+            bases=["BaseClass"],
+            children=["ChildClass"],
+            note="This is a test class"
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Find section positions
+        type_idx = content.find("## Type\n\n")
+        base_idx = content.find("## Base Classes\n\n")
+        children_idx = content.find("## Children\n\n")
+        note_idx = content.find("## Note\n\n")
+
+        # Verify all sections exist
+        assert type_idx != -1
+        assert base_idx != -1
+        assert children_idx != -1
+        assert note_idx != -1
+
+        # Verify order: Type < Base Classes < Children < Note
+        assert type_idx < base_idx
+        assert base_idx < children_idx
+        assert children_idx < note_idx
+
     def test_main_hierarchy_no_atp_markers(self) -> None:
         """SWUT_WRITER_00046: Test that main hierarchy output doesn't show ATP markers.
 

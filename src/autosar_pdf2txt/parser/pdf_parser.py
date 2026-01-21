@@ -482,7 +482,30 @@ class PdfParser:
             # Check for note
             note_match = self.NOTE_PATTERN.match(line)
             if note_match and current_class is not None and not class_definition_complete:
-                current_class.note = note_match.group(1).strip()
+                # Notes can span multiple lines, capture all lines until we hit another pattern
+                note_text = note_match.group(1).strip()
+
+                # Look ahead to capture continuation lines
+                for j in range(i + 1, len(lines)):
+                    next_line = lines[j].strip()
+
+                    # Stop if we hit another known pattern
+                    if (next_line.startswith("Base ") or
+                        next_line.startswith("Subclasses ") or
+                        next_line.startswith("Tags:") or
+                        next_line.startswith("Attribute ") or
+                        next_line.startswith("Class ") or
+                        next_line.startswith("Primitive ") or
+                        next_line.startswith("Enumeration ") or
+                        next_line.startswith("Table ") or
+                        next_line.startswith("Package ")):
+                        break
+
+                    # Append the continuation line
+                    if next_line:
+                        note_text += " " + next_line
+
+                current_class.note = note_text.strip()
                 continue
 
             # Check for attribute header

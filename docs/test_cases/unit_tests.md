@@ -2093,6 +2093,35 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00050
+**Title**: Test Extracting Class with Multi-Line Note
+
+**Maturity**: accept
+
+**Description**: Verify that notes spanning multiple lines are captured completely until encountering another known pattern (Base, Subclasses, Tags:, Attribute, etc.).
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with "Class BswImplementation", "Package M2::AUTOSARTemplates::BswModuleTemplate::BswImplementation"
+3. Parse multi-line note spanning 3 lines:
+   - Line 1: "Note Contains the implementation specific information in addition to the generic specification (BswModule"
+   - Line 2: "Description and BswBehavior). It is possible to have several different BswImplementations referring to"
+   - Line 3: "the same BswBehavior."
+4. Parse "Base ARElement" line after the note (termination pattern)
+5. Verify the class name is "BswImplementation"
+6. Verify the note contains the complete multi-line text:
+   - "Contains the implementation specific information in addition to the generic specification (BswModule Description and BswBehavior)"
+   - "It is possible to have several different BswImplementations referring to the same BswBehavior"
+7. Verify the note word count is at least 20 words
+
+**Expected Result**: Multi-line note is captured completely, not truncated at line breaks. Note contains all phrases from multiple lines.
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
 #### SWUT_PARSER_00007
 **Title**: Test Extracting Abstract Class
 

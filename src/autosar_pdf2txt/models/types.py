@@ -41,6 +41,7 @@ class AutosarClass(AbstractAutosarBase):
         bases: List of base class names for inheritance tracking.
         parent: Name of the immediate parent class from the bases list (None for root classes).
         children: List of child class names that inherit from this class.
+        aggregated_by: List of class names that aggregate this class.
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
@@ -53,6 +54,7 @@ class AutosarClass(AbstractAutosarBase):
         >>> cls_with_note = AutosarClass("MyClass", "M2::SWR", False, note="Documentation note")
         >>> cls_with_atp = AutosarClass("MyClass", "M2::SWR", False, atp_type=ATPType.ATP_VARIATION)
         >>> cls_with_children = AutosarClass("BaseClass", "M2::SWR", False, children=["DerivedClass"])
+        >>> cls_with_aggregated_by = AutosarClass("MyClass", "M2::SWR", False, aggregated_by=["AggregatorClass"])
     """
 
     is_abstract: bool = False
@@ -61,6 +63,7 @@ class AutosarClass(AbstractAutosarBase):
     bases: List[str] = field(default_factory=list)
     parent: Optional[str] = None
     children: List[str] = field(default_factory=list)
+    aggregated_by: List[str] = field(default_factory=list)
 
     def __init__(
         self,
@@ -72,6 +75,7 @@ class AutosarClass(AbstractAutosarBase):
         bases: Optional[List[str]] = None,
         parent: Optional[str] = None,
         children: Optional[List[str]] = None,
+        aggregated_by: Optional[List[str]] = None,
         note: Optional[str] = None,
     ) -> None:
         """Initialize the AUTOSAR class.
@@ -90,6 +94,7 @@ class AutosarClass(AbstractAutosarBase):
             bases: List of base class names.
             parent: Name of immediate parent class.
             children: List of child class names that inherit from this class.
+            aggregated_by: List of class names that aggregate this class.
             note: Optional documentation.
 
         Raises:
@@ -102,6 +107,7 @@ class AutosarClass(AbstractAutosarBase):
         self.bases = bases or []
         self.parent = parent
         self.children = children or []
+        self.aggregated_by = aggregated_by or []
 
     def __str__(self) -> str:
         """Return string representation of the class.

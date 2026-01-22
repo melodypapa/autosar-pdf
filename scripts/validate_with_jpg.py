@@ -7,6 +7,7 @@ This script:
 3. Extracts class names from the class hierarchy markdown file
 4. Extracts class names from table images using OCR
 5. Compares class names between hierarchy and tables to validate extraction
+6. Generates a markdown report with validation results
 
 Usage:
     python scripts/validate_with_jpg.py <pdf_file_or_dir> [output_dir]
@@ -24,6 +25,10 @@ Examples:
 Note:
     OCR functionality requires pytesseract and pillow:
     pip install pytesseract pillow
+    Tesseract binary is also required:
+    - macOS: brew install tesseract
+    - Ubuntu/Debian: sudo apt-get install tesseract-ocr
+    - Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
 """
 
 import argparse
@@ -223,16 +228,29 @@ def parse_hierarchy_for_classes(hierarchy_file: Path) -> List[str]:
     classes = []
 
     # Look for class names in the hierarchy (lines with asterisks and indentation)
-    # Classes are typically at deeper indentation levels (packages are at shallower levels)
+    # Classes are leaf nodes (items without children) at level 3+ (6+ spaces before *)
     import re
-    for line in content.split("\n"):
+    lines = content.split("\n")
+
+    for i, line in enumerate(lines):
         # Match lines with asterisks that look like class definitions
-        # Classes have 2 or more levels of indentation (4+ spaces before *)
-        match = re.match(r"^\s{4,}\*\s+(.+?)$", line)
+        # Classes have 3 or more levels of indentation (6+ spaces before *)
+        match = re.match(r"^\s{6,}\*\s+(.+?)$", line)
         if match:
             class_name = match.group(1).strip()
-            # Filter out obvious non-class entries if needed
-            if class_name:
+            # Check if this is a leaf node (next line has less indentation or is empty)
+            is_leaf = True
+            if i + 1 < len(lines):
+                next_line = lines[i + 1]
+                next_match = re.match(r"^(\s*)\*", next_line)
+                if next_match:
+                    next_indent = len(next_match.group(1))
+                    current_indent = len(re.match(r"^(\s*)\*", line).group(1))
+                    # If next line has more indentation, this is a package (not a leaf)
+                    if next_indent > current_indent:
+                        is_leaf = False
+
+            if is_leaf and class_name:
                 classes.append(class_name)
 
     return classes
@@ -344,12 +362,17 @@ def validate_markdown_with_tables(markdown_files: List[Path], table_images: List
     # Extract class names from table images (only if OCR is available)
     table_classes = []
     if ocr_available:
-        for img_path in table_images:
-            class_name = extract_class_name_from_image(img_path)
-            if class_name:
-                table_classes.append(class_name)
-                logging.debug(f"{img_path.name}: {class_name}")
-        logging.info(f"Extracted {len(table_classes)} class names from table images")
+        # Skip OCR if there are too many tables (likely includes UML diagrams)
+        if len(table_images) > 150:
+            logging.warning(f"Too many table images ({len(table_images)}). Skipping OCR to avoid performance issues.")
+            logging.warning("This likely includes UML diagrams and other non-class tables.")
+        else:
+            for img_path in table_images:
+                class_name = extract_class_name_from_image(img_path)
+                if class_name:
+                    table_classes.append(class_name)
+                    logging.debug(f"{img_path.name}: {class_name}")
+            logging.info(f"Extracted {len(table_classes)} class names from table images")
     else:
         logging.info("Skipping OCR extraction (tesseract not available)")
 
@@ -534,12 +557,6 @@ Note:
         help="Enable verbose logging"
     )
 
-    parser.add_argument(
-        "--no-cleanup",
-        action="store_true",
-        help="Don't clean up output directory after validation"
-    )
-
     args = parser.parse_args()
 
     setup_logging(args.verbose)
@@ -598,11 +615,7 @@ Note:
         print(msg)
     print("=" * 70)
 
-    # Cleanup unless --no-cleanup is specified
-    if not args.no_cleanup:
-        logging.info(f"Cleaning up output directory: {output_dir}")
-        shutil.rmtree(output_dir)
-        logging.info("Cleanup complete")
+    logging.info(f"Validation complete. Results saved to: {output_dir}")
 
     return 0
 

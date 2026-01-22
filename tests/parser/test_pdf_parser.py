@@ -2140,3 +2140,111 @@ class TestPdfParser:
         assert parser._is_valid_package_path("AUTOSAR::") is False
         assert parser._is_valid_package_path("::AUTOSAR") is False
 
+
+    def test_extract_class_with_multiline_aggregated_by(self) -> None:
+        """Test extracting class with multi-line aggregated by list.
+
+        SWUT_PARSER_00055: Test Extracting Class with Multi-Line Aggregated By
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies that multi-line "Aggregated by" lists are correctly parsed,
+        including word splitting across lines (e.g., "SwComponent" + "Type" = "SwComponentType").
+        """
+        parser = PdfParser()
+        text = """
+        Class SwDataDefProps
+        Package M2::AUTOSAR::DataTypes
+        Aggregated by ApplicationSwComponentPrototype,InternalBehavior,Prototype,SwComponent
+        Type,Trigger,SwDataDefPropsConditional
+        Note This element defines the data definition properties.
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        sw_data = class_defs[0]
+
+        # Should include all aggregated by classes from both lines
+        assert "ApplicationSwComponentPrototype" in sw_data.aggregated_by
+        assert "InternalBehavior" in sw_data.aggregated_by
+        assert "Prototype" in sw_data.aggregated_by
+        assert "SwComponentType" in sw_data.aggregated_by  # Combined from SwComponent + Type
+        assert "Trigger" in sw_data.aggregated_by
+        assert "SwDataDefPropsConditional" in sw_data.aggregated_by
+
+        # Verify exact count (6 items total)
+        assert len(sw_data.aggregated_by) == 6
+
+    def test_extract_class_with_multiline_subclasses(self) -> None:
+        """Test extracting class with multi-line subclasses list.
+
+        SWUT_PARSER_00056: Test Extracting Class with Multi-Line Subclasses
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies that multi-line "Subclasses" lists are correctly parsed.
+        """
+        parser = PdfParser()
+        text = """
+        Class BaseType
+        Package M2::AUTOSAR::DataTypes
+        Subclasses DerivedType1,DerivedType2,DerivedType3
+        ,DerivedType4,DerivedType5
+        Note This is the base type.
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        base_type = class_defs[0]
+
+        # Should include all subclasses from both lines
+        assert "DerivedType1" in base_type.subclasses
+        assert "DerivedType2" in base_type.subclasses
+        assert "DerivedType3" in base_type.subclasses
+        assert "DerivedType4" in base_type.subclasses
+        assert "DerivedType5" in base_type.subclasses
+
+        # Verify exact count (5 items total)
+        assert len(base_type.subclasses) == 5
+
+    def test_extract_class_with_aggregated_by_and_base_classes_multiline(self) -> None:
+        """Test extracting class with both aggregated by and base classes, both multi-line.
+
+        SWUT_PARSER_00057: Test Extracting Class with Aggregated By and Base Classes Multi-Line
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies that both "Aggregated by" and "Base" can be parsed
+        correctly when they both span multiple lines.
+        """
+        parser = PdfParser()
+        text = """
+        Class MyDataType
+        Package M2::AUTOSAR::DataTypes
+        Base ARObject,Identifiable,Packageable
+        Element,Referrable
+        Aggregated by SwComponentPrototype,InternalBehavior,Prototype
+        ,Trigger
+        Note This is a custom data type.
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        my_type = class_defs[0]
+
+        # Verify base classes (multi-line with word splitting)
+        assert "ARObject" in my_type.base_classes
+        assert "Identifiable" in my_type.base_classes
+        assert "PackageableElement" in my_type.base_classes  # Combined from Packageable + Element
+        assert "Referrable" in my_type.base_classes
+        assert len(my_type.base_classes) == 4
+
+        # Verify aggregated by (multi-line)
+        assert "SwComponentPrototype" in my_type.aggregated_by
+        assert "InternalBehavior" in my_type.aggregated_by
+        assert "Prototype" in my_type.aggregated_by
+        assert "Trigger" in my_type.aggregated_by
+        assert len(my_type.aggregated_by) == 4

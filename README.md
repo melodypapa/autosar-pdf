@@ -225,9 +225,7 @@ Create a separate file showing the class inheritance hierarchy:
 
 ```bash
 # Extract Software Component Template with class hierarchy
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
-  -o software_components.md \
-  --include-class-hierarchy
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf -o software_components.md --include-class-hierarchy
 
 # This creates two files:
 # - software_components.md (package hierarchy)

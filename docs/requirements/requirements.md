@@ -30,6 +30,7 @@ All existing requirements in this document are currently at maturity level **acc
 - `bases`: List of base class names for inheritance tracking (List[str], defaults to empty list)
 - `parent`: Name of the immediate parent class from the bases list (Optional[str], None for root classes)
 - `children`: List of child class names that inherit from this class (List[str], defaults to empty list)
+- `aggregated_by`: List of class names that aggregate this class (List[str], defaults to empty list)
 - `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
 
 The ATP type enum shall support the following values:
@@ -887,6 +888,102 @@ This requirement ensures a clean user experience while maintaining correct parsi
 
 ---
 
+#### SWR_PARSER_00020
+**Title**: Missing Base Class Logging
+
+**Maturity**: accept
+
+**Description**: The system shall log warnings when base classes cannot be located in the model during parent resolution and ancestry traversal to help users identify incomplete or incorrect AUTOSAR models.
+
+The system shall:
+1. Log a warning when a class references base classes that don't exist in the model during parent resolution
+2. Log a warning when a class cannot be found in the class registry during ancestry traversal
+3. Include the class name, package name, and list of missing base classes in the warning message
+4. Use deduplication to avoid logging the same missing class multiple times during ancestry traversal
+
+**Warning Messages**:
+- Parent resolution: `"Class '<classname>' in package '<packagename>' has base classes that could not be located in the model: <missing_bases>. Parent resolution may be incomplete."`
+- Ancestry traversal: `"Class '<classname>' referenced in base classes could not be located in the model during ancestry traversal. Ancestry analysis may be incomplete."`
+
+**Rationale**:
+- Incomplete AUTOSAR models may reference classes that are defined in other PDF files not included in the current parsing run
+- Typo in base class names or missing definitions can lead to incomplete parent/children relationships
+- Logging these warnings helps users identify and fix incomplete models
+- Deduplication prevents log spam when the same missing class is referenced multiple times
+
+**Implementation**:
+- Check for missing base classes in `_set_parent_references()` method after filtering
+- Check for missing classes in `_build_ancestry_cache()` during recursive ancestry traversal
+- Use a set attribute on the nested function to track logged missing classes
+- Log at WARNING level to ensure visibility without being errors
+
+This requirement enables users to identify and resolve incomplete or incorrect AUTOSAR model definitions.
+
+---
+
+#### SWR_PARSER_00021
+**Title**: Multi-Line Base Class Parsing
+
+**Maturity**: accept
+
+**Description**: The system shall handle multi-line base class lists in PDF class definitions to ensure complete extraction of all base classes.
+
+The system shall:
+1. Detect when base class lists span multiple lines in the PDF due to table formatting
+2. Recognize continuation lines that:
+   - Come immediately after a "Base " line
+   - Do not match any known pattern (Class, Primitive, Enumeration, Package, Subclasses, Note, Attribute, etc.)
+   - Look like comma-separated class names (contain commas or start with continuation of previous line)
+3. Concatenate continuation lines with the base class list
+4. Handle word splitting across lines (e.g., "Packageable" at end of line + "Element" at start of next line = "PackageableElement")
+5. Stop continuation when encountering another known pattern (Note, Subclasses, Attribute, Class, Primitive, Enumeration, Package)
+
+**Example from AUTOSAR_CP_TPS_SystemTemplate.pdf**:
+```
+Class CanTpConfig
+Package M2::AUTOSARTemplates::SystemTemplate::TransportProtocols
+Base ARObject,CollectableElement,FibexElement,Identifiable,MultilanguageReferrable,Packageable
+Element,Referrable,TpConfig
+Note This element defines exactly one CANTPConfiguration.
+```
+
+The base classes list wraps across two lines:
+- Line 1: `Base ARObject,CollectableElement,FibexElement,Identifiable,MultilanguageReferrable,Packageable`
+- Line 2: `Element,Referrable,TpConfig` (continuation)
+
+Without multi-line parsing, only the first line is read, resulting in:
+- Missing: `PackageableElement` (should combine "Packageable" + "Element")
+- Missing: `Referrable`
+- Missing: `TpConfig` (the actual parent!)
+
+With multi-line parsing, the complete base list is:
+- ARObject
+- CollectableElement
+- FibexElement
+- Identifiable
+- MultilanguageReferrable
+- PackageableElement (combined from "Packageable" + "Element")
+- Referrable
+- TpConfig (critical for parent resolution)
+
+**Rationale**:
+- PDF table formatting often causes base class lists to wrap across multiple lines
+- Missing base classes leads to incorrect parent resolution
+- Word splitting across line boundaries must be handled correctly (e.g., "Packageable" + "Element" = "PackageableElement")
+- Without TpConfig in the base list, CanTpConfig.parent would be incorrectly set to FibexElement instead of TpConfig
+
+**Implementation**:
+- Track state when parsing base class section (`in_base_class_section` flag)
+- Maintain `pending_base_classes` list for continuation
+- Track `last_base_class_name` to handle word splitting across lines
+- Detect continuation lines by checking if line doesn't match known patterns
+- Combine split words when first word of continuation line starts with lowercase or is a known continuation fragment
+- Finalize base class list when hitting Note, Subclasses, Attribute, or class definition patterns
+
+This requirement ensures correct parent resolution by guaranteeing that all base classes are extracted from multi-line base class lists in PDFs.
+
+---
+
 ### 3. Writer
 
 #### SWR_WRITER_00001
@@ -1108,6 +1205,42 @@ The ATP Type section shall:
 The separate hierarchy file shall be created in the same directory as the main output file, with the filename generated by replacing hyphens with underscores in the output file stem and appending "_hierarchy" before the file extension.
 
 **Example**: If the output file is `autosar-models.md`, the hierarchy file will be named `autosar_models_hierarchy.md`.
+
+---
+
+#### SWR_CLI_00013
+**Title**: CLI Table Extraction
+
+**Maturity**: accept
+
+**Description**: The system shall provide a command-line interface tool named `autosar-extract-table` for extracting tables from PDF files and saving them as images.
+
+The CLI shall support the following features:
+
+**Input Support**:
+- Accept one or more PDF file paths or directory paths as input arguments
+- When a directory is provided, automatically discover all PDF files within it (sorted alphabetically)
+- Validate input paths and provide appropriate error messages for non-existent paths, non-PDF files (with warning), empty directories (with warning), and no valid PDF files to process (with error)
+
+**Output Configuration**:
+- Require an `-o` / `--output` option to specify the output directory path for extracted table images
+- Create the output directory if it does not exist
+- Extract tables from PDF files and save each table as a separate PNG image file
+- Crop each image to the bounding box of the table to remove surrounding page content
+- Name each image file with the format `table_page{page_number}_table{table_number}.png` where:
+  - `{page_number}` is the PDF page number where the table was found
+  - `{table_number}` is the sequential table number on that page
+
+**Logging and Feedback**:
+- Provide progress feedback via messages indicating the number of PDF files being processed, output directory location, number of tables extracted from each PDF file, and total number of tables extracted across all PDF files
+- Support a `-v` / `--verbose` option to enable verbose output mode, which prints detailed debug information during processing including the number of tables found on each page
+- Suppress pdfminer warnings about invalid color values in PDF files
+- Provide logging information to show the current processing progress, including detailed status messages for each operation step
+
+**Error Handling**:
+- Catch and report exceptions with user-friendly error messages
+- Return appropriate exit codes (0 for success, 1 for error)
+- Display detailed error tracebacks when verbose mode is enabled
 
 ---
 

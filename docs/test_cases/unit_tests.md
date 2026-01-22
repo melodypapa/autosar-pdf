@@ -2915,6 +2915,33 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00056
+**Title**: Test Missing Base Class Logging During Parent Resolution
+
+**Maturity**: accept
+
+**Description**: Verify that warnings are logged when a class references base classes that cannot be located in the model during parent resolution.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create ClassDefinition with a base class that doesn't exist in the model (e.g., "NonExistentBase")
+3. Call parser._build_package_hierarchy() to build the package hierarchy
+4. Verify that the class is created successfully with parent set to None
+5. Verify that warning messages are logged for the missing base class
+6. Verify warning message contains the class name, package name, and missing base class name
+
+**Expected Result**:
+- Class is created with parent=None and bases=["NonExistentBase"]
+- Warning is logged with message: "Class 'DerivedClass' in package 'Derived' has base classes that could not be located in the model: ['NonExistentBase']. Parent resolution may be incomplete."
+- Warning is logged for ancestry traversal: "Class 'NonExistentBase' referenced in base classes could not be located in the model during ancestry traversal. Ancestry analysis may be incomplete."
+- Each unique missing class is logged only once during ancestry traversal (deduplication)
+
+**Requirements Coverage**: SWR_PARSER_00017, SWR_PARSER_00020
+
+---
+
 #### SWUT_PARSER_00034
 **Title**: Test Building Packages with Attributes
 
@@ -3105,4 +3132,43 @@ All existing test cases in this document are currently at maturity level **accep
   - Paths with empty parts → False
 
 **Requirements Coverage**: SWR_PARSER_00006
+
+---
+
+#### SWUT_PARSER_00048
+**Title**: Test Extracting Class with Multi-Line Base Classes
+
+**Maturity**: accept
+
+**Description**: Verify that base classes spanning multiple lines in the PDF are correctly extracted and combined, including handling word splitting across line boundaries.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text with:
+   - "Class CanTpConfig"
+   - "Package M2::AUTOSARTemplates::SystemTemplate::TransportProtocols"
+   - "Base ARObject,CollectableElement,FibexElement,Identifiable,MultilanguageReferrable,Packageable"
+   - "Element,Referrable,TpConfig" (continuation line)
+   - "Note This is a test class."
+3. Verify base_classes contains all 8 expected base classes:
+   - "ARObject"
+   - "CollectableElement"
+   - "FibexElement"
+   - "Identifiable"
+   - "MultilanguageReferrable"
+   - "PackageableElement" (combined from "Packageable" + "Element")
+   - "Referrable"
+   - "TpConfig"
+4. Verify "PackageableElement" is correctly formed by combining the split word
+5. Verify "TpConfig" is in the list (critical for parent resolution)
+
+**Expected Result**:
+- All base classes from both lines are extracted
+- Words split across lines are correctly combined ("Packageable" + "Element" = "PackageableElement")
+- The complete base class list contains 8 classes
+- TpConfig is included in the base class list
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00021
 

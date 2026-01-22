@@ -399,6 +399,10 @@ class PdfParser:
 
         Returns:
             List of ClassDefinition objects.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00021: Multi-Line Base Class Parsing
         """
         class_defs: List[ClassDefinition] = []
         lines = text.split("\n")
@@ -406,7 +410,10 @@ class PdfParser:
         current_class: Optional[ClassDefinition] = None
         in_attribute_section = False
         in_enumeration_literal_section = False
+        in_base_class_section = False
         class_definition_complete = False
+        pending_base_classes: Optional[List[str]] = None
+        last_base_class_name: Optional[str] = None
         pending_attr_name: Optional[str] = None
         pending_attr_type: Optional[str] = None
         pending_attr_multiplicity: Optional[str] = None
@@ -428,6 +435,9 @@ class PdfParser:
             if class_match or primitive_match or enumeration_match:
                 # Finalize pending attribute before processing new class
                 if current_class is not None:
+                    # Finalize pending base classes if any
+                    if in_base_class_section and pending_base_classes is not None:
+                        current_class.base_classes = pending_base_classes
                     (pending_attr_name, pending_attr_type, pending_attr_multiplicity,
                      pending_attr_kind, pending_attr_note) = self._finalize_pending_attribute(
                         current_class, pending_attr_name, pending_attr_type,
@@ -447,6 +457,9 @@ class PdfParser:
                     # Reset attribute section flag and pending attributes when starting a new class
                     in_attribute_section = False
                     in_enumeration_literal_section = False
+                    in_base_class_section = False
+                    pending_base_classes = None
+                    last_base_class_name = None
                     class_definition_complete = False
                     pending_attr_name = None
                     pending_attr_type = None
@@ -461,24 +474,43 @@ class PdfParser:
             # Check for base classes
             base_match = self.BASE_PATTERN.match(line)
             if base_match and current_class is not None and not class_definition_complete:
-                self._process_base_classes_line(base_match, current_class)
+                (pending_base_classes, last_base_class_name) = self._process_base_classes_line(base_match)
+                in_base_class_section = True
                 continue
 
             # Check for subclasses
             subclass_match = self.SUBCLASS_PATTERN.match(line)
             if subclass_match and current_class is not None and not class_definition_complete:
+                # Finalize pending base classes if any
+                if in_base_class_section and pending_base_classes is not None:
+                    current_class.base_classes = pending_base_classes
+                    in_base_class_section = False
+                    pending_base_classes = None
+                    last_base_class_name = None
                 self._process_subclasses_line(subclass_match, current_class)
                 continue
 
             # Check for note
             note_match = self.NOTE_PATTERN.match(line)
             if note_match and current_class is not None and not class_definition_complete:
+                # Finalize pending base classes if any
+                if in_base_class_section and pending_base_classes is not None:
+                    current_class.base_classes = pending_base_classes
+                    in_base_class_section = False
+                    pending_base_classes = None
+                    last_base_class_name = None
                 self._process_note_line(note_match, lines, i, current_class)
                 continue
 
             # Check for attribute header
             attr_header_match = self.ATTRIBUTE_HEADER_PATTERN.match(line)
             if attr_header_match and current_class is not None:
+                # Finalize pending base classes if any
+                if in_base_class_section and pending_base_classes is not None:
+                    current_class.base_classes = pending_base_classes
+                    in_base_class_section = False
+                    pending_base_classes = None
+                    last_base_class_name = None
                 (in_attribute_section, pending_attr_name, pending_attr_type,
                  pending_attr_multiplicity, pending_attr_kind, pending_attr_note) = self._process_attribute_header(
                     pending_attr_name, pending_attr_type, pending_attr_multiplicity,
@@ -500,6 +532,16 @@ class PdfParser:
                     class_definition_complete = True
                 continue
 
+            # Handle base class continuation lines
+            # This must be checked after all known patterns but before attribute processing
+            if in_base_class_section and current_class is not None and not class_definition_complete:
+                # Check if this line looks like a continuation (comma-separated values or continuation fragments)
+                if "," in line or any(fragment in line for fragment in ["Element", "Referrable", "Packageable"]):
+                    (pending_base_classes, last_base_class_name) = self._handle_base_class_continuation(
+                        line, pending_base_classes, last_base_class_name
+                    )
+                    continue
+
             # Check for attribute (only if we're in the attribute section)
             if in_attribute_section and current_class is not None and line and " " in line:
                 attr_result: Dict[str, Union[bool, Optional[str], Optional[AttributeKind]]] = self._process_attribute_line(
@@ -518,6 +560,9 @@ class PdfParser:
 
         # Don't forget the last class
         if current_class is not None:
+            # Finalize pending base classes if any
+            if in_base_class_section and pending_base_classes is not None:
+                current_class.base_classes = pending_base_classes
             # Finalize any pending attribute
             self._finalize_pending_attribute(
                 current_class, pending_attr_name, pending_attr_type,
@@ -747,21 +792,24 @@ class PdfParser:
     def _process_base_classes_line(
         self,
         base_match: re.Match,
-        current_class: ClassDefinition,
-    ) -> None:
+    ) -> Tuple[Optional[List[str]], Optional[str]]:
         """Process a base classes line.
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00021: Multi-Line Base Class Parsing
 
         Args:
             base_match: Match object for base pattern.
-            current_class: The current class definition being processed.
+
+        Returns:
+            Tuple of (list of parsed base classes, last base class name).
+            The last base class name is used to handle word splitting across lines.
         """
         base_classes_str = base_match.group(1)
-        current_class.base_classes = [
-            bc.strip() for bc in base_classes_str.split(",") if bc.strip()
-        ]
+        base_classes = [bc.strip() for bc in base_classes_str.split(",") if bc.strip()]
+        last_base = base_classes[-1] if base_classes else None
+        return (base_classes, last_base)
 
     def _process_subclasses_line(
         self,
@@ -781,6 +829,56 @@ class PdfParser:
         current_class.subclasses = [
             sc.strip() for sc in subclasses_str.split(",") if sc.strip()
         ]
+
+    def _handle_base_class_continuation(
+        self,
+        line: str,
+        pending_base_classes: Optional[List[str]],
+        last_base_class_name: Optional[str],
+    ) -> Tuple[Optional[List[str]], Optional[str]]:
+        """Handle continuation lines for multi-line base class lists.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Base Class Parsing
+
+        This method handles:
+        1. Word splitting across lines (e.g., "Packageable" + "Element" = "PackageableElement")
+        2. Adding new base classes from the continuation line
+        3. Proper comma separation
+
+        Args:
+            line: The continuation line to process.
+            pending_base_classes: List of base classes parsed so far.
+            last_base_class_name: The last base class name from the previous line.
+
+        Returns:
+            Tuple of (updated base classes list, updated last base class name).
+        """
+        if pending_base_classes is None:
+            pending_base_classes = []
+
+        parts = [part.strip() for part in line.split(",") if part.strip()]
+
+        if not parts:
+            return (pending_base_classes, last_base_class_name)
+
+        # Check if the first part should be appended to the last base class
+        if last_base_class_name and parts:
+            first_part = parts[0]
+
+            # Combine if first part starts with lowercase or is a known continuation fragment
+            if first_part and (first_part[0].islower() or first_part in ["Element", "Referrable", "Packageable"]):
+                combined_name = last_base_class_name + first_part
+                pending_base_classes[-1] = combined_name
+                parts = parts[1:]
+
+        # Add remaining parts as new base classes
+        for part in parts:
+            if part:
+                pending_base_classes.append(part)
+
+        new_last_base = pending_base_classes[-1] if pending_base_classes else None
+        return (pending_base_classes, new_last_base)
 
     def _process_note_line(
         self,
@@ -829,11 +927,11 @@ class PdfParser:
 
     def _process_attribute_header(
         self,
-        pending_attr_name: Optional[str],
-        pending_attr_type: Optional[str],
-        pending_attr_multiplicity: Optional[str],
-        pending_attr_kind: Optional[AttributeKind],
-        pending_attr_note: Optional[str],
+        _pending_attr_name: Optional[str],
+        _pending_attr_type: Optional[str],
+        _pending_attr_multiplicity: Optional[str],
+        _pending_attr_kind: Optional[AttributeKind],
+        _pending_attr_note: Optional[str],
     ) -> Tuple[bool, Optional[str], Optional[str], Optional[str], Optional[AttributeKind], Optional[str]]:
         """Process an attribute header line.
 
@@ -841,11 +939,11 @@ class PdfParser:
             SWR_PARSER_00010: Attribute Extraction from PDF
 
         Args:
-            pending_attr_name: Current pending attribute name.
-            pending_attr_type: Current pending attribute type.
-            pending_attr_multiplicity: Current pending attribute multiplicity.
-            pending_attr_kind: Current pending attribute kind.
-            pending_attr_note: Current pending attribute note.
+            _pending_attr_name: Current pending attribute name (unused, reset to None).
+            _pending_attr_type: Current pending attribute type (unused, reset to None).
+            _pending_attr_multiplicity: Current pending attribute multiplicity (unused, reset to None).
+            _pending_attr_kind: Current pending attribute kind (unused, reset to None).
+            _pending_attr_note: Current pending attribute note (unused, reset to None).
 
         Returns:
             Tuple of (in_attribute_section, pending_attr_name, pending_attr_type,
@@ -1303,6 +1401,7 @@ class PdfParser:
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+            SWR_PARSER_00020: Missing Base Class Logging
 
         This method recursively traverses the inheritance hierarchy to collect
         all ancestors for each class. ARObject is filtered out from the ancestry
@@ -1335,6 +1434,17 @@ class PdfParser:
             visited.add(class_name)
 
             if class_name not in class_registry:
+                # Log warning if a class referenced in bases cannot be found
+                # Only log once per unique missing class to avoid spam
+                if not hasattr(collect_ancestors, '_logged_missing'):
+                    collect_ancestors._logged_missing = set()  # type: ignore[attr-defined]
+                if class_name not in collect_ancestors._logged_missing:  # type: ignore[attr-defined]
+                    logger.warning(
+                        f"Class '{class_name}' referenced in base classes could not be "
+                        f"located in the model during ancestry traversal. "
+                        f"Ancestry analysis may be incomplete."
+                    )
+                    collect_ancestors._logged_missing.add(class_name)  # type: ignore[attr-defined]
                 return set()
 
             cls = class_registry[class_name]
@@ -1365,6 +1475,7 @@ class PdfParser:
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+            SWR_PARSER_00020: Missing Base Class Logging
 
         This method sets the `parent` attribute to the name of the most appropriate
         immediate base class using ancestry-based analysis, and collects root classes
@@ -1411,7 +1522,17 @@ class PdfParser:
                     candidate_bases = [b for b in typ.bases if b != "ARObject"]
 
                     # Filter out bases that don't exist in the model (strict validation)
+                    # Track missing base classes for logging
+                    missing_bases = [b for b in candidate_bases if b not in class_registry]
                     valid_bases = [b for b in candidate_bases if b in class_registry]
+
+                    # Log warning if any base classes could not be located
+                    if missing_bases:
+                        logger.warning(
+                            f"Class '{typ.name}' in package '{pkg.name}' has base classes "
+                            f"that could not be located in the model: {missing_bases}. "
+                            f"Parent resolution may be incomplete."
+                        )
 
                     if valid_bases:
                         # Find the direct parent using ancestry-based analysis

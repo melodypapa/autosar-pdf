@@ -10,6 +10,7 @@ from autosar_pdf2txt.models import (
     AttributeKind,
     AutosarAttribute,
     AutosarClass,
+    AutosarDoc,
     AutosarEnumLiteral,
     AutosarEnumeration,
     AutosarPackage,
@@ -1885,3 +1886,156 @@ class TestAutosarPackage:
 
         assert pkg.has_class("MyClass") is True
         assert pkg.has_class("MyEnum") is False
+
+
+class TestAutosarDoc:
+    """Test cases for AutosarDoc dataclass.
+
+    Requirements:
+        SWR_MODEL_00023: AUTOSAR Document Representation
+    """
+
+    def test_init_with_valid_data(self) -> None:
+        """Test AutosarDoc initialization with valid packages and root classes.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        pkg1 = AutosarPackage(name="Package1")
+        pkg2 = AutosarPackage(name="Package2")
+        root_cls1 = AutosarClass(name="RootClass1", package="M2::Test", is_abstract=False)
+        root_cls2 = AutosarClass(name="RootClass2", package="M2::Test", is_abstract=False)
+
+        doc = AutosarDoc(packages=[pkg1, pkg2], root_classes=[root_cls1, root_cls2])
+
+        assert len(doc.packages) == 2
+        assert len(doc.root_classes) == 2
+        assert doc.packages[0].name == "Package1"
+        assert doc.packages[1].name == "Package2"
+        assert doc.root_classes[0].name == "RootClass1"
+        assert doc.root_classes[1].name == "RootClass2"
+
+    def test_init_duplicate_packages_error(self) -> None:
+        """Test AutosarDoc initialization with duplicate package names raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        pkg1 = AutosarPackage(name="DuplicatePackage")
+        pkg2 = AutosarPackage(name="DuplicatePackage")
+
+        with pytest.raises(ValueError, match="Duplicate package names found"):
+            AutosarDoc(packages=[pkg1, pkg2], root_classes=[])
+
+    def test_init_duplicate_root_classes_error(self) -> None:
+        """Test AutosarDoc initialization with duplicate root class names raises ValueError.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        root_cls1 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=False)
+        root_cls2 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=False)
+
+        with pytest.raises(ValueError, match="Duplicate root class names found"):
+            AutosarDoc(packages=[], root_classes=[root_cls1, root_cls2])
+
+    def test_get_package_found(self) -> None:
+        """Test get_package returns the correct package when found.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        pkg1 = AutosarPackage(name="Package1")
+        pkg2 = AutosarPackage(name="Package2")
+        doc = AutosarDoc(packages=[pkg1, pkg2], root_classes=[])
+
+        result = doc.get_package("Package1")
+
+        assert result is pkg1
+        assert result.name == "Package1"
+
+    def test_get_package_not_found(self) -> None:
+        """Test get_package returns None when package not found.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        pkg1 = AutosarPackage(name="Package1")
+        doc = AutosarDoc(packages=[pkg1], root_classes=[])
+
+        result = doc.get_package("NonExistent")
+
+        assert result is None
+
+    def test_get_root_class_found(self) -> None:
+        """Test get_root_class returns the correct root class when found.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        root_cls1 = AutosarClass(name="RootClass1", package="M2::Test", is_abstract=False)
+        root_cls2 = AutosarClass(name="RootClass2", package="M2::Test", is_abstract=False)
+        doc = AutosarDoc(packages=[], root_classes=[root_cls1, root_cls2])
+
+        result = doc.get_root_class("RootClass1")
+
+        assert result is root_cls1
+        assert result.name == "RootClass1"
+
+    def test_get_root_class_not_found(self) -> None:
+        """Test get_root_class returns None when root class not found.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        root_cls1 = AutosarClass(name="RootClass1", package="M2::Test", is_abstract=False)
+        doc = AutosarDoc(packages=[], root_classes=[root_cls1])
+
+        result = doc.get_root_class("NonExistent")
+
+        assert result is None
+
+    def test_str_returns_summary(self) -> None:
+        """Test __str__ returns document summary.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        pkg1 = AutosarPackage(name="Package1")
+        pkg2 = AutosarPackage(name="Package2")
+        root_cls1 = AutosarClass(name="RootClass1", package="M2::Test", is_abstract=False)
+
+        doc = AutosarDoc(packages=[pkg1, pkg2], root_classes=[root_cls1])
+
+        result = str(doc)
+
+        assert result == "AutosarDoc(2 packages, 1 root classes)"
+
+    def test_repr_returns_detailed_representation(self) -> None:
+        """Test __repr__ returns detailed representation for debugging.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
+
+        doc = AutosarDoc(packages=[pkg], root_classes=[root_cls])
+
+        result = repr(doc)
+
+        assert "AutosarDoc" in result
+        assert "packages=" in result
+        assert "root_classes=" in result
+
+    def test_init_with_empty_lists(self) -> None:
+        """Test AutosarDoc initialization with empty packages and root_classes.
+
+        Requirements:
+            SWR_MODEL_00023: AUTOSAR Document Representation
+        """
+        doc = AutosarDoc(packages=[], root_classes=[])
+
+        assert len(doc.packages) == 0
+        assert len(doc.root_classes) == 0
+        assert str(doc) == "AutosarDoc(0 packages, 0 root classes)"

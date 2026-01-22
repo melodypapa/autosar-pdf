@@ -5,7 +5,15 @@ Test coverage for markdown_writer.py targeting 100%.
 
 from pathlib import Path
 
-from autosar_pdf2txt.models import ATPType, AttributeKind, AutosarAttribute, AutosarClass, AutosarPackage
+from autosar_pdf2txt.models import (
+    ATPType,
+    AttributeKind,
+    AutosarAttribute,
+    AutosarClass,
+    AutosarEnumLiteral,
+    AutosarEnumeration,
+    AutosarPackage,
+)
 from autosar_pdf2txt.writer.markdown_writer import MarkdownWriter
 
 
@@ -322,13 +330,21 @@ class TestMarkdownWriterClassHierarchy:
     """
 
     def test_write_class_hierarchy_empty(self) -> None:
-        """Test writing class hierarchy with no root classes."""
+        """Test writing class hierarchy with no root classes.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
         writer = MarkdownWriter()
         result = writer.write_class_hierarchy([])
         assert result == ""
 
     def test_write_class_hierarchy_single_root(self) -> None:
-        """Test writing class hierarchy with a single root class."""
+        """Test writing class hierarchy with a single root class.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
         root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
         writer = MarkdownWriter()
         result = writer.write_class_hierarchy([root_cls])
@@ -336,7 +352,11 @@ class TestMarkdownWriterClassHierarchy:
         assert "* RootClass" in result
 
     def test_write_class_hierarchy_with_abstract(self) -> None:
-        """Test writing class hierarchy with abstract class."""
+        """Test writing class hierarchy with abstract class.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
         root_cls = AutosarClass(name="AbstractClass", package="M2::Test", is_abstract=True)
         writer = MarkdownWriter()
         result = writer.write_class_hierarchy([root_cls])
@@ -344,7 +364,11 @@ class TestMarkdownWriterClassHierarchy:
         assert "* AbstractClass (abstract)" in result
 
     def test_write_class_hierarchy_with_subclasses(self) -> None:
-        """Test writing class hierarchy with subclasses."""
+        """Test writing class hierarchy with subclasses.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
         root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
         child_cls = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent="RootClass")
         writer = MarkdownWriter()
@@ -354,7 +378,11 @@ class TestMarkdownWriterClassHierarchy:
         assert "  * ChildClass" in result
 
     def test_write_class_hierarchy_multiple_levels(self) -> None:
-        """Test writing class hierarchy with multiple levels."""
+        """Test writing class hierarchy with multiple levels.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
         root_cls = AutosarClass(name="RootClass", package="M2::Test", is_abstract=False)
         child_cls = AutosarClass(name="ChildClass", package="M2::Test", is_abstract=False, parent="RootClass")
         grandchild_cls = AutosarClass(name="GrandchildClass", package="M2::Test", is_abstract=False, parent="ChildClass")
@@ -366,7 +394,11 @@ class TestMarkdownWriterClassHierarchy:
         assert "    * GrandchildClass" in result
 
     def test_write_class_hierarchy_multiple_roots(self) -> None:
-        """Test writing class hierarchy with multiple root classes."""
+        """Test writing class hierarchy with multiple root classes.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
         root1 = AutosarClass(name="Root1", package="M2::Test", is_abstract=False)
         root2 = AutosarClass(name="Root2", package="M2::Test", is_abstract=False)
         writer = MarkdownWriter()
@@ -414,6 +446,22 @@ class TestMarkdownWriterClassHierarchy:
         assert len(classes) == 2
         assert rootcls in classes
         assert subcls in classes
+
+    def test_write_class_hierarchy_with_cycle_detection(self) -> None:
+        """Test write_class_hierarchy detects and handles circular references.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
+        """
+        # Create a class that references itself (self-cycle)
+        cls_self = AutosarClass(name="SelfReferencing", package="M2::Test", is_abstract=False, parent="SelfReferencing")
+
+        writer = MarkdownWriter()
+        result = writer.write_class_hierarchy([cls_self], [cls_self])
+
+        # Should detect the cycle
+        assert "(cycle detected)" in result
+        assert "SelfReferencing" in result
 
 
 class TestMarkdownWriterFiles:
@@ -1295,3 +1343,97 @@ class TestMarkdownWriterFiles:
         assert result == expected
         assert "atpVariation" not in result
         assert "atpMixedString" not in result
+
+    def test_write_packages_with_enumeration(self) -> None:
+        """Test write_packages correctly handles enumerations.
+
+        Requirements:
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+        """
+        from autosar_pdf2txt.models import AutosarEnumeration
+
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        pkg.add_type(enum)
+
+        writer = MarkdownWriter()
+        result = writer.write_packages([pkg])
+
+        # Should show enumeration
+        assert "* TestPackage\n" in result
+        assert "  * MyEnum\n" in result
+
+    def test_write_enumeration_with_note(self) -> None:
+        """Test write_packages correctly handles enumerations with notes.
+
+        Requirements:
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        enum.note = "This is a test enumeration"
+        pkg.add_type(enum)
+
+        writer = MarkdownWriter()
+        result = writer.write_packages([pkg])
+
+        # Should show enumeration
+        assert "* TestPackage\n" in result
+        assert "  * MyEnum\n" in result
+
+    def test_write_enumeration_literals_with_descriptions(self) -> None:
+        """Test write_packages correctly handles enumeration literals with descriptions.
+
+        Requirements:
+            SWR_WRITER_00002: Markdown Package Hierarchy Output
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        enum.enumeration_literals = [
+            AutosarEnumLiteral(name="VALUE1", index=0, description="First value"),
+            AutosarEnumLiteral(name="VALUE2", index=1, description="Second value"),
+        ]
+        pkg.add_type(enum)
+
+        writer = MarkdownWriter()
+        result = writer.write_packages([pkg])
+
+        # Should show enumeration
+        assert "* TestPackage\n" in result
+        assert "  * MyEnum\n" in result
+
+    def test_write_packages_to_files_with_enumeration(self) -> None:
+        """Test write_packages_to_files correctly handles enumerations.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        import tempfile
+
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
+        enum.enumeration_literals = [
+            AutosarEnumLiteral(name="VALUE1", index=0),
+            AutosarEnumLiteral(name="VALUE2", index=1),
+        ]
+        pkg.add_type(enum)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.md"
+            output_path.touch()
+
+            writer = MarkdownWriter()
+            writer.write_packages_to_files([pkg], output_path=output_path)
+
+            # Check that enumeration file was created
+            enum_file = Path(tmpdir) / "TestPackage" / "MyEnum.md"
+            assert enum_file.exists()
+
+            # Check enumeration file content
+            content = enum_file.read_text()
+            assert "# Package: TestPackage" in content
+            assert "## Enumeration" in content
+            assert "**MyEnum**" in content
+            assert "VALUE1" in content
+            assert "VALUE2" in content

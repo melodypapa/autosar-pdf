@@ -28,7 +28,27 @@ python scripts/run_tests.py --unit
 - Check coverage meets ≥95% threshold
 - Report any failures
 
-### 3. Run Quality Checks
+### 3. Validate Test Coverage Per Module
+Analyze coverage report to ensure:
+- **CLI module**: Coverage can be < 100% (acceptable)
+- **All other modules**: Must have 100% coverage
+  - Models (src/autosar_pdf2txt/models/): 100% required
+  - Parser (src/autosar_pdf2txt/parser/): 100% required
+  - Writer (src/autosar_pdf2txt/writer/): 100% required
+
+For modules with < 100% coverage:
+- List uncovered line numbers
+- Identify which requirements are not fully tested
+- Suggest specific test cases to add for uncovered lines
+
+### 4. Verify Requirement-to-Test Coverage
+For each requirement in `docs/requirements/requirements.md`:
+- Check if corresponding unit tests exist
+- Verify tests adequately cover the requirement
+- Report requirements without test coverage
+- Suggest test cases to add for uncovered requirements
+
+### 5. Run Quality Checks
 ```bash
 python -m ruff check src/ tests/
 python -m mypy src/autosar_pdf2txt/
@@ -37,24 +57,33 @@ python -m mypy src/autosar_pdf2txt/
 - Verify type checking passes
 - Report any issues
 
-### 4. Analyze and Report
+### 6. Analyze and Report
 After running validation and checks:
 - Report on synchronization status
 - Highlight any discrepancies found
+- Report modules with < 100% coverage (except CLI)
+- List requirements without test coverage
 - Suggest updates to documentation if needed
+- Suggest test cases to add for missing coverage
 - Confirm all quality gates passed
 
-### 5. Summary Report
+### 7. Summary Report
 Display a summary showing:
 ```
 Component                 Status    Details
 ─────────────────────────────────────────────────
 ID Validation            ✅ Pass    No duplicates
-Tests                    ✅ Pass    272 passed, 97% coverage
+Tests                    ✅ Pass    265 passed, 90% coverage
+Module Coverage:
+  - Models               ⚠️  88%    Need tests for 12 lines
+  - Parser               ⚠️  92%    Need tests for 33 lines
+  - Writer               ⚠️  84%    Need tests for 27 lines
+  - CLI                  ✅  75%    Acceptable (< 100% OK)
+Requirements Coverage   ⚠️  3/65   Requirements without tests: SWR_XYZ
 Linting (Ruff)           ✅ Pass    No errors
 Type Checking (Mypy)     ✅ Pass    No issues
 ─────────────────────────────────────────────────
-Documentation Synchronization: Complete ✅
+Documentation Synchronization: Complete with warnings ⚠️
 ```
 
 ## What This Command Does
@@ -185,6 +214,71 @@ All checks must pass for synchronization to be complete.
 
 ## Examples
 
+### When Coverage Gaps Are Detected
+```
+User: /sync-docs
+System: [Step 1] Validating documentation IDs...
+       [OK] No duplicate IDs found (65 unique IDs)
+
+       [Step 2] Running tests...
+       265 passed, 1 skipped, 90% coverage
+
+       [Step 3] Validating test coverage per module...
+       Module Coverage Analysis:
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       Module              Coverage    Missing Lines    Status
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       models/containers   88%         12 lines         ⚠️  NEED TESTS
+       parser/pdf_parser   92%         33 lines         ⚠️  NEED TESTS
+       writer/markdown_    84%         27 lines         ⚠️  NEED TESTS
+       cli/autosar_cli     75%         23 lines         ✅  ACCEPTABLE
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+       Suggested test cases for missing coverage:
+
+       models/containers (12 lines missing):
+       - test_autosar_package_get_class_nested: Test get_class() with nested packages
+       - test_autosar_package_add_subpackage_duplicate: Test duplicate subpackage detection
+       - test_autosar_doc_init_empty_root_classes: Test AutosarDoc with empty root_classes list
+
+       parser/pdf_parser (33 lines missing):
+       - test_parse_pdf_with_malformed_class_definition: Test error handling for malformed class definitions
+       - test_parse_pdf_duplicate_class_detection: Test detection of duplicate class names
+       - test_parse_pdf_empty_package_handling: Test handling of packages with no classes
+
+       writer/markdown_writer (27 lines missing):
+       - test_write_class_hierarchy_no_all_classes: Test write_class_hierarchy() without all_classes parameter
+       - test_write_packages_empty_packages_list: Test write_packages() with empty packages list
+       - test_collect_classes_from_package_deeply_nested: Test _collect_classes_from_package() with deep nesting
+
+       [Step 4] Verifying requirement-to-test coverage...
+       Requirements without adequate test coverage:
+       - SWR_MODEL_00013: AutosarPackage query methods
+       - SWR_WRITER_00007: Class hierarchy output (partial coverage)
+
+       Suggested test cases to cover requirements:
+       - test_autosar_package_query_methods: Test get_class(), get_subpackage(), has_class(), has_subpackage()
+       - test_write_class_hierarchy_root_classes_only: Test class hierarchy output with only root classes
+
+       [Step 5] Running quality checks...
+       All checks passed!
+
+       Summary:
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       Component              Status    Details
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ID Validation         ✅ Pass    No duplicates
+       Tests                 ✅ Pass    265 passed, 90% coverage
+       Module Coverage       ⚠️         3 modules need tests
+       Requirements Coverage ⚠️         2 requirements partial
+       Linting (Ruff)        ✅ Pass    No errors
+       Type Checking (Mypy)  ✅ Pass    No issues
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+       ⚠️  Action required: Add suggested test cases to achieve 100% coverage
+       for all modules except CLI.
+```
+
 ### After Refactoring
 ```
 User: /sync-docs
@@ -264,6 +358,28 @@ System: Found duplicate test IDs that need to be renumbered.
 - Never change stable requirement IDs
 - Keep maturity levels accurate
 - **CRITICAL**: All requirement and test IDs must be unique - duplicate IDs break traceability
+
+## Test Coverage Requirements
+
+**Module Coverage Standards:**
+- **CLI module**: Coverage < 100% is acceptable (error handling paths may be hard to test)
+- **All other modules**: MUST have 100% coverage
+  - models/ (attributes, base, containers, enums, types)
+  - parser/
+  - writer/
+
+**Requirement Coverage Standards:**
+- Every requirement MUST have corresponding unit tests
+- Tests must adequately cover all acceptance criteria
+- If a requirement exists but lacks test coverage, new tests must be added
+
+**When Coverage Gaps Are Found:**
+- The command will suggest specific test cases to add
+- Each suggestion includes:
+  - Test name following naming conventions
+  - Description of what scenario to test
+  - Which requirement it covers
+- Use these suggestions to guide test development
 
 ## Related Commands
 

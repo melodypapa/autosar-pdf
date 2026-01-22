@@ -43,7 +43,7 @@ def main() -> int:
     parser.add_argument(
         "--include-class-hierarchy",
         action="store_true",
-        help="Include class hierarchy from root classes in the output",
+        help="Generate class inheritance hierarchy and write to a separate file (requires -o/--output)",
     )
     parser.add_argument(
         "-v",
@@ -128,22 +128,36 @@ def main() -> int:
         markdown = writer.write_packages(merged_packages)
 
         # SWR_CLI_00012: CLI Class Hierarchy Flag
-        # Add class hierarchy if requested
+        # Generate class hierarchy if requested
+        class_hierarchy = None
         if args.include_class_hierarchy:
+            logging.info("Generating class hierarchy...")
             # Collect all classes from packages for building hierarchy
             all_classes = []
             for pkg in merged_packages:
-                all_classes.extend(writer._collect_classes_from_package(pkg))
+                classes_from_pkg = writer._collect_classes_from_package(pkg)
+                all_classes.extend(classes_from_pkg)
+
+            logging.info(f"Collected {len(all_classes)} classes from {len(merged_packages)} packages")
+            logging.debug(f"Root classes for hierarchy: {len(merged_root_classes)}")
 
             class_hierarchy = writer.write_class_hierarchy(merged_root_classes, all_classes)
             if class_hierarchy:
-                markdown += "\n\n" + class_hierarchy
+                logging.info(f"Generated class hierarchy for {len(merged_root_classes)} root classes")
 
         # SWR_CLI_00004: CLI Output File Option
         if args.output:
             output_path = Path(args.output)
             output_path.write_text(markdown, encoding="utf-8")
             logging.info(f"Output written to: {args.output}")
+
+            # SWR_CLI_00012: CLI Class Hierarchy Flag
+            # Write class hierarchy to separate file if flag is enabled
+            if class_hierarchy:
+                # Generate hierarchy file name by inserting "-hierarchy" before the extension
+                hierarchy_path = output_path.with_stem(f"{output_path.stem}-hierarchy")
+                hierarchy_path.write_text(class_hierarchy, encoding="utf-8")
+                logging.info(f"Class hierarchy written to: {hierarchy_path}")
 
             # SWR_CLI_00010: CLI Class File Output
             # SWR_CLI_00011: CLI Class Files Flag

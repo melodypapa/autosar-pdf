@@ -14,6 +14,7 @@ class MarkdownWriter:
     Requirements:
         SWR_WRITER_00001: Markdown Writer Initialization
         SWR_WRITER_00005: Directory-Based Class File Output
+        SWR_WRITER_00007: Class Hierarchy Output
 
     The output format uses asterisks (*) for hierarchy with indentation
     to show nesting levels. Each level adds 2 spaces of indentation.
@@ -118,6 +119,9 @@ class MarkdownWriter:
 
     def write_class_hierarchy(self, root_classes: List[AutosarClass], all_classes: Optional[List[AutosarClass]] = None) -> str:
         """Write class hierarchy from root classes to markdown format.
+
+        Requirements:
+            SWR_WRITER_00007: Class Hierarchy Output
 
         Args:
             root_classes: List of root AutosarClass objects (classes with no bases).

@@ -8,11 +8,60 @@ Synchronize requirements, test cases, and source code to ensure consistency acro
 /sync-docs
 ```
 
+## Actions
+
+When the user runs `/sync-docs`, perform the following steps:
+
+### 1. Validate Documentation IDs
+```bash
+python scripts/validate_ids.py
+```
+- Check for duplicate requirement and test IDs
+- Verify all IDs are unique and properly formatted
+- If duplicates found, report them and offer to fix
+
+### 2. Run Tests
+```bash
+python scripts/run_tests.py --unit
+```
+- Ensure all tests pass
+- Check coverage meets ≥95% threshold
+- Report any failures
+
+### 3. Run Quality Checks
+```bash
+python -m ruff check src/ tests/
+python -m mypy src/autosar_pdf2txt/
+```
+- Verify linting passes
+- Verify type checking passes
+- Report any issues
+
+### 4. Analyze and Report
+After running validation and checks:
+- Report on synchronization status
+- Highlight any discrepancies found
+- Suggest updates to documentation if needed
+- Confirm all quality gates passed
+
+### 5. Summary Report
+Display a summary showing:
+```
+Component                 Status    Details
+─────────────────────────────────────────────────
+ID Validation            ✅ Pass    No duplicates
+Tests                    ✅ Pass    272 passed, 97% coverage
+Linting (Ruff)           ✅ Pass    No errors
+Type Checking (Mypy)     ✅ Pass    No issues
+─────────────────────────────────────────────────
+Documentation Synchronization: Complete ✅
+```
+
 ## What This Command Does
 
 This command analyzes the source code implementation and updates the requirements and test case documentation to match, ensuring traceability and accuracy.
 
-## Steps
+## Detailed Steps (Reference)
 
 ### 1. Analyze Source Code
 - Scan source files to identify:

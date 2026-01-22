@@ -15,6 +15,7 @@ def main() -> int:
         SWR_CLI_00001: CLI Entry Point
         SWR_CLI_00010: CLI Class File Output
         SWR_CLI_00011: CLI Class Files Flag
+        SWR_CLI_00012: CLI Class Hierarchy Flag
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -126,6 +127,7 @@ def main() -> int:
         writer = MarkdownWriter()
         markdown = writer.write_packages(merged_packages)
 
+        # SWR_CLI_00012: CLI Class Hierarchy Flag
         # Add class hierarchy if requested
         if args.include_class_hierarchy:
             # Collect all classes from packages for building hierarchy

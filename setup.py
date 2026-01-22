@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="autosar-pdf2txt",
-    version="0.11.0",
+    version="0.12.0",
     author="Melodypapa",
     author_email="melodypapa@outlook.com",
     description="A Python package to extract AUTOSAR model from PDF files to markdown",
@@ -36,6 +36,7 @@ setup(
     entry_points={
         "console_scripts": [
             "autosar-extract=autosar_pdf2txt.cli.autosar_cli:main",
+            "autosar-extract-table=autosar_pdf2txt.cli.extract_tables_cli:main",
         ],
     },
 )

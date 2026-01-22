@@ -71,6 +71,37 @@ class TestPdfParser:
         assert len(class_defs) == 1
         assert class_defs[0].base_classes == ["BaseClass1", "BaseClass2", "BaseClass3"]
 
+    def test_extract_class_with_multiline_base_classes(self) -> None:
+        """Test extracting class with multi-line base classes.
+
+        SWUT_PARSER_00021: Test Extracting Class with Multi-Line Base Classes
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00021: Multi-Line Base Class Parsing
+        """
+        parser = PdfParser()
+        text = """
+        Class CanTpConfig
+        Package M2::AUTOSARTemplates::SystemTemplate::TransportProtocols
+        Base ARObject,CollectableElement,FibexElement,Identifiable,MultilanguageReferrable,Packageable
+        Element,Referrable,TpConfig
+        Note This is a test class.
+        """
+        class_defs = parser._parse_class_text(text)
+        assert len(class_defs) == 1
+        can_tp = class_defs[0]
+
+        # Should include all base classes from both lines
+        assert "ARObject" in can_tp.base_classes
+        assert "CollectableElement" in can_tp.base_classes
+        assert "FibexElement" in can_tp.base_classes
+        assert "Identifiable" in can_tp.base_classes
+        assert "MultilanguageReferrable" in can_tp.base_classes
+        assert "PackageableElement" in can_tp.base_classes  # Combined from Packageable + Element
+        assert "Referrable" in can_tp.base_classes
+        assert "TpConfig" in can_tp.base_classes  # Critical: TpConfig should be in the list
+
     def test_extract_class_with_note(self) -> None:
         """Test extracting class with note.
 
@@ -1609,6 +1640,11 @@ class TestPdfParser:
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        Note:
+            When base classes cannot be located in the model, warnings are logged:
+            - "Class 'X' in package 'Y' has base classes that could not be located..."
+            - "Class 'Z' referenced in base classes could not be located during ancestry traversal..."
         """
         parser = PdfParser()
 
@@ -1966,6 +2002,12 @@ class TestPdfParser:
         - Given a class with bases [ExistingClass, NonExistentBase]
         - When NonExistentBase doesn't exist in the model
         - Then parent should be "ExistingClass" (the only valid base)
+
+        Note:
+            A warning is logged for the missing base class:
+            "Class 'DerivedClass' in package 'Derived' has base classes that could
+            not be located in the model: ['NonExistentBase']. Parent resolution may
+            be incomplete."
         """
         parser = PdfParser()
 

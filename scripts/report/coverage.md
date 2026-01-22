@@ -16,7 +16,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 |-------------|-----------|---------|---------|----------|
 | ✓ `__init__.py` | 5 | 5 | 0 | 100.0% |
 | ✓ `cli/__init__.py` | 2 | 2 | 0 | 100.0% |
-| ✗ `cli/autosar_cli.py` | 92 | 69 | 23 | 75.0% |
+| ✗ `cli/autosar_cli.py` | 93 | 70 | 23 | 75.3% |
 | ✓ `models/__init__.py` | 6 | 6 | 0 | 100.0% |
 | ✓ `models/attributes.py` | 34 | 34 | 0 | 100.0% |
 | ✓ `models/base.py` | 14 | 14 | 0 | 100.0% |

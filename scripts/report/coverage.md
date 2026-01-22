@@ -4,9 +4,9 @@ COVERAGE REPORT - MARKDOWN FORMAT
 
 ## Overall Coverage: 93.6%
 
-**Total Statements**: 918
+**Total Statements**: 919
 
-**Statements Covered**: 859
+**Statements Covered**: 860
 
 **Statements Missing**: 59
 
@@ -16,7 +16,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 |-------------|-----------|---------|---------|----------|
 | ✓ `__init__.py` | 5 | 5 | 0 | 100.0% |
 | ✓ `cli/__init__.py` | 2 | 2 | 0 | 100.0% |
-| ✗ `cli/autosar_cli.py` | 92 | 69 | 23 | 75.0% |
+| ✗ `cli/autosar_cli.py` | 93 | 70 | 23 | 75.3% |
 | ✓ `models/__init__.py` | 6 | 6 | 0 | 100.0% |
 | ✓ `models/attributes.py` | 34 | 34 | 0 | 100.0% |
 | ✓ `models/base.py` | 14 | 14 | 0 | 100.0% |
@@ -32,7 +32,7 @@ COVERAGE REPORT - MARKDOWN FORMAT
 
 | Source File | Coverage | Missing Statements |
 |-------------|----------|-------------------|
-| `cli/autosar_cli.py` | 75.0% (69/92) | 23 stmts (25.0%) |
+| `cli/autosar_cli.py` | 75.3% (70/93) | 23 stmts (24.7%) |
 | `parser/pdf_parser.py` | 92.4% (403/436) | 33 stmts (7.6%) |
 | `writer/markdown_writer.py` | 98.2% (162/165) | 3 stmts (1.8%) |
 

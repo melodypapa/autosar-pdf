@@ -63,6 +63,10 @@ def main() -> int:
         format="%(levelname)s: %(message)s",
     )
 
+    # Suppress pdfminer warnings about invalid color values in PDF files
+    # These warnings don't affect text extraction functionality
+    logging.getLogger("pdfminer").setLevel(logging.ERROR)
+
     # Validate and collect input paths (files and directories)
     # SWR_CLI_00006: CLI Input Validation
     pdf_paths = []

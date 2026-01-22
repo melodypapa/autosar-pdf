@@ -260,7 +260,7 @@ class TestAutosarCli:
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
              patch("builtins.print"):
             # Make parser raise exception
-            mock_parser.return_value.parse_pdf.side_effect = Exception("Parse error")
+            mock_parser.return_value.parse_pdfs.side_effect = Exception("Parse error")
             mock_logging.error = MagicMock()
             mock_logging.exception = MagicMock()
             mock_logging.basicConfig = MagicMock()
@@ -296,7 +296,7 @@ class TestAutosarCli:
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("builtins.print"):
             # Make parser raise exception
-            mock_parser.return_value.parse_pdf.side_effect = Exception("Parse error")
+            mock_parser.return_value.parse_pdfs.side_effect = Exception("Parse error")
             mock_logging.error = MagicMock()
             mock_logging.exception = MagicMock()
 

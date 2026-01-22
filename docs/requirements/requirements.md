@@ -716,23 +716,174 @@ This requirement ensures that enumeration literal extraction is scoped correctly
 
 **Maturity**: accept
 
-**Description**: After parsing all classes from a PDF file and building the AUTOSAR class hierarchy tree, the system shall automatically set the `parent` attribute for each class to reference the correct parent `AutosarClass` object.
+**Description**: After parsing all classes and building the AUTOSAR class hierarchy tree, the system shall automatically set the `parent` attribute for each class to reference the actual direct parent `AutosarClass` object using ancestry-based analysis.
 
 The system shall:
-1. After building the complete package hierarchy with all `AutosarClass` objects
+1. Build complete inheritance graph data structures:
+   - **Class Registry**: `Dict[str, AutosarClass]` for O(1) class lookup by name
+   - **Ancestry Cache**: `Dict[str, Set[str]]` mapping each class to all its ancestors
+   - Recursively collect ancestors for each class by following its bases
+   - Filter out ARObject from ancestry cache (implicit root)
+
 2. For each class that has a non-empty `bases` list:
-   - Search through all packages to find the parent `AutosarClass` object by name
-   - Set the `parent` attribute to reference the first base class in the `bases` list
-   - If the parent class is not found in any package, leave `parent` as None
-3. For classes with an empty `bases` list, set `parent` to None (root classes)
-4. Process classes in dependency order to ensure parent classes are resolved before child classes
+   - Filter out "ARObject" from the `bases` list (ARObject is the implicit root of all AUTOSAR classes)
+   - Filter out bases that don't exist in the model (strict validation)
+   - If no bases remain after filtering → parent = None
+   - For each remaining base, check if it's an ancestor of any OTHER base:
+     - If Base2 is in Base1's ancestry → Base1 is an ancestor, NOT direct parent
+   - The direct parent is the base that is NOT an ancestor of any other base
+   - If multiple candidates exist, pick the last one (backward compatibility)
+
+3. For classes with only "ARObject" in their bases list:
+   - Set `parent` attribute to "ARObject" (they inherit directly from the root)
+   - These classes are NOT root classes (they have a parent)
+
+4. Only classes with an empty `bases` list are considered root classes (ARObject itself)
+
+5. Process all classes after all PDFs have been parsed to ensure complete model is available
+
+**Ancestry-Based Parent Selection Algorithm**:
+
+The critical insight is that in a base classes list like `[ClassA, ClassB, ClassC]`, some bases may be ancestors (not direct parents). The algorithm must build the complete inheritance hierarchy and traverse it to find the **ACTUAL direct parent**.
+
+**Example 1: Identifying Direct Parent vs Ancestor**
+```
+Hierarchy:
+  ARObject
+    ├── ClassA
+    │   └── ClassB (child of ClassA)
+    └── ClassC (sibling of ClassA)
+
+ClassD bases: [ClassA, ClassB, ClassC]
+
+Analysis:
+- ClassB is an ancestor (child of ClassA), NOT direct parent
+- ClassA is an ancestor (parent of ClassB), NOT direct parent
+- ClassC is a direct parent (not an ancestor of any other base)
+
+Result: ClassD.parent = "ClassC" (actual direct parent)
+```
+
+**Example 2: Deep Hierarchy Traversal**
+```
+Hierarchy:
+  ARObject → Level1 → Level2 → Level3 → Level4
+
+DerivedWithMultipleBases bases: [Level1, Level2, Level3, Level4]
+
+Analysis:
+- Level4 is the most recent (direct parent)
+- Level1, Level2, Level3 are all ancestors of Level4
+- Algorithm filters out ancestors, selects Level4
+
+Result: DerivedWithMultipleBases.parent = "Level4"
+```
+
+**Example 3: Missing Base Class Handling (Strict Validation)**
+```
+ExistingClass in model
+NonExistentBase NOT in model
+
+DerivedClass bases: [ExistingClass, NonExistentBase]
+
+Analysis:
+- Filter out NonExistentBase (doesn't exist in model)
+- Only ExistingClass remains as valid base
+- ExistingClass becomes the direct parent
+
+Result: DerivedClass.parent = "ExistingClass"
+```
+
+**Root Class Definition**:
+- Root classes are those with NO base classes (empty `bases` list)
+- Typically only ARObject itself is a root class
+- ARObject has `parent = None` and `bases = []`
+- Classes with only ARObject as base have `parent = "ARObject"` (they're children of ARObject, not roots)
+
+**Backward Compatibility**:
+- For simple single inheritance, behavior is unchanged (parent is the only base)
+- For multiple independent bases (no ancestry relationships), picks last base
+- For complex hierarchies with ancestry relationships, correctly identifies direct parent
 
 This requirement enables:
-- Automatic parent-child relationship establishment during parsing
-- Direct object reference navigation from child to parent without searching
+- Automatic parent-child relationship establishment with ancestry-based parent selection
+- Distinguishing between direct parents and ancestors in complex inheritance hierarchies
+- Correct hierarchy representation even with multiple inheritance and deep hierarchies
 - Support for traversing the complete inheritance hierarchy by following parent references
+- Strict validation to handle missing base classes gracefully
 
-**Note**: This requirement complements SWR_MODEL_00022 (AUTOSAR Class Parent Attribute) by describing how the `parent` attribute is automatically populated during PDF parsing.
+**Note**: This requirement complements SWR_MODEL_00022 (AUTOSAR Class Parent Attribute) by describing how the `parent` attribute is automatically populated during PDF parsing using ancestry analysis to find the actual direct parent (not just picking a base from the list).
+
+---
+
+#### SWR_PARSER_00018
+**Title**: Multiple PDF Parsing with Complete Model Resolution
+
+**Maturity**: accept
+
+**Description**: When parsing multiple PDF files, the system shall extract all class definitions from all PDFs before building the package hierarchy and resolving parent/children relationships, to ensure complete model analysis.
+
+The system shall:
+1. When parsing multiple PDF files:
+   - Extract all class definitions from all PDF files first (without resolving parent/children)
+   - Accumulate all class definitions into a single list
+   - Build the complete package hierarchy once from all accumulated class definitions
+   - Resolve parent/children relationships once on the complete model
+2. Ensure that parent classes are found even if they are defined in later PDFs
+3. Support both single-PDF parsing (`parse_pdf()`) and multi-PDF parsing (`parse_pdfs()`)
+4. Return a single `AutosarDoc` containing the complete merged model
+
+**Workflow**:
+- **Single PDF**: parse_pdf() → extract classes → build hierarchy → resolve parents → return AutosarDoc
+- **Multiple PDFs**: parse_pdfs() → extract all classes → build complete hierarchy → resolve parents once → return AutosarDoc
+
+**Rationale**:
+- Parent/children relationships cannot be correctly resolved if only partial model is available
+- A class in PDF1 may have a parent defined in PDF2, which would be missed with per-PDF resolution
+- Resolving after all PDFs ensures complete and accurate inheritance hierarchy
+- Prevents missing parent references due to parse order dependencies
+
+This requirement enables:
+- Correct parent/children resolution across multiple PDF files
+- Complete model analysis regardless of PDF parse order
+- Accurate inheritance hierarchy representation
+- Support for large AUTOSAR specifications split across multiple PDFs
+
+**Note**: This requirement works with SWR_PARSER_00017 (AUTOSAR Class Parent Resolution) to ensure parent/children are resolved on the complete model rather than partial per-PDF models.
+
+---
+
+#### SWR_PARSER_00019
+**Title**: PDF Library Warning Suppression
+
+**Maturity**: accept
+
+**Description**: The system shall suppress pdfplumber warnings that do not affect parsing functionality to prevent console noise from invalid PDF specifications.
+
+The system shall:
+1. Suppress pdfplumber warnings related to invalid color values and other non-critical PDF specification issues
+2. Use Python's `warnings` module to filter pdfplumber warnings during PDF extraction
+3. Only suppress warnings that do not affect the correctness of AUTOSAR model extraction
+4. Allow critical errors (exceptions) to propagate normally
+
+**Examples of Suppressed Warnings**:
+- "Cannot set gray non-stroke color because /'P227' is an invalid float value"
+- Invalid color space warnings
+- Font rendering warnings (when they don't affect text extraction)
+- Other pdfplumber/internal PDF specification warnings that don't affect parsing results
+
+**Rationale**:
+- Many AUTOSAR PDFs have minor PDF specification errors that don't affect text extraction
+- These warnings create unnecessary console noise and may confuse users
+- The extracted AUTOSAR model is still correct despite these warnings
+- Users should only see warnings and errors that affect the actual parsing results
+
+**Implementation**:
+- Use `warnings.filterwarnings()` to suppress pdfplumber warnings
+- Apply filtering in the `_extract_with_pdfplumber()` method
+- Ensure actual parsing errors (exceptions) are not suppressed
+
+This requirement ensures a clean user experience while maintaining correct parsing functionality.
 
 ---
 
@@ -897,10 +1048,13 @@ The ATP Type section shall:
 **Maturity**: accept
 
 **Description**: The CLI shall provide progress feedback via stderr messages indicating:
-- PDF files being parsed
-- Number of top-level packages found per PDF
-- Total number of packages processed
+- Number of PDF files being processed
+- Total number of top-level packages found
+- Total number of root classes found
+- Package names in verbose mode
 - Output file location when applicable
+
+**Implementation Note**: The CLI uses `parse_pdfs()` to parse all PDF files at once, then resolves parent/children relationships on the complete model. This ensures correct hierarchy representation across all PDFs regardless of parse order.
 
 ---
 
@@ -948,10 +1102,12 @@ The ATP Type section shall:
 **Description**: The CLI shall support a `--include-class-hierarchy` flag to enable generation of class inheritance hierarchy in a separate markdown file. When this flag is specified along with the `-o` / `--output` option, the system shall:
 - Collect all classes from parsed packages
 - Generate a class hierarchy section showing inheritance relationships from root classes
-- Write the class hierarchy to a separate markdown file named `<output-file>-hierarchy.md`
+- Write the class hierarchy to a separate markdown file named `<package_name>_hierarchy.md` (with hyphens replaced by underscores)
 - Not modify the main package hierarchy output file
 
-The separate hierarchy file shall be created in the same directory as the main output file, with the filename generated by inserting "-hierarchy" before the file extension.
+The separate hierarchy file shall be created in the same directory as the main output file, with the filename generated by replacing hyphens with underscores in the output file stem and appending "_hierarchy" before the file extension.
+
+**Example**: If the output file is `autosar-models.md`, the hierarchy file will be named `autosar_models_hierarchy.md`.
 
 ---
 

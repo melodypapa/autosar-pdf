@@ -100,36 +100,28 @@ def main() -> int:
         return 1
 
     try:
-        # Parse all PDFs
+        # Parse all PDFs using parse_pdfs() to ensure parent/child relationships
+        # are resolved after all models are loaded (not per-PDF)
         pdf_parser = PdfParser()
-        all_docs = []
 
-        for pdf_path in pdf_paths:
-            # SWR_CLI_00007: CLI Progress Feedback
-            logging.info(f"Parsing PDF: {pdf_path}")
-            logging.debug(f"  Full path: {pdf_path.absolute()}")
-            doc = pdf_parser.parse_pdf(str(pdf_path))
-            all_docs.append(doc)
-            logging.info(f"  Found {len(doc.packages)} top-level packages")
-            logging.info(f"  Found {len(doc.root_classes)} root classes")
-            if args.verbose:
-                for pkg in doc.packages:
-                    logging.debug(f"    - {pkg.name}")
-
-        # Merge all documents into a single document
         # SWR_CLI_00007: CLI Progress Feedback
-        merged_packages = []
-        merged_root_classes = []
-        for doc in all_docs:
-            merged_packages.extend(doc.packages)
-            merged_root_classes.extend(doc.root_classes)
+        logging.info(f"Parsing {len(pdf_paths)} PDF file(s)...")
 
-        logging.info(f"Total: {len(merged_packages)} top-level packages")
-        logging.info(f"Total: {len(merged_root_classes)} root classes")
+        pdf_path_strings = [str(pdf_path) for pdf_path in pdf_paths]
+
+        # Parse all PDFs at once - parent/children resolution happens on complete model
+        doc = pdf_parser.parse_pdfs(pdf_path_strings)
+
+        logging.info(f"Total: {len(doc.packages)} top-level packages")
+        logging.info(f"Total: {len(doc.root_classes)} root classes")
+
+        if args.verbose:
+            for pkg in doc.packages:
+                logging.debug(f"  - {pkg.name}")
 
         # Write to markdown
         writer = MarkdownWriter()
-        markdown = writer.write_packages(merged_packages)
+        markdown = writer.write_packages(doc.packages)
 
         # SWR_CLI_00012: CLI Class Hierarchy Flag
         # Generate class hierarchy if requested
@@ -138,16 +130,16 @@ def main() -> int:
             logging.info("Generating class hierarchy...")
             # Collect all classes from packages for building hierarchy
             all_classes = []
-            for pkg in merged_packages:
+            for pkg in doc.packages:
                 classes_from_pkg = writer._collect_classes_from_package(pkg)
                 all_classes.extend(classes_from_pkg)
 
-            logging.info(f"Collected {len(all_classes)} classes from {len(merged_packages)} packages")
-            logging.debug(f"Root classes for hierarchy: {len(merged_root_classes)}")
+            logging.info(f"Collected {len(all_classes)} classes from {len(doc.packages)} packages")
+            logging.debug(f"Root classes for hierarchy: {len(doc.root_classes)}")
 
-            class_hierarchy = writer.write_class_hierarchy(merged_root_classes, all_classes)
+            class_hierarchy = writer.write_class_hierarchy(doc.root_classes, all_classes)
             if class_hierarchy:
-                logging.info(f"Generated class hierarchy for {len(merged_root_classes)} root classes")
+                logging.info(f"Generated class hierarchy for {len(doc.root_classes)} root classes")
 
         # SWR_CLI_00004: CLI Output File Option
         if args.output:
@@ -158,8 +150,9 @@ def main() -> int:
             # SWR_CLI_00012: CLI Class Hierarchy Flag
             # Write class hierarchy to separate file if flag is enabled
             if class_hierarchy:
-                # Generate hierarchy file name by inserting "-hierarchy" before the extension
-                hierarchy_path = output_path.with_stem(f"{output_path.stem}-hierarchy")
+                # Generate hierarchy file name: <package_name>_hierarchy
+                # Replace hyphens with underscores in the package name
+                hierarchy_path = output_path.with_stem(f"{output_path.stem.replace('-', '_')}_hierarchy")
                 hierarchy_path.write_text(class_hierarchy, encoding="utf-8")
                 logging.info(f"Class hierarchy written to: {hierarchy_path}")
 
@@ -167,7 +160,7 @@ def main() -> int:
             # SWR_CLI_00011: CLI Class Files Flag
             # Write each class to separate files if flag is enabled
             if args.include_class_details:
-                writer.write_packages_to_files(merged_packages, output_path=output_path)
+                writer.write_packages_to_files(doc.packages, output_path=output_path)
                 logging.info(f"Class files written to directory: {output_path.parent}")
         else:
             print(markdown, end="")

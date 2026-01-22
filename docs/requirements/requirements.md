@@ -922,23 +922,28 @@ This requirement enables users to identify and resolve incomplete or incorrect A
 ---
 
 #### SWR_PARSER_00021
-**Title**: Multi-Line Base Class Parsing
+**Title**: Multi-Line Attribute Parsing for AutosarClass
 
 **Maturity**: accept
 
-**Description**: The system shall handle multi-line base class lists in PDF class definitions to ensure complete extraction of all base classes.
+**Description**: The system shall handle multi-line parsing for various AutosarClass attributes in PDF class definitions to ensure complete extraction of all attribute values that span multiple lines.
 
 The system shall:
-1. Detect when base class lists span multiple lines in the PDF due to table formatting
-2. Recognize continuation lines that:
-   - Come immediately after a "Base " line
-   - Do not match any known pattern (Class, Primitive, Enumeration, Package, Subclasses, Note, Attribute, etc.)
+1. Detect when AutosarClass attribute lists span multiple lines in the PDF due to table formatting
+2. Apply multi-line parsing to the following class attributes:
+   - **Base classes**: List of parent class names (comma-separated)
+   - **Aggregated by**: List of class names that aggregate this class (comma-separated)
+   - **Subclasses**: List of child class names (comma-separated)
+   - Any other comma-separated class reference attributes that may be added in the future
+3. For each attribute, recognize continuation lines that:
+   - Come immediately after the attribute header line (e.g., "Base ", "Aggregated by ", "Subclasses ")
+   - Do not match any known pattern (Class, Primitive, Enumeration, Package, Note, Attribute, etc.)
    - Look like comma-separated class names (contain commas or start with continuation of previous line)
-3. Concatenate continuation lines with the base class list
-4. Handle word splitting across lines (e.g., "Packageable" at end of line + "Element" at start of next line = "PackageableElement")
-5. Stop continuation when encountering another known pattern (Note, Subclasses, Attribute, Class, Primitive, Enumeration, Package)
+4. Concatenate continuation lines with the attribute list
+5. Handle word splitting across lines (e.g., "Packageable" at end of line + "Element" at start of next line = "PackageableElement")
+6. Stop continuation when encountering another known pattern (Note, Attribute, Class, Primitive, Enumeration, Package, or another attribute header)
 
-**Example from AUTOSAR_CP_TPS_SystemTemplate.pdf**:
+**Example 1: Multi-Line Base Classes (from AUTOSAR_CP_TPS_SystemTemplate.pdf)**:
 ```
 Class CanTpConfig
 Package M2::AUTOSARTemplates::SystemTemplate::TransportProtocols
@@ -957,30 +962,44 @@ Without multi-line parsing, only the first line is read, resulting in:
 - Missing: `TpConfig` (the actual parent!)
 
 With multi-line parsing, the complete base list is:
-- ARObject
-- CollectableElement
-- FibexElement
-- Identifiable
-- MultilanguageReferrable
+- ARObject, CollectableElement, FibexElement, Identifiable, MultilanguageReferrable
 - PackageableElement (combined from "Packageable" + "Element")
-- Referrable
-- TpConfig (critical for parent resolution)
+- Referrable, TpConfig (critical for parent resolution)
+
+**Example 2: Multi-Line Aggregated By**:
+```
+Class SwDataDefProps
+Package M2::AUTOSAR::DataTypes
+Aggregated by ApplicationSwComponentPrototype,InternalBehavior,Prototype,SwComponent
+Type,Trigger,SwDataDefPropsConditional
+```
+
+The aggregated by list wraps across two lines:
+- Line 1: `Aggregated by ApplicationSwComponentPrototype,InternalBehavior,Prototype,SwComponent`
+- Line 2: `Type,Trigger,SwDataDefPropsConditional` (continuation)
+
+Without multi-line parsing, only the first line is read, missing:
+- SwComponentType (should combine "SwComponent" + "Type")
+- Trigger
+- SwDataDefPropsConditional
 
 **Rationale**:
-- PDF table formatting often causes base class lists to wrap across multiple lines
-- Missing base classes leads to incorrect parent resolution
+- PDF table formatting often causes attribute lists to wrap across multiple lines
+- Missing attribute values leads to incomplete model representation
 - Word splitting across line boundaries must be handled correctly (e.g., "Packageable" + "Element" = "PackageableElement")
-- Without TpConfig in the base list, CanTpConfig.parent would be incorrectly set to FibexElement instead of TpConfig
+- Without complete base class lists, parent resolution fails (e.g., CanTpConfig.parent would be incorrectly set)
+- Without complete "aggregated by" lists, aggregation relationships are incomplete
 
 **Implementation**:
-- Track state when parsing base class section (`in_base_class_section` flag)
-- Maintain `pending_base_classes` list for continuation
-- Track `last_base_class_name` to handle word splitting across lines
+- Track state when parsing each attribute section (generalized `in_attribute_section` flag)
+- For each attribute type, maintain a pending list for continuation
+- Track `last_item_name` to handle word splitting across lines
 - Detect continuation lines by checking if line doesn't match known patterns
 - Combine split words when first word of continuation line starts with lowercase or is a known continuation fragment
-- Finalize base class list when hitting Note, Subclasses, Attribute, or class definition patterns
+- Finalize attribute list when hitting Note, Attribute section, or class definition patterns
+- Apply the same continuation logic to all comma-separated class reference attributes
 
-This requirement ensures correct parent resolution by guaranteeing that all base classes are extracted from multi-line base class lists in PDFs.
+This requirement ensures complete model representation by guaranteeing that all attribute values are extracted from multi-line attribute lists in PDFs, including base classes, aggregated by, subclasses, and future comma-separated class reference attributes.
 
 ---
 

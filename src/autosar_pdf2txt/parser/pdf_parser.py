@@ -34,6 +34,7 @@ class ClassDefinition:
         SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         SWR_MODEL_00024: AUTOSAR Primitive Type Representation
         SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+        SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
 
     Attributes:
         name: The name of the class, enumeration, or primitive type.
@@ -42,6 +43,7 @@ class ClassDefinition:
         atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
         base_classes: List of base class names.
         subclasses: List of subclass names.
+        aggregated_by: List of class names that aggregate this class.
         note: Documentation note extracted from the Note column.
         attributes: Dictionary of class attributes (key: attribute name, value: AutosarAttribute).
         is_enumeration: Whether this is an enumeration type (True) or a class type (False).
@@ -55,6 +57,7 @@ class ClassDefinition:
     atp_type: ATPType = ATPType.NONE
     base_classes: List[str] = field(default_factory=list)
     subclasses: List[str] = field(default_factory=list)
+    aggregated_by: List[str] = field(default_factory=list)
     note: Optional[str] = None
     attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
     is_enumeration: bool = False
@@ -84,12 +87,14 @@ class PdfParser:
     # SWR_PARSER_00010: Attribute Extraction from PDF
     # SWR_PARSER_00012: Multi-Line Attribute Handling
     # SWR_PARSER_00014: Enumeration Literal Header Recognition
+    # SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
     CLASS_PATTERN = re.compile(r"^Class\s+(.+?)(?:\s*\((abstract)\))?\s*$")
     PRIMITIVE_PATTERN = re.compile(r"^Primitive\s+(.+)$")
     ENUMERATION_PATTERN = re.compile(r"^Enumeration\s+(.+)$")
     PACKAGE_PATTERN = re.compile(r"^Package\s+(M2::)?(.+)$")
     BASE_PATTERN = re.compile(r"^Base\s+(.+)$")
     SUBCLASS_PATTERN = re.compile(r"^Subclasses\s+(.+)$")
+    AGGREGATED_BY_PATTERN = re.compile(r"^Aggregated\s+by\s+(.+)$")
     NOTE_PATTERN = re.compile(r"^Note\s+(.+)$")
     ATTRIBUTE_HEADER_PATTERN = re.compile(r"^Attribute\s+Type\s+Mult\.\s+Kind\s+Note$")
     ENUMERATION_LITERAL_HEADER_PATTERN = re.compile(r"^Literal\s+Description$")
@@ -98,6 +103,15 @@ class PdfParser:
     ATP_MIXED_STRING_PATTERN = re.compile(r"<<atpMixedString>>")
     ATP_VARIATION_PATTERN = re.compile(r"<<atpVariation>>")
     ATP_MIXED_PATTERN = re.compile(r"<<atpMixed>>")
+
+    # Class constants for filtering and continuation detection
+    # SWR_PARSER_00012: Multi-Line Attribute Handling
+    # SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+    CONTINUATION_TYPES = {"data", "If", "has", "to", "of", "CP", "atpSplitable"}
+    FRAGMENT_NAMES = {"Element", "SizeProfile", "intention", "ImplementationDataType"}
+    PARTIAL_NAMES = {"isStructWith"}
+    CONTINUATION_FRAGMENTS = {"Element", "Referrable", "Packageable", "Type", "Profile"}
+    REFERENCE_INDICATORS = {"Prototype", "Ref", "Dependency", "Trigger", "Mapping", "Group", "Set", "List", "Collection"}
 
     def __init__(self) -> None:
         """Initialize the PDF parser.
@@ -140,29 +154,9 @@ class PdfParser:
         Returns:
             True if the attribute type appears to be a reference type, False otherwise.
 
-        Reference types typically end with common AUTOSAR reference patterns:
-        - Prototype (e.g., PPortPrototype, RPortPrototype)
-        - Ref (e.g., InstanceRef)
-        - Dependency (e.g., BswModuleDependency)
-        - Trigger (e.g., Trigger)
-        - Mapping (e.g., Mapping)
-        - Group (e.g., ModeDeclarationGroup)
-        - Set (e.g., ModeDeclarationGroupSet)
-        - List (e.g., List)
-        - Collection (e.g., Collection)
+        Reference types typically end with common AUTOSAR reference patterns.
         """
-        reference_indicators = [
-            "Prototype",
-            "Ref",
-            "Dependency",
-            "Trigger",
-            "Mapping",
-            "Group",
-            "Set",
-            "List",
-            "Collection",
-        ]
-        return any(indicator in attr_type for indicator in reference_indicators)
+        return any(indicator in attr_type for indicator in self.REFERENCE_INDICATORS)
 
     def _is_broken_attribute_fragment(
         self, attr_name: str, attr_type: str
@@ -179,25 +173,10 @@ class PdfParser:
         Returns:
             True if this is a broken fragment that should be filtered out, False otherwise.
         """
-        # Continuation types that appear as attribute types in broken fragments
-        continuation_types = ["data", "If", "has", "to"]
-
-        # Fragment names that appear as attribute names in broken fragments
-        fragment_names = [
-            "Element",
-            "SizeProfile",
-            "intention",
-            "ImplementationDataType",
-        ]
-
-        # Partial attribute names that are incomplete
-        # Note: These are only filtered if they don't have proper type information
-        partial_names = ["isStructWith"]  # Removed "dynamicArray" - it's a valid attribute
-
         return (
-            attr_type in continuation_types
-            or attr_name in fragment_names
-            or attr_name in partial_names
+            attr_type in self.CONTINUATION_TYPES
+            or attr_name in self.FRAGMENT_NAMES
+            or attr_name in self.PARTIAL_NAMES
         )
 
     def _is_valid_package_path(self, package_path: str) -> bool:
@@ -393,16 +372,13 @@ class PdfParser:
             SWR_PARSER_00015: Enumeration Literal Extraction from PDF
             SWR_PARSER_00016: Enumeration Literal Section Termination
             SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
 
         Args:
             text: The extracted text from PDF.
 
         Returns:
             List of ClassDefinition objects.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_PARSER_00021: Multi-Line Base Class Parsing
         """
         class_defs: List[ClassDefinition] = []
         lines = text.split("\n")
@@ -410,10 +386,18 @@ class PdfParser:
         current_class: Optional[ClassDefinition] = None
         in_attribute_section = False
         in_enumeration_literal_section = False
-        in_base_class_section = False
         class_definition_complete = False
-        pending_base_classes: Optional[List[str]] = None
-        last_base_class_name: Optional[str] = None
+
+        # SWR_PARSER_00021: Generic tracking for class list attributes
+        # Maps section names to their pending lists and last item names
+        pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str]]] = {
+            "base_classes": (None, None),
+            "aggregated_by": (None, None),
+            "subclasses": (None, None),
+        }
+        in_class_list_section: Optional[str] = None
+
+        # Attribute parsing state
         pending_attr_name: Optional[str] = None
         pending_attr_type: Optional[str] = None
         pending_attr_multiplicity: Optional[str] = None
@@ -433,11 +417,9 @@ class PdfParser:
             enumeration_match = self.ENUMERATION_PATTERN.match(line)
 
             if class_match or primitive_match or enumeration_match:
-                # Finalize pending attribute before processing new class
+                # Finalize pending class lists and attributes before processing new class
                 if current_class is not None:
-                    # Finalize pending base classes if any
-                    if in_base_class_section and pending_base_classes is not None:
-                        current_class.base_classes = pending_base_classes
+                    self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
                     (pending_attr_name, pending_attr_type, pending_attr_multiplicity,
                      pending_attr_kind, pending_attr_note) = self._finalize_pending_attribute(
                         current_class, pending_attr_name, pending_attr_type,
@@ -454,12 +436,12 @@ class PdfParser:
                         class_defs.append(current_class)
 
                     current_class = result
-                    # Reset attribute section flag and pending attributes when starting a new class
+                    # Reset all state when starting a new class
                     in_attribute_section = False
                     in_enumeration_literal_section = False
-                    in_base_class_section = False
-                    pending_base_classes = None
-                    last_base_class_name = None
+                    in_class_list_section = None
+                    for section_name in pending_class_lists:
+                        pending_class_lists[section_name] = (None, None)
                     class_definition_complete = False
                     pending_attr_name = None
                     pending_attr_type = None
@@ -471,46 +453,29 @@ class PdfParser:
                 self._process_package_line(package_match, current_class)
                 continue
 
-            # Check for base classes
-            base_match = self.BASE_PATTERN.match(line)
-            if base_match and current_class is not None and not class_definition_complete:
-                (pending_base_classes, last_base_class_name) = self._process_base_classes_line(base_match)
-                in_base_class_section = True
-                continue
-
-            # Check for subclasses
-            subclass_match = self.SUBCLASS_PATTERN.match(line)
-            if subclass_match and current_class is not None and not class_definition_complete:
-                # Finalize pending base classes if any
-                if in_base_class_section and pending_base_classes is not None:
-                    current_class.base_classes = pending_base_classes
-                    in_base_class_section = False
-                    pending_base_classes = None
-                    last_base_class_name = None
-                self._process_subclasses_line(subclass_match, current_class)
+            # SWR_PARSER_00021: Generic class list attribute pattern matching
+            # Try to match class list attribute patterns (Base, Aggregated by, Subclasses)
+            class_list_match = self._try_match_class_list_pattern(line, current_class, class_definition_complete)
+            if class_list_match is not None and current_class is not None:
+                section_name, match = class_list_match
+                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                pending_class_lists[section_name] = self._parse_class_list_line(section_name, match)
+                in_class_list_section = section_name
                 continue
 
             # Check for note
             note_match = self.NOTE_PATTERN.match(line)
             if note_match and current_class is not None and not class_definition_complete:
-                # Finalize pending base classes if any
-                if in_base_class_section and pending_base_classes is not None:
-                    current_class.base_classes = pending_base_classes
-                    in_base_class_section = False
-                    pending_base_classes = None
-                    last_base_class_name = None
+                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                in_class_list_section = None
                 self._process_note_line(note_match, lines, i, current_class)
                 continue
 
             # Check for attribute header
             attr_header_match = self.ATTRIBUTE_HEADER_PATTERN.match(line)
             if attr_header_match and current_class is not None:
-                # Finalize pending base classes if any
-                if in_base_class_section and pending_base_classes is not None:
-                    current_class.base_classes = pending_base_classes
-                    in_base_class_section = False
-                    pending_base_classes = None
-                    last_base_class_name = None
+                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                in_class_list_section = None
                 (in_attribute_section, pending_attr_name, pending_attr_type,
                  pending_attr_multiplicity, pending_attr_kind, pending_attr_note) = self._process_attribute_header(
                     pending_attr_name, pending_attr_type, pending_attr_multiplicity,
@@ -521,6 +486,8 @@ class PdfParser:
             # Check for enumeration literal header
             enum_literal_header_match = self.ENUMERATION_LITERAL_HEADER_PATTERN.match(line)
             if enum_literal_header_match and current_class is not None and current_class.is_enumeration:
+                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                in_class_list_section = None
                 in_enumeration_literal_section = True
                 continue
 
@@ -532,13 +499,12 @@ class PdfParser:
                     class_definition_complete = True
                 continue
 
-            # Handle base class continuation lines
-            # This must be checked after all known patterns but before attribute processing
-            if in_base_class_section and current_class is not None and not class_definition_complete:
-                # Check if this line looks like a continuation (comma-separated values or continuation fragments)
-                if "," in line or any(fragment in line for fragment in ["Element", "Referrable", "Packageable"]):
-                    (pending_base_classes, last_base_class_name) = self._handle_base_class_continuation(
-                        line, pending_base_classes, last_base_class_name
+            # SWR_PARSER_00021: Generic class list continuation handling
+            if in_class_list_section and current_class is not None and not class_definition_complete:
+                # Check if this line looks like a continuation
+                if "," in line or any(fragment in line for fragment in self.CONTINUATION_FRAGMENTS):
+                    pending_class_lists[in_class_list_section] = self._handle_class_list_continuation(
+                        line, pending_class_lists[in_class_list_section][0], pending_class_lists[in_class_list_section][1]
                     )
                     continue
 
@@ -560,10 +526,7 @@ class PdfParser:
 
         # Don't forget the last class
         if current_class is not None:
-            # Finalize pending base classes if any
-            if in_base_class_section and pending_base_classes is not None:
-                current_class.base_classes = pending_base_classes
-            # Finalize any pending attribute
+            self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
             self._finalize_pending_attribute(
                 current_class, pending_attr_name, pending_attr_type,
                 pending_attr_multiplicity, pending_attr_kind, pending_attr_note
@@ -615,6 +578,133 @@ class PdfParser:
                 current_class.attributes[pending_attr_name] = attr
 
         return (None, None, None, None, None)
+
+    def _finalize_pending_class_lists(
+        self,
+        current_class: ClassDefinition,
+        in_class_list_section: Optional[str],
+        pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str]]],
+    ) -> None:
+        """Finalize a pending class list when transitioning to another section.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This method is called when transitioning from one class list section
+        (base classes, aggregated by, or subclasses) to another section
+        (note, attribute, etc.). It finalizes the pending list by assigning
+        it to the current class definition.
+
+        Args:
+            current_class: The current class definition being processed.
+            in_class_list_section: Which class list section is currently active.
+            pending_class_lists: Dictionary mapping section names to (pending_list, last_item_name) tuples.
+        """
+        if in_class_list_section and in_class_list_section in pending_class_lists:
+            pending_list, _ = pending_class_lists[in_class_list_section]
+            if pending_list is not None:
+                setattr(current_class, in_class_list_section, pending_list)
+
+    def _try_match_class_list_pattern(
+        self,
+        line: str,
+        current_class: Optional[ClassDefinition],
+        class_definition_complete: bool,
+    ) -> Optional[Tuple[str, re.Match]]:
+        """Try to match a class list attribute pattern (Base, Aggregated by, Subclasses).
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This method tries to match the line against any known class list attribute pattern
+        and returns the section name and match object if successful.
+
+        Args:
+            line: The current line being processed.
+            current_class: The current class definition being processed.
+            class_definition_complete: Whether the class definition is complete.
+
+        Returns:
+            Tuple of (section_name, match) if a pattern matches, None otherwise.
+        """
+        if current_class is None or class_definition_complete:
+            return None
+
+        # Try Base pattern
+        base_match = self.BASE_PATTERN.match(line)
+        if base_match:
+            return ("base_classes", base_match)
+
+        # Try Aggregated by pattern
+        aggregated_by_match = self.AGGREGATED_BY_PATTERN.match(line)
+        if aggregated_by_match:
+            return ("aggregated_by", aggregated_by_match)
+
+        # Try Subclasses pattern
+        subclass_match = self.SUBCLASS_PATTERN.match(line)
+        if subclass_match:
+            return ("subclasses", subclass_match)
+
+        return None
+
+    def _parse_class_list_line(
+        self,
+        section_name: str,
+        match: re.Match,
+    ) -> Tuple[Optional[List[str]], Optional[str]]:
+        """Parse a class list line (Base, Aggregated by, or Subclasses).
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This is a generic method that parses any class list attribute line based on the section name.
+
+        Args:
+            section_name: The name of the section ("base_classes", "aggregated_by", or "subclasses").
+            match: The regex match object.
+
+        Returns:
+            Tuple of (list of parsed items, last item name).
+        """
+        items_str = match.group(1)
+        items = [item.strip() for item in items_str.split(",") if item.strip()]
+        last_item = items[-1] if items else None
+        return (items, last_item)
+
+    def _add_attribute_if_valid(
+        self,
+        current_class: ClassDefinition,
+        pending_attr_name: Optional[str],
+        pending_attr_type: Optional[str],
+        pending_attr_multiplicity: Optional[str],
+        pending_attr_kind: Optional[AttributeKind],
+        pending_attr_note: Optional[str],
+    ) -> None:
+        """Add a pending attribute to the current class if it's valid.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00011: Attribute Metadata Filtering
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Args:
+            current_class: The current class definition being processed.
+            pending_attr_name: Name of the pending attribute.
+            pending_attr_type: Type of the pending attribute.
+            pending_attr_multiplicity: Multiplicity of the pending attribute.
+            pending_attr_kind: Kind of the pending attribute.
+            pending_attr_note: Note of the pending attribute.
+        """
+        if pending_attr_name is not None and pending_attr_type is not None:
+            if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
+                attr = self._create_attribute_from_pending(
+                    pending_attr_name,
+                    pending_attr_type,
+                    pending_attr_multiplicity or "1",
+                    pending_attr_kind or AttributeKind.ATTR,
+                    pending_attr_note or ""
+                )
+                current_class.attributes[pending_attr_name] = attr
 
     def _validate_atp_markers(self, raw_class_name: str) -> Tuple[ATPType, str]:
         """Validate ATP markers and extract ATP type and clean class name.
@@ -789,96 +879,60 @@ class PdfParser:
         if self._is_valid_package_path(full_package_path):
             current_class.package_path = full_package_path
 
-    def _process_base_classes_line(
-        self,
-        base_match: re.Match,
-    ) -> Tuple[Optional[List[str]], Optional[str]]:
-        """Process a base classes line.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_PARSER_00021: Multi-Line Base Class Parsing
-
-        Args:
-            base_match: Match object for base pattern.
-
-        Returns:
-            Tuple of (list of parsed base classes, last base class name).
-            The last base class name is used to handle word splitting across lines.
-        """
-        base_classes_str = base_match.group(1)
-        base_classes = [bc.strip() for bc in base_classes_str.split(",") if bc.strip()]
-        last_base = base_classes[-1] if base_classes else None
-        return (base_classes, last_base)
-
-    def _process_subclasses_line(
-        self,
-        subclass_match: re.Match,
-        current_class: ClassDefinition,
-    ) -> None:
-        """Process a subclasses line.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-
-        Args:
-            subclass_match: Match object for subclass pattern.
-            current_class: The current class definition being processed.
-        """
-        subclasses_str = subclass_match.group(1)
-        current_class.subclasses = [
-            sc.strip() for sc in subclasses_str.split(",") if sc.strip()
-        ]
-
-    def _handle_base_class_continuation(
+    def _handle_class_list_continuation(
         self,
         line: str,
-        pending_base_classes: Optional[List[str]],
-        last_base_class_name: Optional[str],
+        pending_list: Optional[List[str]],
+        last_item_name: Optional[str],
     ) -> Tuple[Optional[List[str]], Optional[str]]:
-        """Handle continuation lines for multi-line base class lists.
+        """Handle continuation lines for multi-line class list attributes.
 
         Requirements:
-            SWR_PARSER_00021: Multi-Line Base Class Parsing
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This method handles continuation lines for comma-separated class reference attributes:
+        - Base classes
+        - Aggregated by
+        - Subclasses
 
         This method handles:
         1. Word splitting across lines (e.g., "Packageable" + "Element" = "PackageableElement")
-        2. Adding new base classes from the continuation line
+        2. Adding new items from the continuation line
         3. Proper comma separation
 
         Args:
             line: The continuation line to process.
-            pending_base_classes: List of base classes parsed so far.
-            last_base_class_name: The last base class name from the previous line.
+            pending_list: List of class names parsed so far.
+            last_item_name: The last class name from the previous line.
 
         Returns:
-            Tuple of (updated base classes list, updated last base class name).
+            Tuple of (updated list, updated last item name).
         """
-        if pending_base_classes is None:
-            pending_base_classes = []
+        if pending_list is None:
+            pending_list = []
 
         parts = [part.strip() for part in line.split(",") if part.strip()]
 
         if not parts:
-            return (pending_base_classes, last_base_class_name)
+            return (pending_list, last_item_name)
 
-        # Check if the first part should be appended to the last base class
-        if last_base_class_name and parts:
+        # Check if the first part should be appended to the last item
+        if last_item_name and parts:
             first_part = parts[0]
 
             # Combine if first part starts with lowercase or is a known continuation fragment
-            if first_part and (first_part[0].islower() or first_part in ["Element", "Referrable", "Packageable"]):
-                combined_name = last_base_class_name + first_part
-                pending_base_classes[-1] = combined_name
+            if first_part and (first_part[0].islower() or first_part in self.CONTINUATION_FRAGMENTS):
+                combined_name = last_item_name + first_part
+                pending_list[-1] = combined_name
                 parts = parts[1:]
 
-        # Add remaining parts as new base classes
+        # Add remaining parts as new items
         for part in parts:
             if part:
-                pending_base_classes.append(part)
+                pending_list.append(part)
 
-        new_last_base = pending_base_classes[-1] if pending_base_classes else None
-        return (pending_base_classes, new_last_base)
+        new_last_item = pending_list[-1] if pending_list else None
+        return (pending_list, new_last_item)
 
     def _process_note_line(
         self,
@@ -1016,17 +1070,13 @@ class PdfParser:
         Returns:
             True if the attribute should be filtered, False otherwise.
         """
-        continuation_types = ["data", "If", "has", "to", "of", "CP", "atpSplitable"]
-        fragment_names = ["Element", "SizeProfile", "intention", "ImplementationDataType"]
-        partial_names = ["isStructWith"]  # Always filtered - never a complete attribute
-
         return (
             ":" in attr_name or
             ";" in attr_name or
             attr_name.isdigit() or
-            attr_type in continuation_types or
-            attr_name in fragment_names or
-            attr_name in partial_names
+            attr_type in self.CONTINUATION_TYPES or
+            attr_name in self.FRAGMENT_NAMES or
+            attr_name in self.PARTIAL_NAMES
         )
 
     def _create_attribute_from_pending(
@@ -1108,16 +1158,10 @@ class PdfParser:
         # 2. Enumeration definition (e.g., "Enumeration IntervalTypeEnum")
         if line.startswith("Table ") or line.startswith("Enumeration "):
             # Finalize pending attribute before ending section
-            if pending_attr_name is not None and pending_attr_type is not None:
-                if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
-                    attr = self._create_attribute_from_pending(
-                        pending_attr_name,
-                        pending_attr_type,
-                        pending_attr_multiplicity or "1",
-                        pending_attr_kind or AttributeKind.ATTR,
-                        pending_attr_note or ""
-                    )
-                    current_class.attributes[pending_attr_name] = attr
+            self._add_attribute_if_valid(
+                current_class, pending_attr_name, pending_attr_type,
+                pending_attr_multiplicity, pending_attr_kind, pending_attr_note
+            )
 
             result["section_ended"] = True
             result["pending_attr_name"] = None
@@ -1151,16 +1195,10 @@ class PdfParser:
             if is_new_attribute:
                 # This is a new attribute line with proper structure
                 # Finalize any pending attribute first
-                if pending_attr_name is not None and pending_attr_type is not None:
-                    if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
-                        attr = self._create_attribute_from_pending(
-                            pending_attr_name,
-                            pending_attr_type,
-                            pending_attr_multiplicity or "1",
-                            pending_attr_kind or AttributeKind.ATTR,
-                            pending_attr_note or ""
-                        )
-                        current_class.attributes[pending_attr_name] = attr
+                self._add_attribute_if_valid(
+                    current_class, pending_attr_name, pending_attr_type,
+                    pending_attr_multiplicity, pending_attr_kind, pending_attr_note
+                )
 
                 # Save as pending (might be a multi-line attribute)
                 result["pending_attr_name"] = attr_name
@@ -1346,7 +1384,8 @@ class PdfParser:
                             atp_type=class_def.atp_type,
                             bases=class_def.base_classes.copy(),
                             note=class_def.note,
-                            attributes=class_def.attributes.copy()
+                            attributes=class_def.attributes.copy(),
+                            aggregated_by=class_def.aggregated_by.copy()
                         )
                     parent_package.add_type(autosar_type)
                     processed_classes.add(class_key)

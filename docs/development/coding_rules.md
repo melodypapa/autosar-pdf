@@ -1241,6 +1241,227 @@ class MyError(BaseException):
 
 ---
 
+### CODING_RULE_PR_00011: Don't Repeat Yourself (DRY)
+
+**Maturity**: accept
+
+**Avoid duplication by extracting common logic into reusable components** (The Pragmatic Programmer).
+
+Every piece of knowledge must have a single, unambiguous, authoritative representation within a system. When logic appears in three or more places, extract it into a reusable component.
+
+#### Implementation Guidelines
+
+1. **Extract Generic Methods**: When multiple methods perform similar operations with different parameters, create a generic method.
+
+```python
+# Wrong - Duplicated logic for processing class lists
+def _process_base_classes_line(self, line: str) -> Tuple[Optional[List[str]], Optional[str]]:
+    items = [item.strip() for item in line.split(",")]
+    last_item = items[-1] if items else None
+    return items, last_item
+
+def _process_aggregated_by_line(self, line: str) -> Tuple[Optional[List[str]], Optional[str]]:
+    items = [item.strip() for item in line.split(",")]
+    last_item = items[-1] if items else None
+    return items, last_item
+
+def _process_subclasses_line(self, line: str) -> Tuple[Optional[List[str]], Optional[str]]:
+    items = [item.strip() for item in line.split(",")]
+    last_item = items[-1] if items else None
+    return items, last_item
+
+# Correct - Generic method
+def _parse_class_list_line(self, items_str: str) -> Tuple[Optional[List[str]], Optional[str]]:
+    """Parse a class list line (Base, Aggregated by, or Subclasses)."""
+    items = [item.strip() for item in items_str.split(",") if item.strip()]
+    last_item = items[-1] if items else None
+    return items, last_item
+```
+
+2. **Use Data Structures Instead of Repeated Conditionals**: Replace chains of similar if/elif statements with dictionaries.
+
+```python
+# Wrong - Repeated conditional logic
+if section == "base_classes":
+    pending_base_classes = items
+    pending_base_classes_suffix = last_item
+elif section == "aggregated_by":
+    pending_aggregated_by = items
+    pending_aggregated_by_suffix = last_item
+elif section == "subclasses":
+    pending_subclasses = items
+    pending_subclasses_suffix = last_item
+
+# Correct - Dictionary-based state management
+pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str]]] = {
+    "base_classes": (None, None),
+    "aggregated_by": (None, None),
+    "subclasses": (None, None),
+}
+pending_class_lists[section_name] = (items, last_item)
+```
+
+3. **Define Class Constants for Repeated Values**: Avoid hardcoding the same values in multiple methods.
+
+```python
+# Wrong - Hardcoded lists in multiple methods
+def _should_filter_as_continuation(self, text: str) -> bool:
+    return text in {"data", "If", "has", "to", "of", "CP", "atpSplitable"}
+
+def _should_filter_as_fragment(self, text: str) -> bool:
+    continuation_types = {"data", "If", "has", "to", "of", "CP", "atpSplitable"}
+    return text in continuation_types or text in {"Element", "SizeProfile"}
+
+# Correct - Class constants
+class PdfParser:
+    CONTINUATION_TYPES = {"data", "If", "has", "to", "of", "CP", "atpSplitable"}
+    FRAGMENT_NAMES = {"Element", "SizeProfile", "intention", "ImplementationDataType"}
+
+    def _should_filter_as_continuation(self, text: str) -> bool:
+        return text in self.CONTINUATION_TYPES
+
+    def _should_filter_as_fragment(self, text: str) -> bool:
+        return text in self.CONTINUATION_TYPES or text in self.FRAGMENT_NAMES
+```
+
+4. **Create Helper Methods for Repeated Code Blocks**: When the same code block appears multiple times, extract it into a helper method.
+
+```python
+# Wrong - Duplicated attribute finalization logic
+if pending_attr_name is not None and pending_attr_type is not None:
+    if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
+        attr = AutosarAttribute(
+            name=pending_attr_name,
+            type=pending_attr_type,
+            mult=pending_attr_multiplicity or "1",
+            kind=pending_attr_kind or AttributeKind.ATTR,
+            reference=pending_attr_reference or "",
+        )
+        current_class.attributes[pending_attr_name] = attr
+# ... 20 lines later ...
+if pending_attr_name is not None and pending_attr_type is not None:
+    if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
+        attr = AutosarAttribute(
+            name=pending_attr_name,
+            type=pending_attr_type,
+            mult=pending_attr_multiplicity or "1",
+            kind=pending_attr_kind or AttributeKind.ATTR,
+            reference=pending_attr_reference or "",
+        )
+        current_class.attributes[pending_attr_name] = attr
+
+# Correct - Helper method
+def _add_attribute_if_valid(
+    self,
+    current_class: ClassDefinition,
+    pending_attr_name: Optional[str],
+    pending_attr_type: Optional[str],
+    pending_attr_multiplicity: Optional[str],
+    pending_attr_kind: Optional[AttributeKind],
+    pending_attr_reference: Optional[str],
+) -> None:
+    """Add a pending attribute to the current class if it's valid."""
+    if pending_attr_name is not None and pending_attr_type is not None:
+        if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
+            attr = AutosarAttribute(
+                name=pending_attr_name,
+                type=pending_attr_type,
+                mult=pending_attr_multiplicity or "1",
+                kind=pending_attr_kind or AttributeKind.ATTR,
+                reference=pending_attr_reference or "",
+            )
+            current_class.attributes[pending_attr_name] = attr
+
+# Usage
+self._add_attribute_if_valid(
+    current_class,
+    pending_attr_name,
+    pending_attr_type,
+    pending_attr_multiplicity,
+    pending_attr_kind,
+    pending_attr_reference,
+)
+```
+
+5. **Use Pattern Matching for Similar Operations**: When applying the same operation to different types, use pattern matching or dispatch tables.
+
+```python
+# Wrong - Repeated type checking
+def process_type(obj: AutosarClass | AutosarEnumeration | AutosarPrimitive) -> str:
+    if isinstance(obj, AutosarClass):
+        return f"Class: {obj.name}"
+    elif isinstance(obj, AutosarEnumeration):
+        return f"Enumeration: {obj.name}"
+    elif isinstance(obj, AutosarPrimitive):
+        return f"Primitive: {obj.name}"
+
+# Correct - Dispatch table
+TYPE_PREFIXES = {
+    AutosarClass: "Class",
+    AutosarEnumeration: "Enumeration",
+    AutosarPrimitive: "Primitive",
+}
+
+def process_type(obj: AutosarClass | AutosarEnumeration | AutosarPrimitive) -> str:
+    prefix = TYPE_PREFIXES.get(type(obj), "Unknown")
+    return f"{prefix}: {obj.name}"
+```
+
+6. **Apply DRY to Configuration and Metadata**: Extract configuration values into constants or configuration files.
+
+```python
+# Wrong - Magic numbers and strings scattered throughout
+def __init__(self):
+    self.max_retries = 3
+    self.timeout = 30
+    self.cache_size = 100
+
+def fetch_data(self):
+    if self.retry_count >= 3:  # Magic number
+        raise TimeoutError()
+    time.sleep(1)  # Magic number
+
+# Correct - Class constants
+class DataFetcher:
+    MAX_RETRIES = 3
+    TIMEOUT_SECONDS = 30
+    CACHE_SIZE = 100
+    RETRY_DELAY_SECONDS = 1
+
+    def __init__(self):
+        self.max_retries = self.MAX_RETRIES
+        self.timeout = self.TIMEOUT_SECONDS
+        self.cache_size = self.CACHE_SIZE
+
+    def fetch_data(self):
+        if self.retry_count >= self.MAX_RETRIES:
+            raise TimeoutError()
+        time.sleep(self.RETRY_DELAY_SECONDS)
+```
+
+#### When to Apply DRY
+
+- **Apply**: When logic appears in **3 or more places** or is likely to be reused
+- **Apply**: When changing logic requires updating multiple locations
+- **Apply**: When duplication makes the code harder to understand or maintain
+
+#### When NOT to Apply DRY
+
+- **Don't extract**: For logic that appears only **1-2 times** (extraction adds overhead)
+- **Don't extract**: When the duplicated code has **different intent** despite similar structure
+- **Don't extract**: When extraction would **reduce readability** more than duplication
+- **Don't over-abstract**: One-off operations are sometimes clearer when inline
+
+#### Benefits of Following DRY
+
+1. **Maintainability**: Changes only need to be made in one place
+2. **Testability**: Reusable components can be tested independently
+3. **Readability**: Smaller methods with clear names are easier to understand
+4. **Consistency**: Same logic produces same results everywhere
+5. **Reduced bugs**: Fixes apply to all usages automatically
+
+---
+
 ## Enforcement
 
 These rules are enforced through:

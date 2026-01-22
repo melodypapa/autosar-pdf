@@ -816,6 +816,21 @@ The ATP Type section shall:
 
 ---
 
+#### SWR_WRITER_00007
+**Title**: Class Hierarchy Output
+
+**Maturity**: accept
+
+**Description**: The system shall provide functionality to write AUTOSAR class inheritance hierarchies to markdown format. The class hierarchy output shall:
+- Start with a "## Class Hierarchy" heading
+- Display root classes (classes with no parent) at the top level with asterisk (*) bullet points
+- Indent child classes 2 spaces per level relative to their parent class
+- Mark abstract classes with "(abstract)" suffix after the class name
+- Support both root-only output (when all_classes parameter is None) and full hierarchy output (when all_classes parameter is provided)
+- Return empty string when no root classes are provided
+
+---
+
 ### 4. CLI
 
 #### SWR_CLI_00001
@@ -922,6 +937,18 @@ The ATP Type section shall:
 **Maturity**: accept
 
 **Description**: The CLI shall support a `--include-class-details` flag to enable creation of separate markdown files for each class. This flag only has effect when used with the `-o` / `--output` option. When not specified, only the main hierarchy output file is created.
+
+---
+
+#### SWR_CLI_00012
+**Title**: CLI Class Hierarchy Flag
+
+**Maturity**: accept
+
+**Description**: The CLI shall support a `--include-class-hierarchy` flag to enable inclusion of class inheritance hierarchy in the markdown output. When this flag is specified, the system shall:
+- Collect all classes from parsed packages
+- Generate a class hierarchy section showing inheritance relationships from root classes
+- Append the class hierarchy to the main package hierarchy output in the same markdown file
 
 ---
 

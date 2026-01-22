@@ -4,6 +4,7 @@ Test coverage for pdf_parser.py targeting PDF parsing functionality.
 """
 
 import pytest
+from unittest.mock import patch
 
 from autosar_pdf2txt.models import ATPType, AttributeKind
 from autosar_pdf2txt.parser import PdfParser
@@ -1558,10 +1559,10 @@ class TestPdfParser:
         # Verify base class has no parent
         assert base_class.parent is None
 
-    def test_parent_resolution_with_multiple_bases_uses_first(self) -> None:
-        """Test that parent reference uses the first base class when there are multiple.
+    def test_parent_resolution_with_multiple_bases_uses_most_specific(self) -> None:
+        """Test that parent reference uses the most specific base class when there are multiple.
 
-        SWUT_PARSER_00047: Test Parent Resolution with Multiple Bases Uses First
+        SWUT_PARSER_00047: Test Parent Resolution with Multiple Bases Uses Most Specific
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
@@ -1598,8 +1599,8 @@ class TestPdfParser:
 
         derived = derived_pkg.get_class("DerivedClass")
 
-        # Verify parent is set to the first base
-        assert derived.parent == "Base1"
+        # Verify parent is set to the most specific (last) base class
+        assert derived.parent == "Base2"
 
     def test_parent_resolution_missing_base_leaves_parent_none(self) -> None:
         """Test that parent reference remains None when base class is not found.
@@ -1631,6 +1632,80 @@ class TestPdfParser:
         # Parent should remain None when base is not found
         assert derived.parent is None
         assert derived.bases == ["NonExistentBase"]
+
+    def test_parent_resolution_filters_out_arobject(self) -> None:
+        """Test that ARObject is filtered out when selecting parent reference.
+
+        SWUT_PARSER_00050: Test Parent Resolution Filters Out ARObject
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="ARObject",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="ARElement",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="FibexElement",
+                package_path="AUTOSAR::Fibex",
+                is_abstract=True,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="CommunicationCluster",
+                package_path="AUTOSAR::Fibex::Core",
+                is_abstract=True,
+                base_classes=["ARElement", "ARObject", "FibexElement"]
+            ),
+        ]
+
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        fibex_pkg = pkg.get_subpackage("Fibex")
+        core_pkg = fibex_pkg.get_subpackage("Core")
+
+        comm_cluster = core_pkg.get_class("CommunicationCluster")
+
+        # Verify parent is FibexElement (most specific), not ARElement or ARObject
+        assert comm_cluster.parent == "FibexElement"
+        # Verify all bases are preserved
+        assert comm_cluster.bases == ["ARElement", "ARObject", "FibexElement"]
+
+        # Verify root classes - only ARObject should be a root class
+        base_pkg = pkg.get_subpackage("Base")
+        ar_object = base_pkg.get_class("ARObject")
+        ar_element = base_pkg.get_class("ARElement")
+        fibex_element = fibex_pkg.get_class("FibexElement")
+
+        # ARObject has no bases and no parent (it's the true root)
+        assert ar_object.parent is None
+        assert ar_object.bases == []
+
+        # Classes with only ARObject as base have ARObject as parent
+        assert ar_element.parent == "ARObject"
+        assert fibex_element.parent == "ARObject"
+
+        # Verify only ARObject is in root_classes
+        assert len(doc.root_classes) == 1
+        assert doc.root_classes[0].name == "ARObject"
+
+        # Verify ARObject's children list includes these classes
+        assert ar_element.name in ar_object.children
+        assert fibex_element.name in ar_object.children
 
     def test_parent_resolution_enumerations_not_affected(self) -> None:
         """Test that enumerations are not used as parent references.
@@ -1669,6 +1744,325 @@ class TestPdfParser:
 
         # Parent should remain None because MyEnum is an enumeration, not a class
         assert my_class.parent is None
+
+    def test_parse_multiple_pdfs_resolves_parents_across_pdfs(self) -> None:
+        """Test that parse_pdfs() resolves parent/children relationships across multiple PDFs.
+
+        SWUT_PARSER_00051: Test Parse Multiple PDFs Resolves Parents Across PDFs
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies that when parsing multiple PDFs:
+        1. All class definitions from all PDFs are extracted first
+        2. Parent/children resolution happens once on the complete model
+        3. Parent classes are found even if defined in later PDFs
+        """
+        parser = PdfParser()
+
+        # Simulate first PDF with a child class
+        pdf1_classes = [
+            ClassDefinition(
+                name="ParentClass",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="ChildClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["ParentClass"]
+            ),
+        ]
+
+        # Simulate second PDF with another child class
+        pdf2_classes = [
+            ClassDefinition(
+                name="AnotherChildClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["ParentClass"]
+            ),
+        ]
+
+        # Mock the _extract_class_definitions method to return different classes for each PDF
+        with patch.object(parser, '_extract_class_definitions') as mock_extract:
+            # First call returns pdf1_classes, second call returns pdf2_classes
+            mock_extract.side_effect = [pdf1_classes, pdf2_classes]
+
+            # Call parse_pdfs with two PDF paths
+            doc = parser.parse_pdfs(["pdf1.pdf", "pdf2.pdf"])
+
+            # Verify parent/children were resolved correctly
+            assert len(doc.packages) == 1
+            pkg = doc.packages[0]
+
+            # Check ParentClass
+            base_pkg = pkg.get_subpackage("Base")
+            parent_class = base_pkg.get_class("ParentClass")
+            assert parent_class is not None
+            assert parent_class.parent is None  # Root class
+
+            # Check that both children reference the parent correctly
+            assert set(parent_class.children) == {"ChildClass", "AnotherChildClass"}
+
+            # Check ChildClass
+            derived_pkg = pkg.get_subpackage("Derived")
+            child_class = derived_pkg.get_class("ChildClass")
+            assert child_class is not None
+            assert child_class.parent == "ParentClass"
+
+            # Check AnotherChildClass
+            another_child_class = derived_pkg.get_class("AnotherChildClass")
+            assert another_child_class is not None
+            assert another_child_class.parent == "ParentClass"
+
+            # Verify _extract_class_definitions was called twice (once per PDF)
+            assert mock_extract.call_count == 2
+
+    def test_parent_resolution_ancestry_based_filters_ancestors_from_bases(self) -> None:
+        """Test that ancestry-based parent selection correctly identifies direct parent vs ancestors.
+
+        SWUT_PARSER_00052: Test Parent Resolution Ancestry Based Filters Ancestors From Bases
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies the ancestry-based parent selection algorithm from SWR_PARSER_00017:
+        - Given a hierarchy where ClassB inherits from ClassA, and ClassC is a sibling of ClassA
+        - When ClassD has bases [ClassA, ClassB, ClassC]
+        - Then ClassD.parent should be "ClassC" (the direct parent, not an ancestor)
+        - Because ClassB is an ancestor (child of ClassA) and ClassA is an ancestor (parent of ClassB)
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="ARObject",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="ClassA",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="ClassB",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ClassA"]
+            ),
+            ClassDefinition(
+                name="ClassC",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="ClassD",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["ClassA", "ClassB", "ClassC"]
+            ),
+        ]
+
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        derived_pkg = pkg.get_subpackage("Derived")
+
+        class_d = derived_pkg.get_class("ClassD")
+
+        # Verify parent is ClassC (direct parent), not ClassA or ClassB (ancestors)
+        assert class_d.parent == "ClassC"
+        # Verify all bases are preserved
+        assert class_d.bases == ["ClassA", "ClassB", "ClassC"]
+
+    def test_parent_resolution_ancestry_based_deep_hierarchy(self) -> None:
+        """Test that ancestry-based parent selection works with deep inheritance hierarchies.
+
+        SWUT_PARSER_00053: Test Parent Resolution Ancestry Based Deep Hierarchy
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies the ancestry-based parent selection algorithm with deep hierarchies:
+        - Given a 4-level hierarchy: ARObject → Level1 → Level2 → Level3 → Level4
+        - When DerivedWithMultipleBases has bases [Level1, Level2, Level3, Level4]
+        - Then parent should be "Level4" (the most recent/direct parent)
+        - Because Level1, Level2, Level3 are all ancestors of Level4
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="ARObject",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="Level1",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="Level2",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["Level1"]
+            ),
+            ClassDefinition(
+                name="Level3",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["Level2"]
+            ),
+            ClassDefinition(
+                name="Level4",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["Level3"]
+            ),
+            ClassDefinition(
+                name="DerivedWithMultipleBases",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["Level1", "Level2", "Level3", "Level4"]
+            ),
+        ]
+
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        derived_pkg = pkg.get_subpackage("Derived")
+
+        derived = derived_pkg.get_class("DerivedWithMultipleBases")
+
+        # Verify parent is Level4 (most recent/direct parent)
+        assert derived.parent == "Level4"
+        # Verify all bases are preserved
+        assert derived.bases == ["Level1", "Level2", "Level3", "Level4"]
+
+    def test_parent_resolution_ancestry_based_missing_base_filtered(self) -> None:
+        """Test that ancestry-based parent selection filters out missing base classes.
+
+        SWUT_PARSER_00054: Test Parent Resolution Ancestry Based Missing Base Filtered
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies strict validation in ancestry-based parent selection:
+        - Given a class with bases [ExistingClass, NonExistentBase]
+        - When NonExistentBase doesn't exist in the model
+        - Then parent should be "ExistingClass" (the only valid base)
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="ExistingClass",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="ARObject",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="DerivedClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["ExistingClass", "NonExistentBase"]
+            ),
+        ]
+
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        derived_pkg = pkg.get_subpackage("Derived")
+        derived = derived_pkg.get_class("DerivedClass")
+
+        # Parent should be ExistingClass (only valid base after filtering)
+        assert derived.parent == "ExistingClass"
+        # Verify all bases are preserved (including non-existent one)
+        assert derived.bases == ["ExistingClass", "NonExistentBase"]
+
+    def test_parent_resolution_ancestry_based_multiple_independent_bases(self) -> None:
+        """Test that ancestry-based parent selection handles multiple independent bases.
+
+        SWUT_PARSER_00055: Test Parent Resolution Ancestry Based Multiple Independent Bases
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies backward compatibility with multiple independent bases:
+        - Given three independent base classes with no ancestry relationships
+        - When a class has bases [Base1, Base2, Base3]
+        - Then parent should be "Base3" (last one, for backward compatibility)
+        """
+        parser = PdfParser()
+
+        class_defs = [
+            ClassDefinition(
+                name="ARObject",
+                package_path="AUTOSAR::Base",
+                is_abstract=True,
+                base_classes=[]
+            ),
+            ClassDefinition(
+                name="Base1",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="Base2",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="Base3",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="DerivedClass",
+                package_path="AUTOSAR::Derived",
+                is_abstract=False,
+                base_classes=["Base1", "Base2", "Base3"]
+            ),
+        ]
+
+        doc = parser._build_package_hierarchy(class_defs)
+        packages = doc.packages
+        assert len(packages) == 1
+
+        pkg = packages[0]
+        derived_pkg = pkg.get_subpackage("Derived")
+        derived = derived_pkg.get_class("DerivedClass")
+
+        # Parent should be Base3 (last one, backward compatibility)
+        assert derived.parent == "Base3"
+        # Verify all bases are preserved
+        assert derived.bases == ["Base1", "Base2", "Base3"]
 
     def test_is_valid_package_path(self) -> None:
         """Test package path validation.

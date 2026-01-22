@@ -2,6 +2,7 @@
 
 import logging
 import re
+import warnings
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Dict, List, Optional, Set, Tuple, Union, cast
@@ -257,9 +258,12 @@ class PdfParser:
     def parse_pdf(self, pdf_path: str) -> AutosarDoc:
         """Parse a PDF file and extract the package hierarchy.
 
+        This is a convenience method for parsing a single PDF. Internally calls
+        parse_pdfs() to ensure consistent behavior whether parsing one or many PDFs.
+
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00018: Multiple PDF Parsing with Complete Model Resolution
 
         Args:
             pdf_path: Path to the PDF file.
@@ -271,11 +275,39 @@ class PdfParser:
             FileNotFoundError: If the PDF file doesn't exist.
             Exception: If PDF parsing fails.
         """
-        # Extract class definitions from PDF
-        class_defs = self._extract_class_definitions(pdf_path)
+        return self.parse_pdfs([pdf_path])
 
-        # Build package hierarchy from class definitions
-        return self._build_package_hierarchy(class_defs)
+    def parse_pdfs(self, pdf_paths: List[str]) -> AutosarDoc:
+        """Parse multiple PDF files and extract the complete package hierarchy.
+
+        This method parses all PDFs first, then builds the package hierarchy and
+        resolves parent/children relationships on the complete model. This ensures
+        that parent classes are found even if they are defined in later PDFs.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        Args:
+            pdf_paths: List of paths to PDF files.
+
+        Returns:
+            AutosarDoc containing packages and root classes from all PDFs.
+
+        Raises:
+            FileNotFoundError: If any PDF file doesn't exist.
+            Exception: If PDF parsing fails.
+        """
+        # Phase 1: Extract class definitions from ALL PDFs first
+        all_class_defs: List[ClassDefinition] = []
+        for pdf_path in pdf_paths:
+            logger.info(f"  - {pdf_path}")
+            class_defs = self._extract_class_definitions(pdf_path)
+            all_class_defs.extend(class_defs)
+
+        # Phase 2: Build complete package hierarchy once
+        return self._build_package_hierarchy(all_class_defs)
 
     def _extract_class_definitions(self, pdf_path: str) -> List[ClassDefinition]:
         """Extract all class definitions from the PDF.
@@ -298,6 +330,7 @@ class PdfParser:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00007: PDF Backend Support - pdfplumber
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+            SWR_PARSER_00019: PDF Library Warning Suppression
 
         Args:
             pdf_path: Path to the PDF file.
@@ -309,38 +342,44 @@ class PdfParser:
 
         class_defs: List[ClassDefinition] = []
 
-        try:
-            with pdfplumber.open(pdf_path) as pdf:
-                text_buffer = StringIO()
+        # SWR_PARSER_00019: Suppress pdfplumber warnings that don't affect parsing
+        # Many AUTOSAR PDFs have minor PDF specification errors that generate warnings
+        # but don't affect text extraction correctness
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, module="pdfplumber")
 
-                for page in pdf.pages:
-                    # Use extract_words() with x_tolerance=1 to properly extract words with spaces
-                    # This fixes the issue where words are concatenated without spaces
-                    words = page.extract_words(x_tolerance=1)
+            try:
+                with pdfplumber.open(pdf_path) as pdf:
+                    text_buffer = StringIO()
 
-                    if words:
-                        # Reconstruct text from words, preserving line breaks
-                        # Group words by their vertical position (top coordinate)
-                        current_y = None
-                        for word in words:
-                            text = word['text']
-                            top = word['top']
+                    for page in pdf.pages:
+                        # Use extract_words() with x_tolerance=1 to properly extract words with spaces
+                        # This fixes the issue where words are concatenated without spaces
+                        words = page.extract_words(x_tolerance=1)
 
-                            # Check if we've moved to a new line
-                            if current_y is not None and abs(top - current_y) > 5:
-                                text_buffer.write("\n")
+                        if words:
+                            # Reconstruct text from words, preserving line breaks
+                            # Group words by their vertical position (top coordinate)
+                            current_y = None
+                            for word in words:
+                                text = word['text']
+                                top = word['top']
 
-                            text_buffer.write(text + " ")
-                            current_y = top
+                                # Check if we've moved to a new line
+                                if current_y is not None and abs(top - current_y) > 5:
+                                    text_buffer.write("\n")
 
-                        # Add newline after each page
-                        text_buffer.write("\n")
+                                text_buffer.write(text + " ")
+                                current_y = top
 
-                full_text = text_buffer.getvalue()
-                class_defs = self._parse_class_text(full_text)
+                            # Add newline after each page
+                            text_buffer.write("\n")
 
-        except Exception as e:
-            raise Exception(f"Failed to parse PDF with pdfplumber: {e}") from e
+                    full_text = text_buffer.getvalue()
+                    class_defs = self._parse_class_text(full_text)
+
+            except Exception as e:
+                raise Exception(f"Failed to parse PDF with pdfplumber: {e}") from e
 
         return class_defs
 
@@ -1259,31 +1298,151 @@ class PdfParser:
 
         return root_classes
 
+    def _build_ancestry_cache(self, class_registry: Dict[str, AutosarClass]) -> Dict[str, Set[str]]:
+        """Build ancestry cache mapping each class to all its ancestors.
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This method recursively traverses the inheritance hierarchy to collect
+        all ancestors for each class. ARObject is filtered out from the ancestry
+        cache as it's the implicit root.
+
+        Args:
+            class_registry: Dictionary mapping class names to AutosarClass objects.
+
+        Returns:
+            Dictionary mapping each class name to a set of its ancestor names.
+        """
+        ancestry_cache: Dict[str, Set[str]] = {}
+
+        def collect_ancestors(class_name: str, visited: Optional[Set[str]] = None) -> Set[str]:
+            """Recursively collect all ancestors of a class.
+
+            Args:
+                class_name: The name of the class to collect ancestors for.
+                visited: Set of already visited classes to prevent infinite loops.
+
+            Returns:
+                Set of ancestor names.
+            """
+            if visited is None:
+                visited = set()
+
+            if class_name in visited:
+                return set()
+
+            visited.add(class_name)
+
+            if class_name not in class_registry:
+                return set()
+
+            cls = class_registry[class_name]
+            ancestors: Set[str] = set()
+
+            for base_name in cls.bases:
+                # Skip ARObject from ancestry cache (implicit root)
+                if base_name == "ARObject":
+                    continue
+
+                # Add the base itself as an ancestor
+                ancestors.add(base_name)
+
+                # Recursively collect ancestors of this base
+                base_ancestors = collect_ancestors(base_name, visited.copy())
+                ancestors.update(base_ancestors)
+
+            return ancestors
+
+        # Build ancestry cache for all classes
+        for class_name in class_registry:
+            ancestry_cache[class_name] = collect_ancestors(class_name)
+
+        return ancestry_cache
+
     def _set_parent_references(self, pkg: AutosarPackage, root_classes: List[AutosarClass], all_packages: List[AutosarPackage]) -> None:
         """Recursively set parent references for all AutosarClass objects in a package.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
-        This method sets the `parent` attribute to the name of the first base class
-        if it exists and is a class (not an enumeration), and collects root classes
+        This method sets the `parent` attribute to the name of the most appropriate
+        immediate base class using ancestry-based analysis, and collects root classes
         (classes with empty bases).
+
+        The parent selection algorithm:
+        1. Build complete inheritance graph data structures (class registry, ancestry cache)
+        2. Filter out "ARObject" from bases list (implicit root)
+        3. Filter out bases that don't exist in the model (strict validation)
+        4. For each remaining base, check if it's an ancestor of any OTHER base
+        5. The direct parent is the base that is NOT an ancestor of any other base
+        6. If multiple candidates exist, pick the last one (backward compatibility)
 
         Args:
             pkg: The package to process.
             root_classes: List to populate with root AutosarClass objects.
             all_packages: List of all top-level packages for searching base classes.
         """
+        # Build class registry for O(1) lookup
+        class_registry: Dict[str, AutosarClass] = {}
+
+        def collect_classes(pkg_to_scan: AutosarPackage) -> None:
+            """Collect all classes into the registry."""
+            for typ in pkg_to_scan.types:
+                if isinstance(typ, AutosarClass):
+                    class_registry[typ.name] = typ
+            for subpkg in pkg_to_scan.subpackages:
+                collect_classes(subpkg)
+
+        for pkg_to_scan in all_packages:
+            collect_classes(pkg_to_scan)
+
+        # Build ancestry cache
+        ancestry_cache = self._build_ancestry_cache(class_registry)
+
+        # Set parent references using ancestry-based analysis
         for typ in pkg.types:
             if isinstance(typ, AutosarClass):
                 if typ.bases:
-                    # Only set parent if the base class exists and is a class (not enumeration)
-                    base_name = typ.bases[0]
-                    base_class = self._find_class_in_all_packages(all_packages, base_name)
-                    if base_class is not None:
-                        typ.parent = base_name
+                    # Check if the original bases list contains only "ARObject"
+                    has_only_arobject = all(b == "ARObject" for b in typ.bases)
+
+                    # Filter out ARObject (implicit root of all AUTOSAR classes)
+                    candidate_bases = [b for b in typ.bases if b != "ARObject"]
+
+                    # Filter out bases that don't exist in the model (strict validation)
+                    valid_bases = [b for b in candidate_bases if b in class_registry]
+
+                    if valid_bases:
+                        # Find the direct parent using ancestry-based analysis
+                        # The direct parent is the base that is NOT an ancestor of any other base
+                        direct_parents: List[str] = []
+                        for base_name in valid_bases:
+                            # Check if this base is an ancestor of any OTHER base
+                            is_ancestor = False
+                            for other_base in valid_bases:
+                                if other_base != base_name:
+                                    other_base_ancestors = ancestry_cache.get(other_base, set())
+                                    if base_name in other_base_ancestors:
+                                        is_ancestor = True
+                                        break
+                            if not is_ancestor:
+                                direct_parents.append(base_name)
+
+                        # If multiple candidates exist, pick the last one (backward compatibility)
+                        if direct_parents:
+                            typ.parent = direct_parents[-1]
+                        else:
+                            # Fallback: pick the last valid base
+                            typ.parent = valid_bases[-1]
+                    elif has_only_arobject:
+                        # Only ARObject in bases → parent is ARObject (but not a root class)
+                        typ.parent = "ARObject"
+                    else:
+                        # All bases were filtered out (don't exist in model) → parent is None
+                        typ.parent = None
                 else:
-                    # No bases means this is a root class
+                    # No bases means this is a root class (only ARObject itself)
                     root_classes.append(typ)
 
         # Recursively process subpackages

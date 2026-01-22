@@ -1232,10 +1232,14 @@ class PdfParser:
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
 
-        This method sets the `parent` attribute for each AutosarClass to the name
-        of its immediate parent class based on the class's `bases` list.
-        It also collects root classes (classes with empty bases).
+        This method:
+        1. Sets the `parent` attribute for each AutosarClass to the name
+           of its immediate parent class based on the class's `bases` list
+        2. Populates the `children` attribute for each parent class with
+           the names of classes that inherit from it
+        3. Collects root classes (classes with empty bases).
 
         Args:
             packages: List of top-level AutosarPackage objects.
@@ -1245,9 +1249,13 @@ class PdfParser:
         """
         root_classes: List[AutosarClass] = []
 
-        # Process each package and set parent references
+        # First pass: set parent references and collect root classes
         for pkg in packages:
             self._set_parent_references(pkg, root_classes, packages)
+
+        # Second pass: populate children lists based on parent references
+        for pkg in packages:
+            self._populate_children_lists(pkg, packages)
 
         return root_classes
 
@@ -1281,6 +1289,30 @@ class PdfParser:
         # Recursively process subpackages
         for subpkg in pkg.subpackages:
             self._set_parent_references(subpkg, root_classes, all_packages)
+
+    def _populate_children_lists(self, pkg: AutosarPackage, all_packages: List[AutosarPackage]) -> None:
+        """Populate children lists for all classes based on parent references.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+
+        This method iterates through all classes in the package and adds each class's
+        name to the children list of its parent class (if it has a parent).
+
+        Args:
+            pkg: The package to process.
+            all_packages: List of all top-level packages for searching parent classes.
+        """
+        for typ in pkg.types:
+            if isinstance(typ, AutosarClass) and typ.parent:
+                # Find the parent class and add this class to its children list
+                parent_class = self._find_class_in_all_packages(all_packages, typ.parent)
+                if parent_class is not None:
+                    parent_class.children.append(typ.name)
+
+        # Recursively process subpackages
+        for subpkg in pkg.subpackages:
+            self._populate_children_lists(subpkg, all_packages)
 
     def _find_class_in_all_packages(self, packages: List[AutosarPackage], class_name: str) -> Optional[AutosarClass]:
         """Recursively search for a class by name across all packages.

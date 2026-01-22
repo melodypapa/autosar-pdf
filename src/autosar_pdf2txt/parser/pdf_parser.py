@@ -1298,6 +1298,7 @@ class PdfParser:
 
         This method iterates through all classes in the package and adds each class's
         name to the children list of its parent class (if it has a parent).
+        After populating all children lists, they are sorted alphabetically for consistency.
 
         Args:
             pkg: The package to process.
@@ -1313,6 +1314,11 @@ class PdfParser:
         # Recursively process subpackages
         for subpkg in pkg.subpackages:
             self._populate_children_lists(subpkg, all_packages)
+
+        # Sort children lists alphabetically for all classes in this package
+        for typ in pkg.types:
+            if isinstance(typ, AutosarClass):
+                typ.children.sort()
 
     def _find_class_in_all_packages(self, packages: List[AutosarPackage], class_name: str) -> Optional[AutosarClass]:
         """Recursively search for a class by name across all packages.

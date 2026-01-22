@@ -88,7 +88,11 @@ src/autosar_pdf2txt/
 ├── __init__.py          # Package exports
 ├── models/
 │   ├── __init__.py
-│   └── autosar_models.py   # AutosarClass, AutosarPackage dataclasses
+│   ├── base.py            # AbstractAutosarBase abstract base class
+│   ├── enums.py           # ATPType, AttributeKind enumerations
+│   ├── attributes.py      # AutosarAttribute, AutosarEnumLiteral
+│   ├── types.py           # AutosarClass, AutosarEnumeration, AutosarPrimitive
+│   └── containers.py      # AutosarPackage, AutosarDoc
 ├── parser/
 │   ├── __init__.py
 │   └── pdf_parser.py       # PdfParser class for extracting AUTOSAR from PDFs
@@ -120,11 +124,14 @@ PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → M
    - Builds `ClassDefinition` intermediate objects
    - Constructs `AutosarPackage` hierarchy with nested `AutosarClass` objects
 
-3. **Model Layer**: `autosar_models.py`
-   - Immutable dataclasses with validation
-   - `AutosarPackage`: Hierarchical package structure
-   - `AutosarClass`: Class representation with attributes, inheritance, ATP markers
-   - `AutosarAttribute`: Attribute details with reference type tracking
+3. **Model Layer**: `models/` directory with modular design
+   - `base.py`: `AbstractAutosarBase` - shared base class for all AUTOSAR types
+   - `enums.py`: `ATPType`, `AttributeKind` enumerations
+   - `attributes.py`: `AutosarAttribute`, `AutosarEnumLiteral`
+   - `types.py`: `AutosarClass`, `AutosarEnumeration`, `AutosarPrimitive` (inherit from `AbstractAutosarBase`)
+   - `containers.py`: `AutosarPackage`, `AutosarDoc`
+   - Unified type system: Packages contain `types` list (classes, enumerations, primitives)
+   - Inheritance tracking: `AutosarClass` has `parent` and `children` attributes
    - Duplicate prevention at model level
 
 4. **Output Layer**: `markdown_writer.py`
@@ -134,27 +141,39 @@ PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → M
 
 **Key Design Principles:**
 - **Separation of Concerns**: Each layer has a single responsibility
-- **Dataclass-Based Models**: Immutable, validated data structures
+- **Modular Models**: Separated into base/types/attributes/containers for clear organization
+- **Abstract Base Pattern**: `AbstractAutosarBase` provides common interface for all types
+- **Unified Type System**: Classes, enumerations, and primitives all inherit from same base
+- **Inheritance Tracking**: Classes track both parent and children for bi-directional navigation
 - **Model-Level Validation**: All validation happens in `__post_init__`, not in the parser
 - **No Writer-Level Deduplication**: Parser ensures uniqueness through model validation
 
 ### Core Components
 
-**Models (`models/autosar_models.py`)**
-- `ATPType`: Enum representing AUTOSAR Tool Platform marker types (NONE, ATP_MIXED_STRING, ATP_VARIATION, ATP_MIXED)
-- `AutosarClass`: Dataclass representing an AUTOSAR class with name, abstract flag, atp_type, attributes, bases (inheritance), and note (documentation)
-- `AutosarAttribute`: Dataclass representing an AUTOSAR attribute with name, type, and reference flag
-- `AutosarPackage`: Dataclass for hierarchical package structures containing classes and subpackages
+**Models (`models/` directory)**
+- `base.py`: `AbstractAutosarBase` - abstract base class for all AUTOSAR types (name, package, note)
+- `enums.py`: `ATPType` (NONE, ATP_MIXED_STRING, ATP_VARIATION, ATP_MIXED), `AttributeKind`
+- `attributes.py`: `AutosarAttribute` (name, type, mult, kind, reference), `AutosarEnumLiteral` (name, index, description)
+- `types.py`:
+  - `AutosarClass`: Regular AUTOSAR classes with inheritance tracking (parent, children attributes)
+  - `AutosarEnumeration`: Enumeration types with literals
+  - `AutosarPrimitive`: Primitive data types
+  - All inherit from `AbstractAutosarBase`
+- `containers.py`:
+  - `AutosarPackage`: Hierarchical packages with unified `types` collection (add_type, get_type, has_type)
+  - `AutosarDoc`: Document-level container for packages and root classes
 - Validation: All classes validate non-empty names in `__post_init__`
-- Duplicate prevention: `add_class()` and `add_subpackage()` check for duplicates by name
-- Query methods: `get_class()`, `get_subpackage()`, `has_class()`, `has_subpackage()`
+- Duplicate prevention: `add_type()` and `add_subpackage()` check for duplicates by name
+- Query methods: `get_type()`, `get_class()`, `get_enumeration()`, `get_primitive()`, `get_subpackage()`, `has_type()`, `has_class()`
 
 **Parser (`parser/pdf_parser.py`)**
 - `PdfParser`: Extracts AUTOSAR hierarchies from PDF files using pdfplumber
-- Pattern recognition: Identifies class definitions, package paths, base classes, and subclasses using regex patterns
+- Pattern recognition: Identifies class/enumeration/primitive definitions, package paths, base classes, subclasses using regex patterns
+- Supports three type patterns: `Class`, `Primitive`, `Enumeration` (SWR_PARSER_00013)
 - Hierarchy building: Constructs nested package structures from parsed data
 - Default PDF engine: pdfplumber (no backend selection - this is fixed)
 - Key intermediate class: `ClassDefinition` (internal to parser) for building parsed data before creating model objects
+- Inheritance tracking: Populates both `bases` list and `parent`/`children` attributes
 
 **Writer (`writer/markdown_writer.py`)**
 - `MarkdownWriter`: Class-based API for writing package hierarchies to markdown
@@ -164,6 +183,7 @@ PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → M
 - Supports two output modes:
   - Consolidated: All packages and classes in single markdown file
   - Per-class: Individual markdown files for each class (with `--include-class-details`)
+- Class hierarchy generation: `write_class_hierarchy()` creates inheritance tree from root classes
 
 ## CLI Usage
 
@@ -183,6 +203,9 @@ autosar-extract input.pdf -v
 
 # Create separate markdown files for each class
 autosar-extract input.pdf -o output.md --include-class-details
+
+# Generate class inheritance hierarchy in separate file
+autosar-extract input.pdf -o output.md --include-class-hierarchy
 ```
 
 ### Logging Levels
@@ -272,33 +295,37 @@ autosar-extract input.pdf -o output.md --include-class-details
 
 ### PDF Parsing Patterns
 - Class definitions: `Class <name> (abstract)`
-- Primitive class definitions: `Primitive <name>` (SWR_PARSER_00013)
-- Enumeration class definitions: `Enumeration <name>` (SWR_PARSER_00013)
+- Primitive type definitions: `Primitive <name>` (SWR_PARSER_00013)
+- Enumeration type definitions: `Enumeration <name>` (SWR_PARSER_00013)
 - Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>`
 - Subclasses: `Subclasses <class_list>`
 - Notes: `Note <text>` (documentation/comments)
 - Attribute header: `Attribute Type Mult. Kind Note` (SWR_PARSER_00010)
+- Enumeration literal header: `Literal Description` (SWR_PARSER_00014)
 - Attributes: `<name> <type> <mult> <kind> <description>` (SWR_PARSER_00011, SWR_PARSER_00012)
+- Enumeration literals: `<name> <description>` (SWR_PARSER_00015)
 
 ### PDF Text Extraction Strategy
 The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_tolerance=1`) instead of raw text extraction to properly handle word spacing and avoid concatenated words due to tight kerning in PDF files (SWR_PARSER_00009).
 
-### Attribute Extraction Details
+### Attribute and Enumeration Extraction Details
 - Recognizes attribute section by the "Attribute Type Mult. Kind Note" header (SWR_PARSER_00010)
+- Recognizes enumeration literal section by the "Literal Description" header (SWR_PARSER_00014)
 - Filters out metadata lines containing special characters (`:`, `;`) or starting with numbers (SWR_PARSER_00011)
 - Handles multi-line attribute definitions by detecting and filtering broken attribute fragments (SWR_PARSER_00012)
 - Common filtered fragments: "Element", "SizeProfile", "data", "If", "has", "to", "ImplementationDataType"
+- Enumeration literals extracted as `AutosarEnumLiteral` objects with index and description
 
 ## Requirement Traceability
 
 All code includes requirement IDs in docstrings for traceability to `docs/requirements/requirements.md`. Coding standards are defined in `docs/development/coding_rules.md` with stable identifiers.
 
 **Requirements by Module:**
-- **Model**: SWR_MODEL_00001 - SWR_MODEL_00013
+- **Model**: SWR_MODEL_00001 - SWR_MODEL_00026
 - **Parser**: SWR_PARSER_00001 - SWR_PARSER_00017
-- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00006
+- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00007
 - **CLI**: SWR_CLI_00001 - SWR_CLI_00011
 - **Package**: SWR_PACKAGE_00001 - SWR_PACKAGE_00003
 
@@ -368,7 +395,7 @@ The project maintains comprehensive documentation in the `docs/` directory:
 When implementing new features, follow this workflow:
 
 1. **Add the requirement** to `docs/requirements/requirements.md`:
-   - Use the next available ID in the sequence (e.g., `SWR_MODEL_00014`)
+   - Use the next available ID in the sequence (e.g., `SWR_MODEL_00027`)
    - Set maturity to `draft`
    - Include description and acceptance criteria
 
@@ -376,11 +403,13 @@ When implementing new features, follow this workflow:
    - Add requirement ID to all relevant docstrings
    - Follow coding standards in `docs/development/coding_rules.md`
    - Include type hints and Google-style docstrings
+   - For new types, inherit from `AbstractAutosarBase` if appropriate
 
 3. **Add tests** to the appropriate test file:
-   - Use the next available test ID (e.g., `SWUT_MODEL_00014`)
+   - Use the next available test ID (e.g., `SWUT_MODEL_00027`)
    - Test success paths, error paths, and edge cases
    - Include requirement ID in test docstrings
+   - Target 100% coverage for new code
 
 4. **Update maturity levels**:
    - Change requirement maturity from `draft` to `accept`
@@ -413,6 +442,7 @@ If the parser is not extracting classes correctly from a PDF:
    - Class definitions: `CLASS_PATTERN`, `PRIMITIVE_PATTERN`, `ENUMERATION_PATTERN`
    - Package paths: `PACKAGE_PATTERN`
    - Attributes: `ATTRIBUTE_PATTERN` (checks for "Attribute Type Mult. Kind Note" header)
+   - Enumeration literals: `ENUMERATION_LITERAL_HEADER_PATTERN`, `ENUMERATION_LITERAL_PATTERN`
    - ATP markers: `ATP_MIXED_STRING_PATTERN`, `ATP_VARIATION_PATTERN`, `ATP_MIXED_PATTERN`
 
 4. **Check for attribute extraction issues**:
@@ -421,7 +451,11 @@ If the parser is not extracting classes correctly from a PDF:
    - Look for multi-line attribute fragments (SWR_PARSER_00012)
    - Common problematic fragments: "Element", "SizeProfile", "data", "If", "has"
 
-5. **Check for M2 package prefixes** which affect hierarchy building
+5. **Check for enumeration literal extraction**:
+   - Verify literal header recognition: "Literal Description"
+   - Ensure literals are being extracted with correct indices
+
+6. **Check for M2 package prefixes** which affect hierarchy building
 
 ### Understanding Package Hierarchy
 
@@ -430,7 +464,8 @@ The parser builds package hierarchies from path strings like `"M2::AUTOSAR::Data
 - `M2::` prefix is stripped during parsing
 - `::` separator indicates nesting levels
 - Each level becomes a nested `AutosarPackage`
-- Classes are added to the deepest package level
+- Types (classes, enumerations, primitives) are added to the deepest package level via `add_type()`
+- Packages maintain a unified `types` collection containing all type variants
 
 Example:
 ```
@@ -439,7 +474,36 @@ Package: M2::AUTOSAR::DataTypes
 Creates hierarchy:
 AutosarPackage("AUTOSAR")
   └── AutosarPackage("DataTypes")
-        └── AutosarClass(...)
+        ├── AutosarClass("SwDataDefProps")
+        ├── AutosarEnumeration("CategoryEnum")
+        └── AutosarPrimitive("Limit")
+```
+
+### Understanding Model Inheritance
+
+The model layer uses an abstract base class pattern:
+
+```
+AbstractAutosarBase (name, package, note)
+    ├── AutosarClass (is_abstract, atp_type, attributes, bases, parent, children)
+    ├── AutosarEnumeration (enumeration_literals)
+    └── AutosarPrimitive (attributes)
+```
+
+- **AutosarClass**: Tracks inheritance with `bases` (all parents), `parent` (immediate parent), and `children` (derived classes)
+- **AutosarEnumeration**: Contains `AutosarEnumLiteral` objects
+- **AutosarPrimitive**: Represents primitive data types like `Limit`, `Interval`
+- **AutosarPackage**: Contains unified `types` list (can hold any of the above types)
+
+Access types in packages:
+```python
+# Unified access
+typ = pkg.get_type("MyClass")  # Returns AutosarClass | AutosarEnumeration | AutosarPrimitive | None
+
+# Specific access
+cls = pkg.get_class("MyClass")  # Returns only AutosarClass | None
+enum = pkg.get_enumeration("MyEnum")  # Returns only AutosarEnumeration | None
+prim = pkg.get_primitive("Limit")  # Returns only AutosarPrimitive | None
 ```
 
 ### Test-Driven Development Workflow

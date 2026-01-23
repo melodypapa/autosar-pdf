@@ -231,8 +231,8 @@ class TestPdfIntegration:
             f"Found {len(extra_classes)} unexpected classes: {sorted(extra_classes)}"
 
         # Print summary for verification
-        print(f"\n=== TimingExtensions PDF verification ===")
+        print("\n=== TimingExtensions PDF verification ===")
         print(f"  Expected classes: {expected_count}")
         print(f"  Extracted classes: {actual_count}")
-        print(f"  All expected classes found: YES")
+        print("  All expected classes found: YES")
         print(f"  Sample classes: {sorted(list(extracted_classes))[:10]}...")

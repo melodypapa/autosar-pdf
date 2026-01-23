@@ -2261,7 +2261,6 @@ class TestPdfParser:
         base class, warnings are logged only once per unique missing class,
         preventing log spam.
         """
-        import logging
         from unittest.mock import patch
 
         parser = PdfParser()
@@ -2352,7 +2351,6 @@ class TestPdfParser:
         referenced from multiple classes, warnings are logged only once per unique
         missing class, preventing log spam from repeated references.
         """
-        import logging
         from unittest.mock import patch
 
         parser = PdfParser()
@@ -2424,7 +2422,7 @@ class TestPdfParser:
         only on the initial call to _set_parent_references and are reused in
         recursive calls, avoiding redundant computation.
         """
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
 
         parser = PdfParser()
 
@@ -2459,7 +2457,7 @@ class TestPdfParser:
             return original_build_cache(class_registry, missing_classes_buffer)
 
         with patch.object(parser, '_build_ancestry_cache', side_effect=mock_build_cache):
-            doc = parser._build_package_hierarchy(class_defs)
+            parser._build_package_hierarchy(class_defs)
 
             # _build_ancestry_cache should be called exactly once (not once per package)
             assert call_count[0] == 1, \

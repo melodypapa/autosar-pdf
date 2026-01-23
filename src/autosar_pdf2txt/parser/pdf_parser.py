@@ -1610,13 +1610,16 @@ class PdfParser:
 
         # Build class registry and ancestry cache only on initial call
         if is_initial_call:
-            class_registry: Dict[str, AutosarClass] = {}
+            # Reassign with concrete type (not Optional)
+            class_registry = {}
             missing_ancestry_buffer = set()
 
             def collect_classes(pkg_to_scan: AutosarPackage) -> None:
                 """Collect all classes into the registry."""
                 for typ in pkg_to_scan.types:
                     if isinstance(typ, AutosarClass):
+                        # Type narrowing: class_registry is Dict here, not Optional
+                        assert class_registry is not None
                         class_registry[typ.name] = typ
                 for subpkg in pkg_to_scan.subpackages:
                     collect_classes(subpkg)
@@ -1625,6 +1628,9 @@ class PdfParser:
                 collect_classes(pkg_to_scan)
 
             # Build ancestry cache (with missing classes buffer for deduplication)
+            # Type narrowing: both parameters are non-Optional here
+            assert class_registry is not None
+            assert ancestry_cache is not None
             ancestry_cache = self._build_ancestry_cache(class_registry, missing_ancestry_buffer)
 
         # Set parent references using ancestry-based analysis
@@ -1637,13 +1643,19 @@ class PdfParser:
                     # Filter out ARObject (implicit root of all AUTOSAR classes)
                     candidate_bases = [b for b in typ.bases if b != "ARObject"]
 
+                    # Type narrowing for Optional parameters
+                    if class_registry is None:
+                        class_registry = {}
+                    if ancestry_cache is None:
+                        ancestry_cache = {}
+
                     # Filter out bases that don't exist in the model (strict validation)
                     # Track missing base classes for logging (buffer for later)
                     missing_bases = [b for b in candidate_bases if b not in class_registry]
                     valid_bases = [b for b in candidate_bases if b in class_registry]
 
                     # Collect missing base class errors (buffer instead of immediate logging)
-                    if missing_bases:
+                    if missing_bases and missing_base_errors is not None:
                         # Create unique key for this error: class name + package name
                         error_key = f"{typ.name} (in {pkg.name})"
                         if error_key not in missing_base_errors:

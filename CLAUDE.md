@@ -16,7 +16,7 @@ pip install -e .
 # Install with all development dependencies
 pip install -e ".[dev]"  # If dev extras are defined
 # Or manually:
-pip install pytest pytest-cov ruff mypy pdfplumber
+pip install pytest pytest-cov ruff mypy pdfplumber pytesseract pillow
 ```
 
 ### Running Tests
@@ -185,6 +185,10 @@ PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → M
   - Per-class: Individual markdown files for each class (with `--include-class-details`)
 - Class hierarchy generation: `write_class_hierarchy()` creates inheritance tree from root classes
 
+**CLI Entry Points**
+- `autosar-extract`: Main CLI for extracting AUTOSAR models from PDFs to markdown (`cli/autosar_cli.py`)
+- `autosar-extract-table`: CLI for extracting tables from PDFs as images (`cli/extract_tables_cli.py`)
+
 ## CLI Usage
 
 ### Basic Usage
@@ -206,6 +210,10 @@ autosar-extract input.pdf -o output.md --include-class-details
 
 # Generate class inheritance hierarchy in separate file
 autosar-extract input.pdf -o output.md --include-class-hierarchy
+
+# Extract tables from PDFs as images (requires -o for output directory)
+autosar-extract-table input.pdf -o output_tables_dir/
+autosar-extract-table /path/to/pdfs/ -o tables/
 ```
 
 ### Logging Levels
@@ -523,6 +531,43 @@ When fixing bugs or adding features:
    ```
 6. **Check coverage** to ensure new code is covered
 
+### Validating PDF Extraction with Tables
+
+The project includes a validation script that compares extracted class hierarchies with table images extracted from PDFs using OCR:
+
+```bash
+# Validate a single PDF (uses default output: data)
+python scripts/validate_with_jpg.py examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf
+
+# Validate all PDFs in a directory
+python scripts/validate_with_jpg.py examples/pdf/
+
+# Specify custom output directory
+python scripts/validate_with_jpg.py examples/pdf/ data/custom_output/
+```
+
+**What the script does:**
+1. Calls `autosar-extract` to generate class markdown files and hierarchy from PDFs
+2. Calls `autosar-extract-table` to extract all tables from the same PDFs as images
+3. Extracts class names from the class hierarchy markdown file
+4. Uses OCR (pytesseract) to extract class names from table images
+5. Filters tables to only include class attribute tables (headers: Attribute, Type, Mult., Kind, Note)
+6. Compares class names between hierarchy and tables to validate extraction
+7. Generates a markdown report with validation results
+
+**OCR requirements:**
+```bash
+# Python packages
+pip install pytesseract pillow
+
+# Tesseract binary (system dependency)
+# macOS:
+brew install tesseract
+# Ubuntu/Debian:
+sudo apt-get install tesseract-ocr
+# Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+```
+
 ## Troubleshooting
 
 ### Issue: Import Error for pdfplumber
@@ -567,3 +612,20 @@ def parse_pdf(self, pdf_path: str) -> List[AutosarPackage]:
 2. Identify uncovered lines in specific files
 3. Add tests for uncovered code paths
 4. Re-run tests: `python scripts/run_tests.py --unit`
+
+### Issue: OCR Not Working (Validation Script)
+
+**Error**: `ImportError: No module named 'pytesseract'` or `Failed to check table type`
+
+**Solution**:
+```bash
+# Install Python OCR dependencies
+pip install pytesseract pillow
+
+# Install Tesseract binary (system dependency)
+# macOS:
+brew install tesseract
+# Ubuntu/Debian:
+sudo apt-get install tesseract-ocr
+# Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+```

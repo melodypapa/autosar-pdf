@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Validate markdown files with extracted table images.
+"""Validate markdown files with extracted AUTOSAR table images.
 
 This script:
 1. Calls autosar-extract to generate class markdown files and hierarchy from PDFs
-2. Calls autosar-extract-table to extract all tables from the same PDFs
+2. Calls autosar-extract-table to extract AUTOSAR-related tables (containing Class and Package fields)
 3. Extracts class names from the class hierarchy markdown file
 4. Extracts class names from table images using OCR
 5. Compares class names between hierarchy and tables to validate extraction
@@ -138,13 +138,15 @@ def generate_markdown_files(pdf_files: List[Path], output_dir: Path, include_cla
 
 
 def extract_table_images(pdf_files: List[Path], output_dir: Path) -> None:
-    """Extract table images using autosar-extract-table.
+    """Extract AUTOSAR-related table images using autosar-extract-table.
+
+    Only tables containing both Class and Package fields are extracted.
 
     Args:
         pdf_files: List of PDF file paths
         output_dir: Output directory for table images
     """
-    logging.info("Extracting table images with autosar-extract-table...")
+    logging.info("Extracting AUTOSAR table images with autosar-extract-table...")
 
     tables_dir = output_dir / "tables"
     cmd = [
@@ -156,7 +158,7 @@ def extract_table_images(pdf_files: List[Path], output_dir: Path) -> None:
 
     try:
         run_command(cmd)
-        logging.info(f"Table images extracted to {tables_dir}")
+        logging.info(f"AUTOSAR table images extracted to {tables_dir}")
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to extract table images: {e}")
         sys.exit(1)
@@ -179,16 +181,16 @@ def find_markdown_files(output_dir: Path) -> List[Path]:
 
 
 def find_table_images(tables_dir: Path) -> List[Path]:
-    """Find all table image files in tables directory.
+    """Find all AUTOSAR table image files in tables directory.
 
     Args:
         tables_dir: Tables directory
 
     Returns:
-        List of table image paths
+        List of AUTOSAR table image paths
     """
     table_images = list(tables_dir.glob("*.png"))
-    logging.debug(f"Found {len(table_images)} table images")
+    logging.debug(f"Found {len(table_images)} AUTOSAR table images")
     return table_images
 
 
@@ -338,11 +340,13 @@ def extract_class_name_from_image(image_path: Path) -> Optional[str]:
 
 
 def validate_markdown_with_tables(markdown_files: List[Path], table_images: List[Path], hierarchy_file: Path, ocr_available: bool) -> Tuple[int, int, List[str], List[str], List[str], set, set, set]:
-    """Validate markdown files against table images.
+    """Validate markdown files against AUTOSAR table images.
+
+    Note: Tables are already filtered at extraction time (only AUTOSAR-related tables with Class and Package fields).
 
     Args:
         markdown_files: List of markdown file paths
-        table_images: List of table image paths
+        table_images: List of AUTOSAR table image paths
         hierarchy_file: Path to class hierarchy markdown file
         ocr_available: Whether OCR functionality is available
 
@@ -353,7 +357,7 @@ def validate_markdown_with_tables(markdown_files: List[Path], table_images: List
     total_tables = len(table_images)
     validation_messages = []
 
-    logging.info("Validating markdown files with table images...")
+    logging.info("Validating markdown files with AUTOSAR table images...")
 
     # Extract class names from hierarchy file
     hierarchy_classes = parse_hierarchy_for_classes(hierarchy_file)
@@ -361,18 +365,16 @@ def validate_markdown_with_tables(markdown_files: List[Path], table_images: List
 
     # Extract class names from table images (only if OCR is available)
     table_classes = []
+
     if ocr_available:
-        # Skip OCR if there are too many tables (likely includes UML diagrams)
-        if len(table_images) > 150:
-            logging.warning(f"Too many table images ({len(table_images)}). Skipping OCR to avoid performance issues.")
-            logging.warning("This likely includes UML diagrams and other non-class tables.")
-        else:
-            for img_path in table_images:
-                class_name = extract_class_name_from_image(img_path)
-                if class_name:
-                    table_classes.append(class_name)
-                    logging.debug(f"{img_path.name}: {class_name}")
-            logging.info(f"Extracted {len(table_classes)} class names from table images")
+        # Tables are already filtered at extraction time (AUTOSAR-related tables only)
+        logging.info(f"Extracting class names from {len(table_images)} AUTOSAR table images...")
+        for img_path in table_images:
+            class_name = extract_class_name_from_image(img_path)
+            if class_name:
+                table_classes.append(class_name)
+                logging.debug(f"{img_path.name}: {class_name}")
+        logging.info(f"Extracted {len(table_classes)} class names from AUTOSAR tables")
     else:
         logging.info("Skipping OCR extraction (tesseract not available)")
 
@@ -386,14 +388,14 @@ def validate_markdown_with_tables(markdown_files: List[Path], table_images: List
 
     validation_messages.append(f"Total markdown files: {len(markdown_files)}")
     validation_messages.append(f"Total classes in hierarchy: {len(hierarchy_classes)}")
-    validation_messages.append(f"Total table images: {total_tables}")
+    validation_messages.append(f"Total AUTOSAR table images extracted: {total_tables}")
     validation_messages.append(f"Classes extracted from tables: {len(table_classes)}")
 
-    # Compare total table images with markdown class files
-    if len(markdown_files) == total_tables:
-        validation_messages.append(f"[SUCCESS] Number of markdown files ({len(markdown_files)}) matches number of table images ({total_tables})")
+    # Compare total AUTOSAR tables with markdown class files
+    if len(markdown_files) == len(table_images):
+        validation_messages.append(f"[SUCCESS] Number of markdown files ({len(markdown_files)}) matches number of AUTOSAR tables ({len(table_images)})")
     else:
-        validation_messages.append(f"[WARNING] Mismatch: {len(markdown_files)} markdown files vs {total_tables} table images (difference: {abs(len(markdown_files) - total_tables)})")
+        validation_messages.append(f"[WARNING] Mismatch: {len(markdown_files)} markdown files vs {len(table_images)} AUTOSAR tables (difference: {abs(len(markdown_files) - len(table_images))})")
 
     if matching_classes:
         validation_messages.append(f"Matching classes: {len(matching_classes)}")
@@ -416,7 +418,7 @@ def validate_markdown_with_tables(markdown_files: List[Path], table_images: List
     elif len(matching_classes) > 0:
         validation_messages.append(f"[INFO] {len(matching_classes)} classes match, but there are discrepancies")
 
-    return len(hierarchy_classes), total_tables, validation_messages, hierarchy_classes, table_classes, matching_classes, missing_in_tables, missing_in_hierarchy
+    return len(hierarchy_classes), len(table_images), validation_messages, hierarchy_classes, table_classes, matching_classes, missing_in_tables, missing_in_hierarchy
 
 
 def generate_markdown_report(

@@ -21,272 +21,88 @@ All existing integration test cases in this document are currently at maturity l
 ### 1. PDF Parser Integration Tests
 
 #### SWIT_00001
-**Title**: Test Parsing Real AUTOSAR PDF and Verifying First Class
+**Title**: Test Parsing Real AUTOSAR PDF and Verifying AUTOSAR and SwComponentType Classes
 
 **Maturity**: accept
 
-**Description**: Integration test that parses a real AUTOSAR PDF file and verifies the first extracted class has correct structure including name, abstract flag, base classes, and note with proper word spacing.
+**Description**: Integration test that parses real AUTOSAR PDF files and verifies two classes:
+1. The AUTOSAR class from BSW Module Template PDF
+2. The SwComponentType class from GenericStructureTemplate PDF (including attributes, attribute kinds, and note support)
 
-**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+**Precondition**: Files examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf and examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exist
 
 **Test Steps**:
-1. Create a PdfParser instance
-2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
-3. Find the first class in the extracted packages (searching through M2 → AUTOSARTemplates → AutosarTopLevelStructure)
-4. Verify the class name is "AUTOSAR"
-5. Verify the class is not abstract (is_abstract=False)
-6. Verify the class has one base class "ARObject" (bases=["ARObject"])
-7. Verify the class has a note containing "AUTOSAR" or "Rootelement"
-8. Verify the class is in the "AutosarTopLevelStructure" package under M2 → AUTOSARTemplates
-9. Verify the note contains proper word spacing (e.g., "Root element" not "Rootelement", "AUTOSAR description" not "AUTOSARdescription")
 
-**Expected Result**: First class is extracted successfully with:
+**Part 1: Verify AUTOSAR class from BSW Module Template PDF**
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
+2. Find the first class in the extracted packages (searching through M2 → AUTOSARTemplates → AutosarTopLevelStructure)
+3. Verify the class name is "AUTOSAR"
+4. Verify the class is not abstract (is_abstract=False)
+5. Verify the class has one base class "ARObject" (bases=["ARObject"])
+6. Verify the class has a note containing "AUTOSAR" or "Rootelement"
+7. Verify the class is in the "AutosarTopLevelStructure" package under M2 → AUTOSARTemplates
+8. Verify the note contains proper word spacing
+
+**Part 2: Verify SwComponentType class from GenericStructureTemplate PDF**
+1. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
+2. Find the SwComponentType class in the extracted packages (searching through M2 → AUTOSARTemplates → SWComponentTemplate → Components)
+3. Verify the class name is "SwComponentType"
+4. Verify the package name is "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+5. Verify the note is "Base class for AUTOSAR software components."
+6. Verify the base list contains: "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable"
+7. Verify the attribute list contains: "consistency", "port", "portGroup", "swcMapping", "swComponent", "unitGroup" (Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering)
+8. Verify the attribute "swcMapping" has kind "ref" and is_ref is true
+9. Verify attribute types match expected values: consistency: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup
+10. Verify attributes have notes (multi-line attribute note support is verified in SWIT_00006)
+
+**Expected Result**:
+
+**Part 1: AUTOSAR class**
 - Name: "AUTOSAR"
 - Abstract: False
 - Bases: ["ARObject"]
 - Note contains "AUTOSAR" or "Rootelement" with proper word spacing
 - Package hierarchy: M2 → AUTOSARTemplates → AutosarTopLevelStructure
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_MODEL_00001
+**Part 2: SwComponentType class**
+- Name: "SwComponentType"
+- Package: "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+- Note: "Base class for AUTOSAR software components."
+- Bases: ["ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable"]
+- Attributes: ["consistency", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"]
+- swcMapping.kind == "ref" and swcMapping.is_ref == True
+- Attribute types: {consistency: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup}
+- All attributes have notes (single-line for SwComponentType)
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_MODEL_00001, SWR_MODEL_00010, SWR_MODEL_00023
 
 ---
+
+### 2. TimingExtensions PDF Integration Tests
 
 #### SWIT_00002
-**Title**: Test Parsing Real AUTOSAR PDF Extracts Multiple Classes
+**Title**: Test Parsing TimingExtensions PDF and Verifying Class List
 
 **Maturity**: accept
 
-**Description**: Verify that the parser can extract all classes from a large real AUTOSAR PDF file, confirming comprehensive parsing functionality.
+**Description**: Integration test that parses the AUTOSAR_CP_TPS_TimingExtensions.pdf PDF file and verifies that all 148 expected AUTOSAR classes, enumerations, and primitives are correctly extracted.
 
-**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
-
-**Test Steps**:
-1. Create a PdfParser instance
-2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
-3. Count total classes by iterating through all packages and subpackages
-4. Verify that more than 10 classes are extracted (should be 240 in actual PDF)
-5. Print total classes and packages extracted
-
-**Expected Result**: Parser successfully extracts many classes (240 classes from 14 packages), demonstrating comprehensive parsing of the entire AUTOSAR template document
-
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00006
-
----
-
-#### SWIT_00003
-**Title**: Test Parsing Real AUTOSAR PDF Has Bases and Notes
-
-**Maturity**: accept
-
-**Description**: Verify that classes with base classes and notes are correctly parsed and transferred from real AUTOSAR PDF to the AutosarClass model.
-
-**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+**Precondition**: Files examples/pdf/AUTOSAR_CP_TPS_TimingExtensions.pdf and tests/integration/timing_extensions_class_list.txt exist
 
 **Test Steps**:
-1. Create a PdfParser instance
-2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
-3. Iterate through all packages and subpackages to find classes with bases
-4. Iterate through all packages and subpackages to find classes with notes
-5. Verify that multiple classes have base classes (expected: 231)
-6. Verify that multiple classes have notes (expected: 240 - all classes)
-7. Print counts and examples of classes with bases and notes
-
-**Expected Result**: Parser correctly extracts:
-- Many classes with base classes (231 out of 240 classes)
-- All classes have notes (240 out of 240 classes)
-- Example class shows: Name="AUTOSAR", Bases=["ARObject"], Note contains description
-
-**Requirements Coverage**: SWR_PARSER_00004, SWR_MODEL_00001
-
----
-
-## Additional Integration Test Scenarios
-
-Future integration tests should cover:
-- End-to-end PDF parsing and markdown generation
-- CLI functionality with various input combinations
-- Error handling across module boundaries
-- Performance testing with large PDFs
-- Writer output verification with real data
-
----
-
-#### SWIT_00004
-**Title**: Test End-to-End Parsing and Writing with ATP Patterns
-
-**Maturity**: accept
-
-**Description**: Integration test that verifies end-to-end parsing and writing with ATP patterns, ensuring the complete workflow from PDF parsing to markdown file generation works correctly.
-
-**Precondition**: pdfplumber library is available
-
-**Test Steps**:
-1. Create a PdfParser instance
-2. Mock pdfplumber to return class with ATP patterns
-3. Parse the mocked PDF data
-4. Verify ATP pattern is correctly extracted (atpVariation)
-5. Create a MarkdownWriter instance
-6. Write packages to temporary directory
-7. Verify individual class file contains ATP section with atpVariation marker
-
-**Expected Result**: End-to-end workflow succeeds:
-- ATP pattern is correctly extracted from PDF
-- Class has atp_type set to ATPType.ATP_VARIATION
-- Markdown file is generated with correct ATP section
-- ATP marker appears in output as "* atpVariation"
-
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_MODEL_00001, SWR_WRITER_00005
-
----
-
-#### SWIT_00005
-**Title**: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
-
-**Maturity**: accept
-
-**Description**: Integration test that parses an ECU Configuration PDF and verifies:
-1. The correct hierarchical package structure, particularly the nested Fibex package hierarchy under M2
-2. The ImplementationDataType class has correct attributes (not broken fragments from multi-line PDF table formatting)
-
-**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf exists
-
-**Test Steps**:
-1. Create a PdfParser instance
-2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf
-3. Verify there is exactly 1 top-level package (M2)
-4. Find AUTOSARTemplates subpackage under M2
-5. Find SystemTemplate subpackage under AUTOSARTemplates
-6. Find Fibex subpackage under SystemTemplate
-7. Find FibexCore subpackage under Fibex
-8. Find CoreCommunication subpackage under FibexCore
-9. Verify CoreCommunication contains classes
-10. Verify specific Fibex classes exist: Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu
-11. Verify that Fibex, SystemTemplate, FibexCore, and AUTOSARTemplates are NOT top-level packages
-12. Find CommonStructure subpackage under AUTOSARTemplates
-13. Find ImplementationDataTypes subpackage under CommonStructure
-14. Find ImplementationDataType class in ImplementationDataTypes
-15. Verify ImplementationDataType attributes are correct:
-    - Should have exactly 5 attributes
-    - Should have `dynamicArray: String` attribute
-    - Should have `isStructWithOptionalElement: Boolean` attribute
-    - Should have `subElement: ImplementationData` attribute
-    - Should have `symbolProps: SymbolProps` attribute
-    - Should have `typeEmitter: NameToken` attribute
-    - Should NOT have broken fragment attributes like:
-      - `SizeProfile: data` (continuation fragment)
-      - `isStructWith: Boolean` (partial name)
-      - `Element: If` (continuation fragment)
-      - `ImplementationDataType: has` (continuation fragment)
-      - `intention: to` (continuation fragment)
+1. Read the expected class list from tests/integration/timing_extensions_class_list.txt (excluding comments and empty lines)
+2. Verify the class list file contains 148 expected entries
+3. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_TimingExtensions.pdf using the PdfParser
+4. Recursively collect all type names (classes, enumerations, and primitives) from the parsed document
+5. Verify the total number of extracted types equals 148
+6. Verify all expected class names from the file are present in the extracted types
+7. Verify no unexpected additional types were extracted
 
 **Expected Result**:
-1. Package hierarchy is correctly structured as:
-   - M2 (top-level)
-     └─ AUTOSARTemplates
-        ├─ SystemTemplate
-        │  └─ Fibex
-        │     └─ FibexCore
-        │        └─ CoreCommunication (contains Frame, NPdu, Pdu, PduTriggering, UserDefinedPdu)
-        └─ CommonStructure
-           └─ ImplementationDataTypes
-              └─ ImplementationDataType (with correct attributes)
+- Total extracted types: 148
+- All expected classes present: YES
+- No missing classes
+- No extra classes
 
-2. ImplementationDataType has exactly 5 attributes:
-   - `dynamicArray: String`
-   - `isStructWithOptionalElement: Boolean`
-   - `subElement: ImplementationData`
-   - `symbolProps: SymbolProps`
-   - `typeEmitter: NameToken`
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001, SWR_MODEL_00023
 
-3. Broken attribute fragments are filtered out and not present
-
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_PARSER_00011, SWR_PARSER_00012, SWR_MODEL_00004
-
----
-
-#### SWIT_00006
-**Title**: Test Multi-Line Note Extraction from Real AUTOSAR PDF
-
-**Maturity**: accept
-
-**Description**: Integration test that verifies multi-line note extraction from a real AUTOSAR PDF file, ensuring that notes spanning multiple lines are captured completely until encountering another known pattern. This test also verifies that the Tags field is included in the class note, and that attribute notes spanning multiple lines are also captured correctly.
-
-**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf exists
-
-**Test Steps**:
-1. Create a PdfParser instance
-2. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf
-3. Find the BswImplementation class (search through M2 → AUTOSARTemplates → BswModuleTemplate → BswImplementation)
-4. Verify the class exists with name="BswImplementation"
-5. Verify the class has a note (note is not None and not empty)
-6. Verify the class note contains the complete multi-line text:
-   - "Contains the implementation specific information in addition to the generic specification"
-   - "(BswModule Description and BswBehavior)"
-   - "It is possible to have several different BswImplementations referring to the same BswBehavior"
-7. Verify the class note includes the Tags field:
-   - "Tags: atp.recommendedPackage=BswImplementations"
-8. Verify the class note word count is at least 20 words (ensures multi-line capture)
-9. Verify the class note character count is approximately 273 characters (full note length including Tags)
-10. Verify the arRelease attribute has a multi-line note:
-    - Verify the attribute exists (arRelease in attributes)
-    - Verify the attribute note contains text from multiple lines
-    - Verify the attribute note contains "Version of the AUTOSAR Release"
-    - Verify the attribute note contains "The numbering contains three"
-    - Verify the attribute note word count is at least 20 words
-    - Verify the attribute note character count is approximately 159 characters
-11. Print the extracted class note and attribute note for visual verification
-
-**Expected Result**: BswImplementation class is extracted with complete multi-line notes including Tags:
-- Class note contains all expected phrases across multiple lines
-- Class note is not truncated at line breaks
-- Class note includes Tags field: "Tags: atp.recommendedPackage=BswImplementations"
-- Class note word count ≥ 20 words
-- Class note character count ≈ 273 characters (increased from 225 due to Tags field)
-- arRelease attribute has multi-line note captured completely
-- arRelease attribute note contains "Version of the AUTOSAR Release" and "The numbering contains three"
-- arRelease attribute note word count ≥ 20 words
-- arRelease attribute note character count ≈ 159 characters
-
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00010, SWR_MODEL_00001, SWR_MODEL_00010
-
----
-
-#### SWIT_00007
-**Title**: Test Package Path Validation Filters Invalid Entries
-
-**Maturity**: accept
-
-**Description**: Regression test for package path validation that verifies invalid package paths containing spaces, special characters, and PDF artifacts are filtered out during parsing. The GenericStructureTemplate PDF contains descriptive text like "live in various packages which do not have a common" and "can coexist in the context of a ReferenceBase.(cid:99)()" that was incorrectly parsed as package names before the fix.
-
-**Precondition**: File examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exists
-
-**Test Steps**:
-1. Create a PdfParser instance
-2. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
-3. Collect all package names recursively from the parsed packages
-4. Verify that invalid package names are NOT present:
-   - "live in various packages which do not have a common" (spaces, lowercase)
-   - "can coexist in the context of a ReferenceBase.(cid:99)()" (special characters, PDF artifacts)
-5. Verify that M2 is the top-level package
-6. Navigate through the package hierarchy: M2 → AUTOSARTemplates → GenericStructure → GeneralTemplateClasses → ARPackage
-7. Verify ReferenceBase class exists in ARPackage
-8. Verify ReferenceBase has the expected base class "ARObject"
-9. Verify ReferenceBase has the expected attributes: globalElement, globalIn, isDefault, package, shortLabel
-
-**Expected Result**:
-1. Invalid package names are filtered out and not present in the parsed output
-2. Valid package structure is preserved:
-   - M2 (top-level)
-     └─ AUTOSARTemplates
-        └─ GenericStructure
-           └─ GeneralTemplateClasses
-              └─ ARPackage
-                 └─ ReferenceBase (with correct attributes)
-3. ReferenceBase class is correctly extracted with:
-   - Name: "ReferenceBase"
-   - Base class: "ARObject"
-   - Attributes: globalElement, globalIn, isDefault, package, shortLabel
-4. Total packages extracted: 98
-5. No invalid packages in the output
-
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00006, SWR_MODEL_00004

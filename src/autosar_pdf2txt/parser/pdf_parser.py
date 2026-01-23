@@ -5,6 +5,7 @@ import re
 import warnings
 from dataclasses import dataclass, field
 from io import StringIO
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union, cast
 
 from autosar_pdf2txt.models import (
@@ -17,6 +18,7 @@ from autosar_pdf2txt.models import (
     AutosarEnumeration,
     AutosarPackage,
     AutosarPrimitive,
+    AutosarSource,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,8 @@ class ClassDefinition:
         SWR_MODEL_00024: AUTOSAR Primitive Type Representation
         SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
         SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+        SWR_MODEL_00027: AUTOSAR Source Location Representation
+        SWR_PARSER_00022: PDF Source Location Extraction
 
     Attributes:
         name: The name of the class, enumeration, or primitive type.
@@ -49,6 +53,7 @@ class ClassDefinition:
         is_enumeration: Whether this is an enumeration type (True) or a class type (False).
         is_primitive: Whether this is a primitive type (True) or a class/enumeration type (False).
         enumeration_literals: List of enumeration literals (for enumeration types only).
+        source: Source location where this type was defined (pdf_file, page_number).
     """
 
     name: str
@@ -63,6 +68,7 @@ class ClassDefinition:
     is_enumeration: bool = False
     is_primitive: bool = False
     enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
+    source: Optional[AutosarSource] = None
 
 
 class PdfParser:
@@ -310,16 +316,21 @@ class PdfParser:
             SWR_PARSER_00007: PDF Backend Support - pdfplumber
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_PARSER_00019: PDF Library Warning Suppression
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_PARSER_00022: PDF Source Location Extraction
 
         Args:
             pdf_path: Path to the PDF file.
 
         Returns:
-            List of ClassDefinition objects.
+            List of ClassDefinition objects with source information.
         """
         import pdfplumber
 
         class_defs: List[ClassDefinition] = []
+
+        # Extract PDF filename for source tracking
+        pdf_filename = Path(pdf_path).name
 
         # SWR_PARSER_00019: Suppress pdfplumber warnings that don't affect parsing
         # Many AUTOSAR PDFs have minor PDF specification errors that generate warnings
@@ -329,9 +340,10 @@ class PdfParser:
 
             try:
                 with pdfplumber.open(pdf_path) as pdf:
-                    text_buffer = StringIO()
+                    # Process each page individually to track page numbers for source information
+                    for page_num, page in enumerate(pdf.pages, start=1):
+                        text_buffer = StringIO()
 
-                    for page in pdf.pages:
                         # Use extract_words() with x_tolerance=1 to properly extract words with spaces
                         # This fixes the issue where words are concatenated without spaces
                         words = page.extract_words(x_tolerance=1)
@@ -354,15 +366,26 @@ class PdfParser:
                             # Add newline after each page
                             text_buffer.write("\n")
 
-                    full_text = text_buffer.getvalue()
-                    class_defs = self._parse_class_text(full_text)
+                        page_text = text_buffer.getvalue()
+                        # Pass source information to parser
+                        page_class_defs = self._parse_class_text(
+                            page_text,
+                            pdf_filename=pdf_filename,
+                            page_number=page_num,
+                        )
+                        class_defs.extend(page_class_defs)
 
             except Exception as e:
                 raise Exception(f"Failed to parse PDF with pdfplumber: {e}") from e
 
         return class_defs
 
-    def _parse_class_text(self, text: str) -> List[ClassDefinition]:
+    def _parse_class_text(
+        self,
+        text: str,
+        pdf_filename: Optional[str] = None,
+        page_number: Optional[int] = None,
+    ) -> List[ClassDefinition]:
         """Parse class definitions from extracted text.
 
         Requirements:
@@ -373,12 +396,16 @@ class PdfParser:
             SWR_PARSER_00016: Enumeration Literal Section Termination
             SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
             SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_PARSER_00022: PDF Source Location Extraction
 
         Args:
             text: The extracted text from PDF.
+            pdf_filename: Optional PDF filename for source tracking.
+            page_number: Optional page number for source tracking.
 
         Returns:
-            List of ClassDefinition objects.
+            List of ClassDefinition objects with source information.
         """
         class_defs: List[ClassDefinition] = []
         lines = text.split("\n")
@@ -419,7 +446,9 @@ class PdfParser:
             if class_match or primitive_match or enumeration_match:
                 # Finalize pending class lists and attributes before processing new class
                 if current_class is not None:
-                    self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                    self._finalize_pending_class_lists(
+                        current_class, in_class_list_section, pending_class_lists
+                    )
                     (pending_attr_name, pending_attr_type, pending_attr_multiplicity,
                      pending_attr_kind, pending_attr_note) = self._finalize_pending_attribute(
                         current_class, pending_attr_name, pending_attr_type,
@@ -428,7 +457,8 @@ class PdfParser:
 
                 # Process class definition patterns
                 result = self._process_class_definition_pattern(
-                    class_match, primitive_match, enumeration_match, lines, i
+                    class_match, primitive_match, enumeration_match, lines, i,
+                    pdf_filename, page_number
                 )
                 if result:
                     # Save previous class if exists
@@ -458,7 +488,9 @@ class PdfParser:
             class_list_match = self._try_match_class_list_pattern(line, current_class, class_definition_complete)
             if class_list_match is not None and current_class is not None:
                 section_name, match = class_list_match
-                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                self._finalize_pending_class_lists(
+                    current_class, in_class_list_section, pending_class_lists
+                )
                 pending_class_lists[section_name] = self._parse_class_list_line(section_name, match)
                 in_class_list_section = section_name
                 continue
@@ -466,7 +498,9 @@ class PdfParser:
             # Check for note
             note_match = self.NOTE_PATTERN.match(line)
             if note_match and current_class is not None and not class_definition_complete:
-                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                self._finalize_pending_class_lists(
+                    current_class, in_class_list_section, pending_class_lists
+                )
                 in_class_list_section = None
                 self._process_note_line(note_match, lines, i, current_class)
                 continue
@@ -474,7 +508,9 @@ class PdfParser:
             # Check for attribute header
             attr_header_match = self.ATTRIBUTE_HEADER_PATTERN.match(line)
             if attr_header_match and current_class is not None:
-                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                self._finalize_pending_class_lists(
+                    current_class, in_class_list_section, pending_class_lists
+                )
                 in_class_list_section = None
                 (in_attribute_section, pending_attr_name, pending_attr_type,
                  pending_attr_multiplicity, pending_attr_kind, pending_attr_note) = self._process_attribute_header(
@@ -486,7 +522,9 @@ class PdfParser:
             # Check for enumeration literal header
             enum_literal_header_match = self.ENUMERATION_LITERAL_HEADER_PATTERN.match(line)
             if enum_literal_header_match and current_class is not None and current_class.is_enumeration:
-                self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+                self._finalize_pending_class_lists(
+                    current_class, in_class_list_section, pending_class_lists
+                )
                 in_class_list_section = None
                 in_enumeration_literal_section = True
                 continue
@@ -526,7 +564,9 @@ class PdfParser:
 
         # Don't forget the last class
         if current_class is not None:
-            self._finalize_pending_class_lists(current_class, in_class_list_section, pending_class_lists)
+            self._finalize_pending_class_lists(
+                current_class, in_class_list_section, pending_class_lists
+            )
             self._finalize_pending_attribute(
                 current_class, pending_attr_name, pending_attr_type,
                 pending_attr_multiplicity, pending_attr_kind, pending_attr_note
@@ -796,12 +836,16 @@ class PdfParser:
         enumeration_match: Optional[re.Match],
         lines: List[str],
         line_index: int,
+        pdf_filename: Optional[str] = None,
+        page_number: Optional[int] = None,
     ) -> Optional[ClassDefinition]:
         """Process class/primitive/enumeration definition patterns and create ClassDefinition.
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_PARSER_00022: PDF Source Location Extraction
 
         Args:
             class_match: Match object for class pattern, or None.
@@ -809,6 +853,8 @@ class PdfParser:
             enumeration_match: Match object for enumeration pattern, or None.
             lines: List of text lines.
             line_index: Current line index.
+            pdf_filename: Optional PDF filename for source tracking.
+            page_number: Optional page number for source tracking.
 
         Returns:
             ClassDefinition if valid, None otherwise.
@@ -845,13 +891,19 @@ class PdfParser:
         else:
             is_abstract = False
 
+        # Create source if filename and page provided
+        source = None
+        if pdf_filename and page_number:
+            source = AutosarSource(pdf_file=pdf_filename, page_number=page_number)
+
         return ClassDefinition(
             name=clean_class_name,
             package_path="",
             is_abstract=is_abstract,
             atp_type=atp_type,
             is_enumeration=is_enumeration,
-            is_primitive=is_primitive
+            is_primitive=is_primitive,
+            source=source,
         )
 
     def _process_package_line(
@@ -1360,6 +1412,7 @@ class PdfParser:
                     # SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
                     # SWR_MODEL_00024: AUTOSAR Primitive Type Representation
                     # SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+                    # SWR_MODEL_00027: AUTOSAR Source Location Representation
                     # Create AutosarEnumeration for enumeration types, AutosarPrimitive for primitive types, AutosarClass for class types
                     autosar_type: Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]
                     if class_def.is_enumeration:
@@ -1367,14 +1420,16 @@ class PdfParser:
                             name=class_def.name,
                             package=class_def.package_path,
                             note=class_def.note,
-                            enumeration_literals=class_def.enumeration_literals.copy()
+                            enumeration_literals=class_def.enumeration_literals.copy(),
+                            source=class_def.source,
                         )
                     elif class_def.is_primitive:
                         autosar_type = AutosarPrimitive(
                             name=class_def.name,
                             package=class_def.package_path,
                             note=class_def.note,
-                            attributes=class_def.attributes.copy()
+                            attributes=class_def.attributes.copy(),
+                            source=class_def.source,
                         )
                     else:
                         autosar_type = AutosarClass(
@@ -1385,7 +1440,8 @@ class PdfParser:
                             bases=class_def.base_classes.copy(),
                             note=class_def.note,
                             attributes=class_def.attributes.copy(),
-                            aggregated_by=class_def.aggregated_by.copy()
+                            aggregated_by=class_def.aggregated_by.copy(),
+                            source=class_def.source,
                         )
                     parent_package.add_type(autosar_type)
                     processed_classes.add(class_key)
@@ -1435,7 +1491,11 @@ class PdfParser:
 
         return root_classes
 
-    def _build_ancestry_cache(self, class_registry: Dict[str, AutosarClass]) -> Dict[str, Set[str]]:
+    def _build_ancestry_cache(
+        self,
+        class_registry: Dict[str, AutosarClass],
+        missing_classes_buffer: Set[str]
+    ) -> Dict[str, Set[str]]:
         """Build ancestry cache mapping each class to all its ancestors.
 
         Requirements:
@@ -1448,6 +1508,7 @@ class PdfParser:
 
         Args:
             class_registry: Dictionary mapping class names to AutosarClass objects.
+            missing_classes_buffer: Set to collect missing class names for deduplicated warning logging.
 
         Returns:
             Dictionary mapping each class name to a set of its ancestor names.
@@ -1473,17 +1534,9 @@ class PdfParser:
             visited.add(class_name)
 
             if class_name not in class_registry:
-                # Log warning if a class referenced in bases cannot be found
-                # Only log once per unique missing class to avoid spam
-                if not hasattr(collect_ancestors, '_logged_missing'):
-                    collect_ancestors._logged_missing = set()  # type: ignore[attr-defined]
-                if class_name not in collect_ancestors._logged_missing:  # type: ignore[attr-defined]
-                    logger.warning(
-                        f"Class '{class_name}' referenced in base classes could not be "
-                        f"located in the model during ancestry traversal. "
-                        f"Ancestry analysis may be incomplete."
-                    )
-                    collect_ancestors._logged_missing.add(class_name)  # type: ignore[attr-defined]
+                # Collect missing class names for later deduplicated logging
+                if missing_classes_buffer is not None:
+                    missing_classes_buffer.add(class_name)
                 return set()
 
             cls = class_registry[class_name]
@@ -1509,7 +1562,17 @@ class PdfParser:
 
         return ancestry_cache
 
-    def _set_parent_references(self, pkg: AutosarPackage, root_classes: List[AutosarClass], all_packages: List[AutosarPackage]) -> None:
+    def _set_parent_references(
+        self,
+        pkg: AutosarPackage,
+        root_classes: List[AutosarClass],
+        all_packages: List[AutosarPackage],
+        missing_base_errors: Optional[Dict[str, Set[str]]] = None,
+        is_initial_call: bool = True,
+        class_registry: Optional[Dict[str, AutosarClass]] = None,
+        ancestry_cache: Optional[Dict[str, Set[str]]] = None,
+        missing_ancestry_buffer: Optional[Set[str]] = None
+    ) -> None:
         """Recursively set parent references for all AutosarClass objects in a package.
 
         Requirements:
@@ -1532,23 +1595,42 @@ class PdfParser:
             pkg: The package to process.
             root_classes: List to populate with root AutosarClass objects.
             all_packages: List of all top-level packages for searching base classes.
+            missing_base_errors: Dictionary to collect unique missing base class errors.
+                Keys are error identifiers, values are sets of missing base names.
+            is_initial_call: Flag indicating if this is the initial (non-recursive) call.
+                Only the initial call prints warnings after analysis.
+            class_registry: Shared class registry (built on initial call, reused in recursion).
+            ancestry_cache: Shared ancestry cache (built on initial call, reused in recursion).
+            missing_ancestry_buffer: Shared buffer for missing ancestry classes (built on initial call).
         """
-        # Build class registry for O(1) lookup
-        class_registry: Dict[str, AutosarClass] = {}
+        # Initialize error buffer and shared data structures for initial call
+        if missing_base_errors is None:
+            missing_base_errors = {}
+            is_initial_call = True
 
-        def collect_classes(pkg_to_scan: AutosarPackage) -> None:
-            """Collect all classes into the registry."""
-            for typ in pkg_to_scan.types:
-                if isinstance(typ, AutosarClass):
-                    class_registry[typ.name] = typ
-            for subpkg in pkg_to_scan.subpackages:
-                collect_classes(subpkg)
+        # Build class registry and ancestry cache only on initial call
+        if is_initial_call:
+            # Reassign with concrete type (not Optional)
+            class_registry = {}
+            missing_ancestry_buffer = set()
 
-        for pkg_to_scan in all_packages:
-            collect_classes(pkg_to_scan)
+            def collect_classes(pkg_to_scan: AutosarPackage) -> None:
+                """Collect all classes into the registry."""
+                for typ in pkg_to_scan.types:
+                    if isinstance(typ, AutosarClass):
+                        # Type narrowing: class_registry is Dict here, not Optional
+                        assert class_registry is not None
+                        class_registry[typ.name] = typ
+                for subpkg in pkg_to_scan.subpackages:
+                    collect_classes(subpkg)
 
-        # Build ancestry cache
-        ancestry_cache = self._build_ancestry_cache(class_registry)
+            for pkg_to_scan in all_packages:
+                collect_classes(pkg_to_scan)
+
+            # Build ancestry cache (with missing classes buffer for deduplication)
+            # Type narrowing: class_registry is non-Optional here
+            assert class_registry is not None
+            ancestry_cache = self._build_ancestry_cache(class_registry, missing_ancestry_buffer)
 
         # Set parent references using ancestry-based analysis
         for typ in pkg.types:
@@ -1560,18 +1642,24 @@ class PdfParser:
                     # Filter out ARObject (implicit root of all AUTOSAR classes)
                     candidate_bases = [b for b in typ.bases if b != "ARObject"]
 
+                    # Type narrowing for Optional parameters
+                    if class_registry is None:
+                        class_registry = {}
+                    if ancestry_cache is None:
+                        ancestry_cache = {}
+
                     # Filter out bases that don't exist in the model (strict validation)
-                    # Track missing base classes for logging
+                    # Track missing base classes for logging (buffer for later)
                     missing_bases = [b for b in candidate_bases if b not in class_registry]
                     valid_bases = [b for b in candidate_bases if b in class_registry]
 
-                    # Log warning if any base classes could not be located
-                    if missing_bases:
-                        logger.warning(
-                            f"Class '{typ.name}' in package '{pkg.name}' has base classes "
-                            f"that could not be located in the model: {missing_bases}. "
-                            f"Parent resolution may be incomplete."
-                        )
+                    # Collect missing base class errors (buffer instead of immediate logging)
+                    if missing_bases and missing_base_errors is not None:
+                        # Create unique key for this error: class name + package name
+                        error_key = f"{typ.name} (in {pkg.name})"
+                        if error_key not in missing_base_errors:
+                            missing_base_errors[error_key] = set()
+                        missing_base_errors[error_key].update(missing_bases)
 
                     if valid_bases:
                         # Find the direct parent using ancestry-based analysis
@@ -1605,9 +1693,38 @@ class PdfParser:
                     # No bases means this is a root class (only ARObject itself)
                     root_classes.append(typ)
 
-        # Recursively process subpackages
+        # Recursively process subpackages (pass shared data structures)
         for subpkg in pkg.subpackages:
-            self._set_parent_references(subpkg, root_classes, all_packages)
+            self._set_parent_references(
+                subpkg, root_classes, all_packages, missing_base_errors,
+                is_initial_call=False, class_registry=class_registry,
+                ancestry_cache=ancestry_cache, missing_ancestry_buffer=missing_ancestry_buffer
+            )
+
+        # Print warnings after analysis is complete (only for initial call)
+        if is_initial_call:
+            # This is the initial top-level call - print all collected warnings
+            # SWR_PARSER_00020: List each missing base class separately
+
+            # 1. Warn about missing base classes (from parent resolution)
+            all_missing_bases: Set[str] = set()
+            for missing_bases_set in missing_base_errors.values():
+                all_missing_bases.update(missing_bases_set)
+
+            # Warn only once for each unique missing base class
+            for missing_base in sorted(all_missing_bases):
+                logger.warning(
+                    f"Class '{missing_base}' could not be located in the model"
+                )
+
+            # 2. Warn about missing classes from ancestry traversal
+            if missing_ancestry_buffer:
+                for missing_class in sorted(missing_ancestry_buffer):
+                    logger.warning(
+                        f"Class '{missing_class}' referenced in base classes could not be "
+                        f"located in the model during ancestry traversal. "
+                        f"Ancestry analysis may be incomplete."
+                    )
 
     def _populate_children_lists(self, pkg: AutosarPackage, all_packages: List[AutosarPackage]) -> None:
         """Populate children lists for all classes based on parent references.

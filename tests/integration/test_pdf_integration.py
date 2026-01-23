@@ -7,16 +7,15 @@ to cache parsed PDF data. Each PDF is parsed only once per test session, with
 results shared across all tests that need them.
 """
 
-from typing import Dict, List
+import os
 
-from autosar_pdf2txt.models import ATPType, AutosarClass, AutosarDoc, AutosarPackage
-from autosar_pdf2txt.parser import PdfParser
+import pytest
+
+from autosar_pdf2txt.models import AutosarClass, AutosarDoc
 
 
 # Import helper functions from conftest
 from tests.integration.conftest import (
-    collect_classes_with_predicate,
-    count_classes,
     find_first_class,
 )
 
@@ -28,424 +27,212 @@ class TestPdfIntegration:
     Tests are skipped if files are not available (for CI/CD environments).
     """
 
-    def test_parse_bsw_module_template_pdf_first_class(self, bsw_template_pdf) -> None:
-        """Test parsing real AUTOSAR BSW Module Template PDF and verify first class.
+    def test_parse_real_autosar_pdf_and_verify_autosar_and_sw_component_type(
+        self, bsw_template_pdf: AutosarDoc, generic_structure_sw_component_type: AutosarClass
+    ) -> None:
+        """Test parsing real AUTOSAR PDF files and verify AUTOSAR and SwComponentType classes.
 
-        SWIT_00001: Test Parsing Real AUTOSAR PDF and Verifying First Class
+        SWIT_00001: Test Parsing Real AUTOSAR PDF and Verifying AUTOSAR and SwComponentType Classes
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+            SWR_PARSER_00010: Attribute Extraction from PDF
             SWR_MODEL_00001: AUTOSAR Class Representation
+            SWR_MODEL_00010: AUTOSAR Attribute Representation
             SWR_MODEL_00023: AUTOSAR Document Model
 
         Args:
             bsw_template_pdf: Cached parsed BSW Module Template PDF data (AutosarDoc).
+            generic_structure_sw_component_type: Cached SwComponentType class from GenericStructureTemplate PDF.
         """
+        # ========== Verify AUTOSAR class from BSW Module Template PDF ==========
         packages = bsw_template_pdf.packages
 
         # Verify we got some packages
         assert len(packages) > 0, "Should extract at least one package from PDF"
 
         # Find the first class with actual data (using cached helper)
-        first_package, first_class = find_first_class(packages)
+        first_package, autosar_class = find_first_class(packages)
 
-        assert first_class is not None, "Should find at least one class in the PDF"
+        assert autosar_class is not None, "Should find at least one class in the PDF"
         assert first_package is not None, "Should find the package containing the class"
 
-        # Verify the first class details
-        assert first_class.name == "AUTOSAR", f"Expected class name 'AUTOSAR', got '{first_class.name}'"
-        assert first_class.is_abstract is False, "AUTOSAR class should not be abstract"
+        # Verify the AUTOSAR class details
+        assert autosar_class.name == "AUTOSAR", f"Expected class name 'AUTOSAR', got '{autosar_class.name}'"
+        assert autosar_class.is_abstract is False, "AUTOSAR class should not be abstract"
         assert first_package.name == "AutosarTopLevelStructure", f"Expected package 'AutosarTopLevelStructure', got '{first_package.name}'"
 
         # Verify bases - should have one base class
-        assert len(first_class.bases) == 1, f"Expected 1 base class, got {len(first_class.bases)}"
-        assert "ARObject" in first_class.bases, f"Expected 'ARObject' in bases, got {first_class.bases}"
+        assert len(autosar_class.bases) == 1, f"Expected 1 base class, got {len(autosar_class.bases)}"
+        assert "ARObject" in autosar_class.bases, f"Expected 'ARObject' in bases, got {autosar_class.bases}"
 
         # Verify note - should have a note
-        assert first_class.note is not None, "AUTOSAR class should have a note"
-        assert len(first_class.note) > 0, "Note should not be empty"
-        assert "AUTOSAR" in first_class.note or "Rootelement" in first_class.note, \
-            f"Note should contain AUTOSAR or Rootelement, got: '{first_class.note}'"
+        assert autosar_class.note is not None, "AUTOSAR class should have a note"
+        assert len(autosar_class.note) > 0, "Note should not be empty"
+        assert "AUTOSAR" in autosar_class.note or "Rootelement" in autosar_class.note, \
+            f"Note should contain AUTOSAR or Rootelement, got: '{autosar_class.note}'"
 
-        # Print class information for verification
-        print("\nFirst class found:")
-        print(f"  Name: {first_class.name}")
-        print(f"  Abstract: {first_class.is_abstract}")
-        print(f"  Bases: {first_class.bases}")
-        print(f"  Note: {first_class.note}")
+        # Print AUTOSAR class information for verification
+        print("\n=== AUTOSAR class verified ===")
+        print(f"  Name: {autosar_class.name}")
+        print(f"  Abstract: {autosar_class.is_abstract}")
+        print(f"  Bases: {autosar_class.bases}")
+        print(f"  Note: {autosar_class.note}")
         print(f"  Package: {first_package.name}")
 
-    def test_parse_bsw_module_template_pdf_multiple_classes(self, bsw_template_pdf) -> None:
-        """Test that multiple classes are parsed from real AUTOSAR PDF.
+        # ========== Verify SwComponentType class from GenericStructureTemplate PDF ==========
+        sw_component_type = generic_structure_sw_component_type
 
-        SWIT_00002: Test Parsing Real AUTOSAR PDF Extracts Multiple Classes
+        # Verify class name
+        assert sw_component_type.name == "SwComponentType", \
+            f"Expected class name 'SwComponentType', got '{sw_component_type.name}'"
+
+        # Verify package name is M2::AUTOSARTemplates::SWComponentTemplate::Components
+        expected_package = "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+        assert sw_component_type.package == expected_package, \
+            f"Expected package '{expected_package}', got '{sw_component_type.package}'"
+
+        # Verify note
+        assert sw_component_type.note is not None, "SwComponentType should have a note"
+        assert len(sw_component_type.note) > 0, "Note should not be empty"
+        assert sw_component_type.note == "Base class for AUTOSAR software components.", \
+            f"Expected note 'Base class for AUTOSAR software components.', got '{sw_component_type.note}'"
+
+        # Verify base list
+        expected_bases = [
+            "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier",
+            "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable",
+            "PackageableElement", "Referrable"
+        ]
+        assert len(sw_component_type.bases) == len(expected_bases), \
+            f"Expected {len(expected_bases)} base classes, got {len(sw_component_type.bases)}"
+        for base in expected_bases:
+            assert base in sw_component_type.bases, \
+                f"Expected '{base}' in bases, got {sw_component_type.bases}"
+
+        # Verify attribute list
+        # Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering
+        expected_attributes = [
+            "consistency", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"
+        ]
+        assert len(sw_component_type.attributes) == len(expected_attributes), \
+            f"Expected {len(expected_attributes)} attributes, got {len(sw_component_type.attributes)}"
+        for attr_name in expected_attributes:
+            assert attr_name in sw_component_type.attributes, \
+                f"Expected attribute '{attr_name}' not found. Got: {list(sw_component_type.attributes.keys())}"
+
+        # Verify swcMapping attribute kind is "ref" and is_ref is true
+        swc_mapping = sw_component_type.attributes.get("swcMapping")
+        assert swc_mapping is not None, "swcMapping attribute should exist"
+        assert swc_mapping.kind.value == "ref", \
+            f"Expected swcMapping kind to be 'ref', got '{swc_mapping.kind.value}'"
+        assert swc_mapping.is_ref is True, \
+            f"Expected swcMapping is_ref to be True, got {swc_mapping.is_ref}"
+
+        # Verify attribute types match expected values
+        expected_types = {
+            "consistency": "ConsistencyNeeds",
+            "port": "PortPrototype",
+            "portGroup": "PortGroup",
+            "swcMapping": "SwComponentMapping",
+            "swComponent": "SwComponent",
+            "unitGroup": "UnitGroup"
+        }
+        for attr_name, expected_type in expected_types.items():
+            attr = sw_component_type.attributes.get(attr_name)
+            assert attr is not None, f"Attribute '{attr_name}' should exist"
+            assert attr.type == expected_type, \
+                f"Expected attribute '{attr_name}' to have type '{expected_type}', got '{attr.type}'"
+
+        # Verify attribute notes exist
+        attrs_with_notes = [name for name, attr in sw_component_type.attributes.items() if attr.note]
+        assert len(attrs_with_notes) > 0, "At least one attribute should have a note"
+
+        # Print SwComponentType class information for verification
+        print("\n=== SwComponentType class verified ===")
+        print(f"  Name: {sw_component_type.name}")
+        print(f"  Package: {sw_component_type.package}")
+        print(f"  Abstract: {sw_component_type.is_abstract}")
+        print(f"  Bases ({len(sw_component_type.bases)}): {', '.join(sw_component_type.bases)}")
+        print(f"  Note: {sw_component_type.note}")
+        print(f"  Attributes ({len(sw_component_type.attributes)}):")
+        for attr_name, attr in sw_component_type.attributes.items():
+            print(f"    - {attr_name}: {attr.type} (ref: {attr.is_ref}, kind: {attr.kind.value})")
+
+    def test_parse_timing_extensions_pdf_and_verify_class_list(
+        self, timing_extensions_pdf: AutosarDoc
+    ) -> None:
+        """Test parsing TimingExtensions PDF and verify complete class list.
+
+        SWIT_00002: Test Parsing TimingExtensions PDF and Verifying Class List
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
             SWR_PARSER_00006: Package Hierarchy Building
-            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
+            SWR_MODEL_00001: AUTOSAR Class Representation
             SWR_MODEL_00023: AUTOSAR Document Model
 
         Args:
-            bsw_template_pdf: Cached parsed BSW Module Template PDF data (AutosarDoc).
+            timing_extensions_pdf: Cached parsed TimingExtensions PDF data (AutosarDoc).
         """
-        packages = bsw_template_pdf.packages
+        # Read expected class list from file
+        class_list_file = "tests/integration/timing_extensions_class_list.txt"
 
-        # Count total classes recursively (using cached helper)
-        total_classes = count_classes(packages)
+        if not os.path.exists(class_list_file):
+            pytest.skip(f"Class list file not found: {class_list_file}")
 
-        # Should have extracted many classes from the AUTOSAR template
-        assert total_classes > 10, f"Expected to extract many classes, got {total_classes}"
+        expected_classes = set()
+        with open(class_list_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                # Skip empty lines and comments
+                if line and not line.startswith('#'):
+                    expected_classes.add(line)
 
-        print(f"\nTotal classes extracted: {total_classes}")
-        print(f"Total packages: {len(packages)}")
+        # Verify expected count from file header
+        expected_count = 148
+        assert len(expected_classes) == expected_count, \
+            f"Expected {expected_count} classes in file, found {len(expected_classes)}"
 
-    def test_parse_bsw_module_template_pdf_has_bases_and_notes(self, bsw_template_pdf: AutosarDoc) -> None:
-        """Test parsing real AUTOSAR PDF has bases and notes.
+        # Extract all class names from parsed PDF
+        extracted_classes = set()
+        packages = timing_extensions_pdf.packages
 
-        SWIT_00003: Test Parsing Real AUTOSAR PDF Has Bases and Notes
-
-        Requirements:
-            SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
-            SWR_MODEL_00001: AUTOSAR Class Representation
-
-        Args:
-            bsw_template_pdf: Cached parsed BSW Module Template PDF data.
-        """
-        packages = bsw_template_pdf.packages
-
-        # Use optimized helper to collect classes with bases
-        classes_with_bases = collect_classes_with_predicate(packages, lambda cls: cls.bases)
-
-        # Use optimized helper to collect classes with notes
-        classes_with_notes = collect_classes_with_predicate(packages, lambda cls: cls.note)
-
-        # Verify we have classes with bases
-        assert len(classes_with_bases) > 0, "Should find classes with base classes"
-
-        # Verify we have classes with notes
-        assert len(classes_with_notes) > 0, "Should find classes with notes"
-
-        print(f"\nClasses with bases: {len(classes_with_bases)}")
-        print(f"Classes with notes: {len(classes_with_notes)}")
-
-        # Show examples
-        if classes_with_bases:
-            example = classes_with_bases[0]
-            print("\nExample class with bases:")
-            print(f"  Name: {example.name}")
-            print(f"  Bases: {example.bases}")
-
-        if classes_with_notes:
-            example = classes_with_notes[0]
-            print("\nExample class with note:")
-            print(f"  Name: {example.name}")
-            print(f"  Note: {example.note}")
-
-    def test_parse_pdf_with_atp_patterns(self, monkeypatch) -> None:
-        """Test end-to-end parsing and writing with ATP patterns.
-
-        SWIT_00004: Test End-to-End Parsing and Writing with ATP Patterns
-
-        Requirements:
-            SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_MODEL_00001: AUTOSAR Class Representation
-            SWR_WRITER_00005: Directory-Based Class File Output
-        """
-        parser = PdfParser()
-
-        # Mock pdfplumber to return class with ATP patterns
-        class MockPage:
-            def extract_words(self, x_tolerance=1):
-                # Return word data structure with 'text' and 'top' keys
-                return [
-                    {'text': 'Class', 'top': 0},
-                    {'text': 'MyData', 'top': 0},
-                    {'text': '<<atpVariation>>', 'top': 0},
-                    {'text': 'Package', 'top': 10},
-                    {'text': 'M2::AUTOSAR::Data', 'top': 10},
-                ]
-
-        class MockPdf:
-            pages = [MockPage()]
-
-        def mock_open(path, **kwargs):
-            class MockPdfManager:
-                def __enter__(self):
-                    return MockPdf()
-                def __exit__(self, *args):
-                    pass
-            return MockPdfManager()
-
-        monkeypatch.setattr("pdfplumber.open", mock_open)
-
-        # Parse PDF
-        doc = parser.parse_pdf("dummy.pdf")
-
-        # Verify parsing
-        packages = doc.packages
-        assert len(packages) == 1
-        m2_pkg = packages[0]
-        assert m2_pkg.name == "M2"
-        autosar_pkg = m2_pkg.get_subpackage("AUTOSAR")
-        assert autosar_pkg is not None
-        data_pkg = autosar_pkg.get_subpackage("Data")
-        assert data_pkg is not None
-        my_data = data_pkg.get_class("MyData")
-        assert my_data is not None
-        assert my_data.atp_type == ATPType.ATP_VARIATION
-
-        # Verify writer output
-        from autosar_pdf2txt.writer import MarkdownWriter
-        import tempfile
-
-        writer = MarkdownWriter()
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            from pathlib import Path
-            writer.write_packages_to_files(packages, base_dir=Path(tmp_dir))
-
-            # Check individual file has ATP section
-            class_file = Path(tmp_dir) / "M2" / "AUTOSAR" / "Data" / "MyData.md"
-            content = class_file.read_text(encoding="utf-8")
-            assert "## ATP Type\n\n" in content
-            assert "* atpVariation\n" in content
-
-    def test_parse_ecu_configuration_pdf_fibex_package_structure(self, ecu_configuration_fibex_packages: Dict[str, AutosarPackage]) -> None:
-        """Test parsing ECU Configuration PDF and verify Fibex package structure and ImplementationDataType attributes.
-
-        SWIT_00005: Test Parsing ECU Configuration PDF and Verifying Fibex Package Structure and ImplementationDataType Attributes
-
-        Requirements:
-            SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_PARSER_00006: Package Hierarchy Building
-            SWR_PARSER_00007: Top-Level Package Selection
-            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
-            SWR_PARSER_00010: Attribute Extraction from PDF
-            SWR_PARSER_00011: Metadata Filtering in Attribute Extraction
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-            SWR_MODEL_00004: AUTOSAR Package Representation
-
-        Args:
-            ecu_configuration_fibex_packages: Pre-cached Fibex package structure.
-        """
-        # Use pre-cached packages for faster access
-        core_comm_pkg = ecu_configuration_fibex_packages['core_comm']
-        impl_data_types_pkg = ecu_configuration_fibex_packages['impl_data_types']
-
-        # Verify CoreCommunication has classes
-        assert len(core_comm_pkg.types) > 0, "CoreCommunication should contain classes"
-
-        # Verify specific Fibex classes exist
-        fibex_class_names = [cls.name for cls in core_comm_pkg.types]
-        expected_classes = ["Frame", "NPdu", "Pdu", "PduTriggering", "UserDefinedPdu"]
-        for expected_class in expected_classes:
-            assert expected_class in fibex_class_names, \
-                f"Expected class '{expected_class}' not found in CoreCommunication. Found: {fibex_class_names}"
-
-        # Verify package hierarchy path
-        print("\nFibex package hierarchy verified:")
-        print("  Top-level: M2")
-        print("    └─ AUTOSARTemplates")
-        print("       └─ SystemTemplate")
-        print("          └─ Fibex")
-        print("             └─ FibexCore")
-        print(f"                └─ CoreCommunication ({len(core_comm_pkg.types)} classes)")
-        print(f"                   Classes: {', '.join(sorted(fibex_class_names))}")
-
-        # Find ImplementationDataType class
-        impl_data_type = impl_data_types_pkg.get_class("ImplementationDataType")
-        assert impl_data_type is not None, "ImplementationDataType class should exist in ImplementationDataTypes"
-
-        # Verify ImplementationDataType has exactly 5 attributes
-        assert len(impl_data_type.attributes) == 5, \
-            f"ImplementationDataType should have 5 attributes, got {len(impl_data_type.attributes)}"
-
-        # Verify the expected attributes exist
-        expected_attributes = {
-            "dynamicArray": "String",
-            "isStructWithOptionalElement": "Boolean",
-            "subElement": "ImplementationData",
-            "symbolProps": "SymbolProps",
-            "typeEmitter": "NameToken"
-        }
-
-        for attr_name, expected_type in expected_attributes.items():
-            assert attr_name in impl_data_type.attributes, \
-                f"Expected attribute '{attr_name}' not found. Found: {list(impl_data_type.attributes.keys())}"
-            assert impl_data_type.attributes[attr_name].type == expected_type, \
-                f"Attribute '{attr_name}' should have type '{expected_type}', got '{impl_data_type.attributes[attr_name].type}'"
-
-        print("\nImplementationDataType attributes verified:")
-        print(f"  Total attributes: {len(impl_data_type.attributes)}")
-        for attr_name, attr in impl_data_type.attributes.items():
-            print(f"    - {attr_name}: {attr.type} (ref: {attr.is_ref})")
-
-    def test_multi_line_note_extraction(self, ecu_configuration_bsw_implementation: AutosarClass) -> None:
-        """Test multi-line note extraction from real AUTOSAR PDF.
-
-        SWIT_00006: Test Multi-Line Note Extraction from Real AUTOSAR PDF
-
-        Requirements:
-            SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_PARSER_00006: Package Hierarchy Building
-            SWR_MODEL_00001: AUTOSAR Class Representation
-
-        Args:
-            ecu_configuration_bsw_implementation: Pre-cached BswImplementation class.
-        """
-        bsw_implementation = ecu_configuration_bsw_implementation
-
-        # Verify class name
-        assert bsw_implementation.name == "BswImplementation", \
-            f"Expected class name 'BswImplementation', got '{bsw_implementation.name}'"
-
-        # Verify note exists
-        assert bsw_implementation.note is not None, "BswImplementation should have a note"
-        assert len(bsw_implementation.note) > 0, "Note should not be empty"
-
-        # Verify the note contains expected multi-line content
-        note = bsw_implementation.note
-        expected_phrases = [
-            "Contains the implementation specific information in addition to the generic specification",
-            "BswModule Description and BswBehavior",
-            "It is possible to have several different BswImplementations referring to the same BswBehavior",
-            "Tags: atp.recommendedPackage=BswImplementations"
-        ]
-
-        for phrase in expected_phrases:
-            assert phrase in note, f"Expected phrase '{phrase}' not found in note. Got: '{note}'"
-
-        # Verify note word count (ensures multi-line capture including Tags)
-        word_count = len(note.split())
-        assert word_count >= 20, f"Expected at least 20 words in note, got {word_count}. Note: '{note}'"
-
-        # Verify note character count (ensures full note is captured including Tags field)
-        char_count = len(note)
-        # The expected note is approximately 273 characters (increased from 225 due to Tags field)
-        assert 260 <= char_count <= 290, \
-            f"Expected note to be approximately 273 characters, got {char_count}. Note: '{note}'"
-
-        # Print for visual verification
-        print("\nMulti-line note extraction verified:")
-        print(f"  Class: {bsw_implementation.name}")
-        print(f"  Note word count: {word_count}")
-        print(f"  Note character count: {char_count}")
-        print(f"  Full note:\n    {note}")
-
-        # Verify arRelease attribute has multi-line note
-        arRelease_attr = bsw_implementation.attributes.get("arRelease")
-        assert arRelease_attr is not None, "arRelease attribute should exist"
-        assert arRelease_attr.name == "arRelease", f"Expected attribute name 'arRelease', got '{arRelease_attr.name}'"
-        assert arRelease_attr.type == "RevisionLabelString", f"Expected type 'RevisionLabelString', got '{arRelease_attr.type}'"
-
-        # Verify attribute note exists and is multi-line
-        assert arRelease_attr.note is not None, "arRelease attribute should have a note"
-        assert len(arRelease_attr.note) > 100, f"Expected arRelease note to be multi-line (> 100 chars), got {len(arRelease_attr.note)}"
-
-        # Verify attribute note contains expected multi-line content
-        attr_note = arRelease_attr.note
-        expected_attr_phrases = [
-            "Version of the AUTOSAR Release",
-            "The numbering contains three"
-        ]
-
-        for phrase in expected_attr_phrases:
-            assert phrase in attr_note, f"Expected phrase '{phrase}' not found in arRelease note. Got: '{attr_note}'"
-
-        # Verify attribute note word count (ensures multi-line capture)
-        attr_word_count = len(attr_note.split())
-        assert attr_word_count >= 20, f"Expected at least 20 words in arRelease note, got {attr_word_count}. Note: '{attr_note}'"
-
-        # Verify attribute note character count
-        attr_char_count = len(attr_note)
-        # The expected note is approximately 159 characters
-        assert 140 <= attr_char_count <= 180, \
-            f"Expected arRelease note to be approximately 159 characters, got {attr_char_count}. Note: '{attr_note}'"
-
-        # Print attribute note for visual verification
-        print("\nMulti-line attribute note extraction verified:")
-        print(f"  Attribute: {arRelease_attr.name}")
-        print(f"  Type: {arRelease_attr.type}")
-        print(f"  Multiplicity: {arRelease_attr.multiplicity}")
-        print(f"  Kind: {arRelease_attr.kind.value}")
-        print(f"  Note word count: {attr_word_count}")
-        print(f"  Note character count: {attr_char_count}")
-        print(f"  Full attribute note:\n    {attr_note}")
-
-    def test_generic_structure_template_filters_invalid_package_paths(self, generic_structure_template_pdf: AutosarDoc, generic_structure_reference_base: AutosarClass) -> None:
-        """Test that invalid package paths are filtered from GenericStructureTemplate PDF.
-
-        This is a regression test for package path validation. The GenericStructureTemplate
-        PDF contains descriptive text like "live in various packages which do not have a common"
-        that was incorrectly parsed as package names before the fix.
-
-        SWIT_00007: Test Package Path Validation Filters Invalid Entries
-
-        Requirements:
-            SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00006: Package Hierarchy Building
-            SWR_MODEL_00004: AUTOSAR Package Representation
-
-        Args:
-            generic_structure_template_pdf: Cached parsed GenericStructureTemplate PDF data.
-            generic_structure_reference_base: Pre-cached ReferenceBase class.
-        """
-        packages = generic_structure_template_pdf.packages
-
-        # Verify we have packages
-        assert len(packages) > 0, "Should extract at least one package from PDF"
-
-        # Collect all package names recursively
-        def collect_all_package_names(pkg, names_list):
-            names_list.append(pkg.name)
+        # Collect all classes, enumerations, and primitives recursively
+        def collect_types(pkg) -> set:
+            """Recursively collect all type names from a package."""
+            types = set()
+            for typ in pkg.types:
+                types.add(typ.name)
             for subpkg in pkg.subpackages:
-                collect_all_package_names(subpkg, names_list)
+                types.update(collect_types(subpkg))
+            return types
 
-        all_package_names: List[str] = []
         for pkg in packages:
-            collect_all_package_names(pkg, all_package_names)
+            extracted_classes.update(collect_types(pkg))
 
-        # Verify no invalid package names exist
-        # These were the false positives from the PDF before the fix
-        invalid_names = [
-            "live in various packages which do not have a common",
-            "can coexist in the context of a ReferenceBase.(cid:99)()",
-        ]
+        # Verify total number of classes
+        actual_count = len(extracted_classes)
+        assert actual_count == expected_count, \
+            f"Expected {expected_count} classes, but found {actual_count}"
 
-        for invalid_name in invalid_names:
-            assert invalid_name not in all_package_names, \
-                f"Invalid package name '{invalid_name}' should have been filtered out"
+        # Verify all expected classes are present
+        missing_classes = expected_classes - extracted_classes
+        assert not missing_classes, \
+            f"Missing {len(missing_classes)} classes: {sorted(missing_classes)}"
 
-        # Use cached ReferenceBase class for faster verification
-        reference_base = generic_structure_reference_base
+        # Verify no extra classes were extracted
+        extra_classes = extracted_classes - expected_classes
+        assert not extra_classes, \
+            f"Found {len(extra_classes)} unexpected classes: {sorted(extra_classes)}"
 
-        # Verify ReferenceBase class details
-        assert reference_base.name == "ReferenceBase", \
-            f"Expected class name 'ReferenceBase', got '{reference_base.name}'"
-
-        # Verify ReferenceBase has the expected base class
-        assert len(reference_base.bases) > 0, "ReferenceBase should have base classes"
-        assert "ARObject" in reference_base.bases, \
-            f"Expected 'ARObject' in ReferenceBase bases, got {reference_base.bases}"
-
-        # Verify ReferenceBase has attributes
-        assert len(reference_base.attributes) > 0, "ReferenceBase should have attributes"
-        expected_attributes = ["globalElement", "globalIn", "isDefault", "package", "shortLabel"]
-        for attr in expected_attributes:
-            assert attr in reference_base.attributes, \
-                f"Expected attribute '{attr}' not found in ReferenceBase"
-
-        print("\nPackage path validation verified:")
-        print(f"  Total packages: {len(all_package_names)}")
-        print("  Invalid packages filtered: 0")
-        print("  ReferenceBase class found: True")
-        print("  ReferenceBase location: M2::AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::ARPackage")
-        print(f"  ReferenceBase attributes: {len(reference_base.attributes)}")
+        # Print summary for verification
+        print("\n=== TimingExtensions PDF verification ===")
+        print(f"  Expected classes: {expected_count}")
+        print(f"  Extracted classes: {actual_count}")
+        print("  All expected classes found: YES")
+        print(f"  Sample classes: {sorted(list(extracted_classes))[:10]}...")

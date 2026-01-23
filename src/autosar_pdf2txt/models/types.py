@@ -9,13 +9,14 @@ Requirements:
     SWR_MODEL_00022: AUTOSAR Class Parent Attribute
     SWR_MODEL_00024: AUTOSAR Primitive Type Representation
     SWR_MODEL_00026: AUTOSAR Class Children Attribute
+    SWR_MODEL_00027: AUTOSAR Source Location Representation
 """
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from autosar_pdf2txt.models.attributes import AutosarAttribute, AutosarEnumLiteral
-from autosar_pdf2txt.models.base import AbstractAutosarBase
+from autosar_pdf2txt.models.base import AbstractAutosarBase, AutosarSource
 from autosar_pdf2txt.models.enums import ATPType
 
 
@@ -28,6 +29,7 @@ class AutosarClass(AbstractAutosarBase):
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        SWR_MODEL_00027: AUTOSAR Source Location Representation
 
     Inherits from AbstractAutosarBase to provide common type properties (name, package, note)
     and adds class-specific attributes including inheritance support and ATP markers.
@@ -42,6 +44,7 @@ class AutosarClass(AbstractAutosarBase):
         parent: Name of the immediate parent class from the bases list (None for root classes).
         children: List of child class names that inherit from this class.
         aggregated_by: List of class names that aggregate this class.
+        source: Optional source location for the class definition itself (inherited).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
@@ -77,6 +80,7 @@ class AutosarClass(AbstractAutosarBase):
         children: Optional[List[str]] = None,
         aggregated_by: Optional[List[str]] = None,
         note: Optional[str] = None,
+        source: Optional[AutosarSource] = None,
     ) -> None:
         """Initialize the AUTOSAR class.
 
@@ -84,6 +88,7 @@ class AutosarClass(AbstractAutosarBase):
             SWR_MODEL_00001: AUTOSAR Class Representation
             SWR_MODEL_00002: AUTOSAR Class Name Validation
             SWR_MODEL_00026: AUTOSAR Class Children Attribute
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         Args:
             name: The name of the class.
@@ -96,11 +101,12 @@ class AutosarClass(AbstractAutosarBase):
             children: List of child class names that inherit from this class.
             aggregated_by: List of class names that aggregate this class.
             note: Optional documentation.
+            source: Optional source location for this class definition.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
         """
-        super().__init__(name, package, note)
+        super().__init__(name, package, note, source)
         self.is_abstract = is_abstract
         self.atp_type = atp_type
         self.attributes = attributes or {}
@@ -178,23 +184,26 @@ class AutosarEnumeration(AbstractAutosarBase):
         package: str,
         enumeration_literals: Optional[List[AutosarEnumLiteral]] = None,
         note: Optional[str] = None,
+        source: Optional[AutosarSource] = None,
     ) -> None:
         """Initialize the AUTOSAR enumeration.
 
         Requirements:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         Args:
             name: The name of the enumeration.
             package: The full package path.
             enumeration_literals: List of enumeration literal values.
             note: Optional documentation.
+            source: Optional source location for this enumeration definition.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
         """
-        super().__init__(name, package, note)
+        super().__init__(name, package, note, source)
         self.enumeration_literals = enumeration_literals or []
 
     def __str__(self) -> str:
@@ -256,23 +265,26 @@ class AutosarPrimitive(AbstractAutosarBase):
         package: str,
         attributes: Optional[Dict[str, AutosarAttribute]] = None,
         note: Optional[str] = None,
+        source: Optional[AutosarSource] = None,
     ) -> None:
         """Initialize the AUTOSAR primitive type.
 
         Requirements:
             SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
             SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         Args:
             name: The name of the primitive type.
             package: The full package path.
             attributes: Dictionary of attributes.
             note: Optional documentation.
+            source: Optional source location for this primitive definition.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
         """
-        super().__init__(name, package, note)
+        super().__init__(name, package, note, source)
         self.attributes = attributes or {}
 
     def __str__(self) -> str:

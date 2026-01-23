@@ -435,6 +435,22 @@ This requirement enables:
 
 ---
 
+#### SWR_MODEL_00027
+**Title**: AUTOSAR Source Location Representation
+
+**Maturity**: accept
+
+**Description**: The system shall provide a data model to represent source location information for AUTOSAR types. The source location shall include:
+- `pdf_file`: Path to the PDF file (relative or absolute)
+- `page_number`: Page number in the PDF (1-indexed)
+
+The source location shall be:
+- Immutable (frozen dataclass)
+- Optional for all AUTOSAR types (backward compatibility)
+- Attachable to any type inheriting from AbstractAutosarBase
+
+---
+
 ### 2. Parser
 
 #### SWR_PARSER_00001
@@ -889,35 +905,43 @@ This requirement ensures a clean user experience while maintaining correct parsi
 ---
 
 #### SWR_PARSER_00020
-**Title**: Missing Base Class Logging
+**Title**: Missing Base Class Logging with Deduplication
 
 **Maturity**: accept
 
-**Description**: The system shall log warnings when base classes cannot be located in the model during parent resolution and ancestry traversal to help users identify incomplete or incorrect AUTOSAR models.
+**Description**: The system shall collect and log warnings when base classes cannot be located in the model during parent resolution and ancestry traversal to help users identify incomplete or incorrect AUTOSAR models.
 
 The system shall:
-1. Log a warning when a class references base classes that don't exist in the model during parent resolution
-2. Log a warning when a class cannot be found in the class registry during ancestry traversal
-3. Include the class name, package name, and list of missing base classes in the warning message
-4. Use deduplication to avoid logging the same missing class multiple times during ancestry traversal
+1. Build class registry and ancestry cache only once per parse operation (not per recursive call)
+2. Collect missing base class errors into a buffer during parent resolution analysis (not immediate logging)
+3. Collect missing class references during ancestry traversal into a shared buffer
+4. Store each unique error only once (deduplication by class name)
+5. Print all buffered warnings after the parent resolution analysis is complete
+6. Log one warning per missing base class (not grouped by referencing class)
+7. Log one warning per missing class from ancestry traversal (not per reference)
 
 **Warning Messages**:
-- Parent resolution: `"Class '<classname>' in package '<packagename>' has base classes that could not be located in the model: <missing_bases>. Parent resolution may be incomplete."`
-- Ancestry traversal: `"Class '<classname>' referenced in base classes could not be located in the model during ancestry traversal. Ancestry analysis may be incomplete."`
+- For each missing base class from parent resolution: `"Class '<missing_base_class>' could not be located in the model"`
+- For each missing class from ancestry traversal: `"Class '<missing_class>' referenced in base classes could not be located in the model during ancestry traversal. Ancestry analysis may be incomplete."`
 
 **Rationale**:
 - Incomplete AUTOSAR models may reference classes that are defined in other PDF files not included in the current parsing run
 - Typo in base class names or missing definitions can lead to incomplete parent/children relationships
 - Logging these warnings helps users identify and fix incomplete models
-- Deduplication prevents log spam when the same missing class is referenced multiple times
+- Buffering and deduplication prevents log spam and provides cleaner, consolidated error reporting
+- Building data structures once improves performance by avoiding redundant computation
+- Sorting missing class names alphabetically ensures consistent output
 
 **Implementation**:
 - Check for missing base classes in `_set_parent_references()` method after filtering
-- Check for missing classes in `_build_ancestry_cache()` during recursive ancestry traversal
-- Use a set attribute on the nested function to track logged missing classes
+- Buffer errors in a dictionary with keys as `"<classname> (in <packagename>)"` and values as sets of missing base class names
+- Build class registry and ancestry cache only on initial call to `_set_parent_references()`, pass to recursive calls
+- Collect missing classes from `_build_ancestry_cache()` into a shared buffer
+- Use sets to ensure automatic deduplication of missing base class names
+- Print one warning per unique missing base class after analysis completes
 - Log at WARNING level to ensure visibility without being errors
 
-This requirement enables users to identify and resolve incomplete or incorrect AUTOSAR model definitions.
+This requirement enables users to identify and resolve incomplete or incorrect AUTOSAR model definitions through consolidated, non-repetitive warning messages while avoiding performance issues from redundant data structure building.
 
 ---
 
@@ -1000,6 +1024,22 @@ Without multi-line parsing, only the first line is read, missing:
 - Apply the same continuation logic to all comma-separated class reference attributes
 
 This requirement ensures complete model representation by guaranteeing that all attribute values are extracted from multi-line attribute lists in PDFs, including base classes, aggregated by, subclasses, and future comma-separated class reference attributes.
+
+---
+
+#### SWR_PARSER_00022
+**Title**: PDF Source Location Extraction
+
+**Maturity**: accept
+
+**Description**: The PDF parser shall track source locations (PDF file and page number) during parsing. The parser shall:
+- Extract PDF filename from the file path for cleaner output
+- Track current page number during PDF processing (1-indexed)
+- Attach source information to ClassDefinition objects when creating class definitions
+- Transfer source info from ClassDefinition to model objects during hierarchy building
+
+This requirement enables:
+- Complete traceability of where each AUTOSAR type was defined
 
 ---
 
@@ -1095,6 +1135,19 @@ The ATP Type section shall:
 - Mark abstract classes with "(abstract)" suffix after the class name
 - Support both root-only output (when all_classes parameter is None) and full hierarchy output (when all_classes parameter is provided)
 - Return empty string when no root classes are provided
+
+---
+
+#### SWR_WRITER_00008
+**Title**: Markdown Source Information Output
+
+**Maturity**: accept
+
+**Description**: The markdown writer shall output source information in individual class files when using the `--include-class-details` flag. The output shall include:
+- A "Source" section for the class's own definition location (if available)
+- Proper formatting with PDF filename and page number for the source
+
+The source section shall only be included when source information is available from the parsing process.
 
 ---
 

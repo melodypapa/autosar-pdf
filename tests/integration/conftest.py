@@ -272,6 +272,65 @@ def generic_structure_reference_base(generic_structure_template_pdf: AutosarDoc)
 
 
 @pytest.fixture(scope="session")
+def generic_structure_sw_component_type(generic_structure_template_pdf: AutosarDoc) -> AutosarClass:
+    """Cache the SwComponentType class from GenericStructureTemplate PDF.
+
+    This fixture pre-fetches and caches the SwComponentType class,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        generic_structure_template_pdf: Parsed GenericStructureTemplate PDF data.
+
+    Returns:
+        The SwComponentType AutosarClass.
+
+    Skips:
+        If SwComponentType class is not found.
+    """
+    m2_pkg = generic_structure_template_pdf.packages[0]
+    autosar_templates = m2_pkg.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        pytest.skip("AUTOSARTemplates package not found")
+
+    sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
+    if not sw_component_template:
+        pytest.skip("SWComponentTemplate package not found")
+
+    components = sw_component_template.get_subpackage("Components")
+    if not components:
+        pytest.skip("Components package not found")
+
+    sw_component_type = components.get_class("SwComponentType")
+    if not sw_component_type:
+        pytest.skip("SwComponentType class not found")
+
+    return sw_component_type
+
+
+@pytest.fixture(scope="session")
+def timing_extensions_pdf(parser: PdfParser) -> AutosarDoc:
+    """Parse and cache the TimingExtensions PDF.
+
+    This fixture parses the PDF once per session and caches the result.
+
+    Args:
+        parser: Shared PdfParser instance.
+
+    Returns:
+        AutosarDoc containing parsed packages and root classes.
+
+    Skips:
+        If the PDF file is not found.
+    """
+    pdf_path = "examples/pdf/AUTOSAR_CP_TPS_TimingExtensions.pdf"
+
+    if not os.path.exists(pdf_path):
+        pytest.skip(f"PDF file not found: {pdf_path}")
+
+    return parser.parse_pdf(pdf_path)
+
+
+@pytest.fixture(scope="session")
 def pdf_cache(parser: PdfParser) -> Dict[str, AutosarDoc]:
     """Parse and cache all available AUTOSAR PDF files.
 

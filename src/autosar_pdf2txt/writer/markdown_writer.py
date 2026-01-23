@@ -324,6 +324,7 @@ class MarkdownWriter:
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
             SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         The markdown file contains:
         - Package path (full parent hierarchy)
@@ -331,6 +332,7 @@ class MarkdownWriter:
         - Parent class name (if parent is not None)
         - ATP type (if any ATP flags are present)
         - Base classes (if any)
+        - Source location (if available)
         - Children classes (if any)
         - Note as description (if present)
         - Attributes list (if any)
@@ -377,6 +379,11 @@ class MarkdownWriter:
             for base in cls.bases:
                 output.write(f"* {base}\n")
             output.write("\n")
+
+        # Write source section if available
+        if cls.source:
+            output.write("## Source\n\n")
+            output.write(f"{cls.source}\n\n")
 
         # Write children if present
         if cls.children:
@@ -437,6 +444,7 @@ class MarkdownWriter:
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         Args:
             enum: The enumeration to write.
@@ -454,6 +462,11 @@ class MarkdownWriter:
         # Write enumeration name
         output.write("## Enumeration\n\n")
         output.write(f"**{enum.name}**\n\n")
+
+        # Write source if available
+        if enum.source:
+            output.write("## Source\n\n")
+            output.write(f"{enum.source}\n\n")
 
         # Write note if present
         if enum.note:

@@ -2920,7 +2920,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Maturity**: accept
 
-**Description**: Verify that warnings are logged when a class references base classes that cannot be located in the model during parent resolution.
+**Description**: Verify that warnings are buffered and logged when a class references base classes that cannot be located in the model during parent resolution.
 
 **Precondition**: None
 
@@ -2929,14 +2929,15 @@ All existing test cases in this document are currently at maturity level **accep
 2. Create ClassDefinition with a base class that doesn't exist in the model (e.g., "NonExistentBase")
 3. Call parser._build_package_hierarchy() to build the package hierarchy
 4. Verify that the class is created successfully with parent set to None
-5. Verify that warning messages are logged for the missing base class
-6. Verify warning message contains the class name, package name, and missing base class name
+5. Verify that warning messages are buffered and logged after parent resolution completes
+6. Verify warning message contains the class name, package name, and sorted list of missing base class names
 
 **Expected Result**:
 - Class is created with parent=None and bases=["NonExistentBase"]
-- Warning is logged with message: "Class 'DerivedClass' in package 'Derived' has base classes that could not be located in the model: ['NonExistentBase']. Parent resolution may be incomplete."
-- Warning is logged for ancestry traversal: "Class 'NonExistentBase' referenced in base classes could not be located in the model during ancestry traversal. Ancestry analysis may be incomplete."
-- Each unique missing class is logged only once during ancestry traversal (deduplication)
+- Warnings are buffered during analysis (not logged immediately)
+- After parent resolution completes, warning is logged with message: "Class 'DerivedClass (in Derived)' has base classes that could not be located in the model: ['NonExistentBase']. Parent resolution may be incomplete."
+- Each unique missing base class error is stored only once (deduplication)
+- Missing base class names are sorted alphabetically in the warning message
 
 **Requirements Coverage**: SWR_PARSER_00017, SWR_PARSER_00020
 
@@ -3171,6 +3172,95 @@ All existing test cases in this document are currently at maturity level **accep
 - TpConfig is included in the base class list
 
 **Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00021
+
+---
+
+#### SWUT_PARSER_00058
+**Title**: Test Parent Resolution Missing Base Deduplicated Warnings
+
+**Maturity**: accept
+
+**Description**: Verify that when multiple classes reference the same missing base class, warnings are logged only once per unique missing class, preventing log spam.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create three class definitions:
+   - DerivedClass1 with base_classes=["MissingBaseA", "ARObject"]
+   - DerivedClass2 with base_classes=["MissingBaseA", "MissingBaseB", "ARObject"]
+   - DerivedClass3 with base_classes=["MissingBaseB", "MissingBaseC", "ARObject"]
+3. Mock the logger to capture warnings
+4. Build package hierarchy from class definitions
+5. Verify exactly 3 unique missing base warnings are logged
+6. Verify MissingBaseA, MissingBaseB, and MissingBaseC each appear exactly once
+7. Verify no duplicate warnings for the same missing base class
+
+**Expected Result**:
+- 3 unique missing base warnings logged (one per unique missing class)
+- Each missing base class appears exactly once in warnings
+- No duplicate warnings for the same missing class
+
+**Requirements Coverage**: SWR_PARSER_00020
+
+---
+
+#### SWUT_PARSER_00059
+**Title**: Test Parent Resolution Missing Ancestry Deduplicated Warnings
+
+**Maturity**: accept
+
+**Description**: Verify that when ancestry traversal encounters missing classes referenced from multiple classes, warnings are logged only once per unique missing class, preventing log spam from repeated references.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create class definitions:
+   - BaseClass with base_classes=["ARObject"]
+   - DerivedClass1 with base_classes=["MissingMiddleClass", "ARObject"]
+   - DerivedClass2 with base_classes=["MissingMiddleClass", "ARObject"]
+   - DerivedClass3 with base_classes=["MissingMiddleClass", "ARObject"]
+3. Mock the logger to capture warnings
+4. Build package hierarchy from class definitions
+5. Verify exactly 1 ancestry traversal warning is logged for MissingMiddleClass
+6. Verify the warning mentions "MissingMiddleClass"
+
+**Expected Result**:
+- 1 unique ancestry traversal warning logged
+- Warning mentions the missing class (MissingMiddleClass)
+- No duplicate warnings even though 3 classes reference the same missing base
+
+**Requirements Coverage**: SWR_PARSER_00020
+
+---
+
+#### SWUT_PARSER_00060
+**Title**: Test Parent Resolution Builds Data Structures Once
+
+**Maturity**: accept
+
+**Description**: Verify that the class registry and ancestry cache are built only on the initial call to _set_parent_references and are reused in recursive calls, avoiding redundant computation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create class definitions with nested packages:
+   - Class1 in AUTOSAR::Package1::SubPackage1
+   - Class2 in AUTOSAR::Package1::SubPackage2
+   - Class3 in AUTOSAR::Package2
+   - All with base_classes=["ARObject"]
+3. Patch _build_ancestry_cache to track call count
+4. Build package hierarchy from class definitions
+5. Verify _build_ancestry_cache is called exactly once (not once per package)
+
+**Expected Result**:
+- _build_ancestry_cache is called exactly once
+- Data structures are reused across recursive calls
+- No redundant computation occurs
+
+**Requirements Coverage**: SWR_PARSER_00020
 
 ---
 

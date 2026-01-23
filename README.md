@@ -66,10 +66,7 @@ autosar-extract path/to/file.pdf -o output.md --include-class-details
 autosar-extract path/to/file.pdf -v
 
 # Combine all options
-autosar-extract examples/pdf/ -o autosar_models.md \
-  --include-class-hierarchy \
-  --include-class-details \
-  -v
+autosar-extract examples/pdf/ -o data/autosar_models.md --include-class-hierarchy --include-class-details 
 ```
 
 #### CLI Options
@@ -225,7 +222,7 @@ Create a separate file showing the class inheritance hierarchy:
 
 ```bash
 # Extract Software Component Template with class hierarchy
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf -o software_components.md --include-class-hierarchy
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf -o autosar_model.md --include-class-hierarchy 
 
 # This creates two files:
 # - software_components.md (package hierarchy)

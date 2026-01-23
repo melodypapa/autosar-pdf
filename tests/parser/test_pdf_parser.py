@@ -2248,3 +2248,219 @@ class TestPdfParser:
         assert "Prototype" in my_type.aggregated_by
         assert "Trigger" in my_type.aggregated_by
         assert len(my_type.aggregated_by) == 4
+
+    def test_parent_resolution_missing_base_deduplicated_warnings(self) -> None:
+        """Test that missing base class warnings are deduplicated.
+
+        SWUT_PARSER_00058: Test Parent Resolution Missing Base Deduplicated Warnings
+
+        Requirements:
+            SWR_PARSER_00020: Missing Base Class Logging with Deduplication
+
+        This test verifies that when multiple classes reference the same missing
+        base class, warnings are logged only once per unique missing class,
+        preventing log spam.
+        """
+        import logging
+        from unittest.mock import patch
+
+        parser = PdfParser()
+
+        # Create multiple classes that all reference the same missing base classes
+        class_defs = [
+            ClassDefinition(
+                name="DerivedClass1",
+                package_path="AUTOSAR::Derived1",
+                is_abstract=False,
+                base_classes=["MissingBaseA", "ARObject"]
+            ),
+            ClassDefinition(
+                name="DerivedClass2",
+                package_path="AUTOSAR::Derived2",
+                is_abstract=False,
+                base_classes=["MissingBaseA", "MissingBaseB", "ARObject"]
+            ),
+            ClassDefinition(
+                name="DerivedClass3",
+                package_path="AUTOSAR::Derived3",
+                is_abstract=False,
+                base_classes=["MissingBaseB", "MissingBaseC", "ARObject"]
+            ),
+        ]
+
+        # Capture warnings
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            doc = parser._build_package_hierarchy(class_defs)
+            packages = doc.packages
+
+            # Verify packages were created
+            assert len(packages) == 1
+            pkg = packages[0]
+
+            # Verify all classes were created
+            derived1_pkg = pkg.get_subpackage("Derived1")
+            derived2_pkg = pkg.get_subpackage("Derived2")
+            derived3_pkg = pkg.get_subpackage("Derived3")
+            assert derived1_pkg is not None
+            assert derived2_pkg is not None
+            assert derived3_pkg is not None
+
+            # Verify warning calls
+            warning_calls = [call for call in mock_logger.warning.call_args_list]
+
+            # Extract warning messages
+            warning_messages = [call[0][0] for call in warning_calls]
+
+            # Count unique missing base class warnings
+            missing_base_warnings = [msg for msg in warning_messages
+                                    if "could not be located in the model" in msg
+                                    and "during ancestry traversal" not in msg]
+
+            # Should have exactly 3 warnings (one for each unique missing base)
+            assert len(missing_base_warnings) == 3, \
+                f"Expected 3 unique missing base warnings, got {len(missing_base_warnings)}: {missing_base_warnings}"
+
+            # Verify each missing base is warned about exactly once
+            assert any("MissingBaseA" in msg for msg in missing_base_warnings), \
+                "MissingBaseA should be in warnings"
+            assert any("MissingBaseB" in msg for msg in missing_base_warnings), \
+                "MissingBaseB should be in warnings"
+            assert any("MissingBaseC" in msg for msg in missing_base_warnings), \
+                "MissingBaseC should be in warnings"
+
+            # Verify no duplicates
+            base_names = []
+            for msg in missing_base_warnings:
+                # Extract class name from message
+                if "Class '" in msg:
+                    start = msg.find("Class '") + 7
+                    end = msg.find("'", start)
+                    base_names.append(msg[start:end])
+
+            assert len(base_names) == len(set(base_names)), \
+                f"Each base class should appear only once, got duplicates: {base_names}"
+
+    def test_parent_resolution_missing_ancestry_deduplicated_warnings(self) -> None:
+        """Test that missing ancestry class warnings are deduplicated.
+
+        SWUT_PARSER_00059: Test Parent Resolution Missing Ancestry Deduplicated Warnings
+
+        Requirements:
+            SWR_PARSER_00020: Missing Base Class Logging with Deduplication
+
+        This test verifies that when ancestry traversal encounters missing classes
+        referenced from multiple classes, warnings are logged only once per unique
+        missing class, preventing log spam from repeated references.
+        """
+        import logging
+        from unittest.mock import patch
+
+        parser = PdfParser()
+
+        # Create a hierarchy where multiple classes reference the same missing base
+        # Base -> MissingMiddle -> Derived
+        class_defs = [
+            ClassDefinition(
+                name="BaseClass",
+                package_path="AUTOSAR::Base",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="DerivedClass1",
+                package_path="AUTOSAR::Derived1",
+                is_abstract=False,
+                base_classes=["MissingMiddleClass", "ARObject"]
+            ),
+            ClassDefinition(
+                name="DerivedClass2",
+                package_path="AUTOSAR::Derived2",
+                is_abstract=False,
+                base_classes=["MissingMiddleClass", "ARObject"]
+            ),
+            ClassDefinition(
+                name="DerivedClass3",
+                package_path="AUTOSAR::Derived3",
+                is_abstract=False,
+                base_classes=["MissingMiddleClass", "ARObject"]
+            ),
+        ]
+
+        # Capture warnings
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            doc = parser._build_package_hierarchy(class_defs)
+            packages = doc.packages
+
+            # Verify packages were created
+            assert len(packages) == 1
+
+            # Verify warning calls
+            warning_calls = [call for call in mock_logger.warning.call_args_list]
+
+            # Extract warning messages
+            warning_messages = [call[0][0] for call in warning_calls]
+
+            # Count ancestry traversal warnings
+            ancestry_warnings = [msg for msg in warning_messages
+                               if "during ancestry traversal" in msg]
+
+            # Should have exactly 1 ancestry warning for MissingMiddleClass
+            assert len(ancestry_warnings) == 1, \
+                f"Expected 1 unique ancestry warning, got {len(ancestry_warnings)}: {ancestry_warnings}"
+
+            # Verify the warning mentions the missing class
+            assert "MissingMiddleClass" in ancestry_warnings[0], \
+                "Ancestry warning should mention MissingMiddleClass"
+
+    def test_parent_resolution_builds_data_structures_once(self) -> None:
+        """Test that class registry and ancestry cache are built only once.
+
+        SWUT_PARSER_00060: Test Parent Resolution Builds Data Structures Once
+
+        Requirements:
+            SWR_PARSER_00020: Missing Base Class Logging with Deduplication
+
+        This test verifies that the class registry and ancestry cache are built
+        only on the initial call to _set_parent_references and are reused in
+        recursive calls, avoiding redundant computation.
+        """
+        from unittest.mock import patch, MagicMock
+
+        parser = PdfParser()
+
+        # Create nested packages to trigger recursive calls
+        class_defs = [
+            ClassDefinition(
+                name="Class1",
+                package_path="AUTOSAR::Package1::SubPackage1",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="Class2",
+                package_path="AUTOSAR::Package1::SubPackage2",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+            ClassDefinition(
+                name="Class3",
+                package_path="AUTOSAR::Package2",
+                is_abstract=False,
+                base_classes=["ARObject"]
+            ),
+        ]
+
+        # Patch _build_ancestry_cache to track call count
+        original_build_cache = parser._build_ancestry_cache
+        call_count = [0]
+
+        def mock_build_cache(class_registry, missing_classes_buffer):
+            call_count[0] += 1
+            return original_build_cache(class_registry, missing_classes_buffer)
+
+        with patch.object(parser, '_build_ancestry_cache', side_effect=mock_build_cache):
+            doc = parser._build_package_hierarchy(class_defs)
+
+            # _build_ancestry_cache should be called exactly once (not once per package)
+            assert call_count[0] == 1, \
+                f"_build_ancestry_cache should be called once, was called {call_count[0]} times"

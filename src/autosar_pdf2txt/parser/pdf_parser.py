@@ -1628,9 +1628,8 @@ class PdfParser:
                 collect_classes(pkg_to_scan)
 
             # Build ancestry cache (with missing classes buffer for deduplication)
-            # Type narrowing: both parameters are non-Optional here
+            # Type narrowing: class_registry is non-Optional here
             assert class_registry is not None
-            assert ancestry_cache is not None
             ancestry_cache = self._build_ancestry_cache(class_registry, missing_ancestry_buffer)
 
         # Set parent references using ancestry-based analysis

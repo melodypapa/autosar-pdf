@@ -3172,3 +3172,501 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00021
 
+---
+
+### 7. Extract Tables CLI Tests
+
+#### SWUT_CLI_00013
+**Title**: Test AUTOSAR Table Detection with Class and Package Fields
+
+**Maturity**: accept
+
+**Description**: Verify that a table containing both Class and Package fields is correctly identified as AUTOSAR-related.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["Class", "Package", "Attribute", "Type"]
+2. Add a data row: ["TestClass", "TestPackage", "testAttr", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is True
+
+**Expected Result**: Table is identified as AUTOSAR-related
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00014
+**Title**: Test AUTOSAR Table Detection Case Insensitive
+
+**Maturity**: accept
+
+**Description**: Verify that table detection is case-insensitive for Class and Package fields.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["CLASS", "PACKAGE", "Attribute", "Type"]
+2. Add a data row: ["TestClass", "TestPackage", "testAttr", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is True
+
+**Expected Result**: Table is identified as AUTOSAR-related regardless of case
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00015
+**Title**: Test AUTOSAR Table Detection with Mixed Case
+
+**Maturity**: accept
+
+**Description**: Verify that table detection works with mixed case in header fields.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["Class", "PaCKaGe", "Attribute", "Type"]
+2. Add a data row: ["TestClass", "TestPackage", "testAttr", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is True
+
+**Expected Result**: Table is identified as AUTOSAR-related with mixed case
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00016
+**Title**: Test Table with Only Class Field Not AUTOSAR
+
+**Maturity**: accept
+
+**Description**: Verify that a table with only Class field (missing Package) is not identified as AUTOSAR-related.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["Class", "Attribute", "Type"]
+2. Add a data row: ["TestClass", "testAttr", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is False
+
+**Expected Result**: Table is not identified as AUTOSAR-related
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00017
+**Title**: Test Table with Only Package Field Not AUTOSAR
+
+**Maturity**: accept
+
+**Description**: Verify that a table with only Package field (missing Class) is not identified as AUTOSAR-related.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["Package", "Attribute", "Type"]
+2. Add a data row: ["TestPackage", "testAttr", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is False
+
+**Expected Result**: Table is not identified as AUTOSAR-related
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00018
+**Title**: Test Table with Neither Class nor Package Not AUTOSAR
+
+**Maturity**: accept
+
+**Description**: Verify that a table without Class or Package fields is not identified as AUTOSAR-related.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["Attribute", "Type", "Mult"]
+2. Add a data row: ["testAttr", "string", "0..1"]
+3. Call is_autosar_table(table)
+4. Verify the result is False
+
+**Expected Result**: Table is not identified as AUTOSAR-related
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00019
+**Title**: Test Empty Table Returns False
+
+**Maturity**: accept
+
+**Description**: Verify that an empty table returns False for AUTOSAR detection.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an empty table: []
+2. Call is_autosar_table(table)
+3. Verify the result is False
+
+**Expected Result**: Empty table returns False
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00020
+**Title**: Test Table with None in Header
+
+**Maturity**: accept
+
+**Description**: Verify that a table with None values in header is handled correctly.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: ["Class", None, "Package", "Type"]
+2. Add a data row: ["TestClass", None, "TestPackage", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is True
+
+**Expected Result**: Table is identified as AUTOSAR-related despite None values
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00021
+**Title**: Test Table with Whitespace in Header
+
+**Maturity**: accept
+
+**Description**: Verify that a table with whitespace in header fields is handled correctly.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a table with header: [" Class ", " Package ", "Attribute", "Type"]
+2. Add a data row: ["TestClass", "TestPackage", "testAttr", "string"]
+3. Call is_autosar_table(table)
+4. Verify the result is True
+
+**Expected Result**: Table is identified as AUTOSAR-related after stripping whitespace
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00022
+**Title**: Test Extracting Only AUTOSAR Tables from PDF
+
+**Maturity**: accept
+
+**Description**: Verify that only AUTOSAR-related tables are extracted from a PDF file.
+
+**Precondition**: A PDF file with mixed tables exists
+
+**Test Steps**:
+1. Create a mock PDF with two tables on one page:
+   - Table 1: AUTOSAR table with Class and Package fields
+   - Table 2: Non-AUTOSAR table without Package field
+2. Call extract_tables_from_pdf(pdf_path, output_dir)
+3. Verify only 1 table image is saved (AUTOSAR table only)
+4. Verify the non-AUTOSAR table is skipped
+
+**Expected Result**: Only AUTOSAR tables are extracted and saved
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00023
+**Title**: Test Extracting PDF with No AUTOSAR Tables
+
+**Maturity**: accept
+
+**Description**: Verify that an empty list is returned when no AUTOSAR tables are found.
+
+**Precondition**: A PDF file with non-AUTOSAR tables exists
+
+**Test Steps**:
+1. Create a mock PDF with only non-AUTOSAR tables
+2. Call extract_tables_from_pdf(pdf_path, output_dir)
+3. Verify the result is an empty list
+4. Verify no images are saved
+
+**Expected Result**: Empty list is returned
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00024
+**Title**: Test Extracting Tables from Multiple Pages
+
+**Maturity**: accept
+
+**Description**: Verify that AUTOSAR tables are extracted from multiple pages of a PDF.
+
+**Precondition**: A PDF file with AUTOSAR tables on multiple pages exists
+
+**Test Steps**:
+1. Create a mock PDF with AUTOSAR tables on 2 pages
+2. Call extract_tables_from_pdf(pdf_path, output_dir)
+3. Verify 2 table images are saved (one from each page)
+4. Verify both tables are AUTOSAR-related
+
+**Expected Result**: All AUTOSAR tables from all pages are extracted
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00025
+**Title**: Test Extract Tables CLI Entry Point
+
+**Maturity**: accept
+
+**Description**: Verify that the main function exists and returns an integer exit code.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Verify main function is callable
+2. Verify main function has return type annotation of int
+
+**Expected Result**: main function exists and returns int
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00026
+**Title**: Test CLI Handles Non-Existent Paths
+
+**Maturity**: accept
+
+**Description**: Verify that CLI returns error when path does not exist.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI with non-existent PDF path: "nonexistent.pdf"
+2. Verify exit code is 1 (error)
+3. Verify error message is logged
+
+**Expected Result**: CLI returns error exit code
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00027
+**Title**: Test CLI Warns About Non-PDF Files
+
+**Maturity**: accept
+
+**Description**: Verify that CLI warns about non-PDF files and skips them.
+
+**Precondition**: A non-PDF file exists
+
+**Test Steps**:
+1. Run CLI with non-PDF file: "test.txt"
+2. Verify warning is logged
+3. Verify file is skipped
+
+**Expected Result**: Warning is logged and non-PDF files are skipped
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00028
+**Title**: Test CLI Verbose Mode
+
+**Maturity**: accept
+
+**Description**: Verify that verbose mode enables detailed debug logging.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI with "-v" flag: "test.pdf -o output -v"
+2. Verify logging is configured at DEBUG level
+3. Verify detailed debug information is available
+
+**Expected Result**: Verbose mode enables DEBUG level logging
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00029
+**Title**: Test CLI Logging Configuration
+
+**Maturity**: accept
+
+**Description**: Verify that CLI logging is configured correctly in normal mode.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI without "-v" flag: "test.pdf -o output"
+2. Verify logging is configured at INFO level
+3. Verify logging format is correct
+
+**Expected Result**: Logging is configured at INFO level in normal mode
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00030
+**Title**: Test CLI Creates Output Directory
+
+**Maturity**: accept
+
+**Description**: Verify that CLI creates output directory if it doesn't exist.
+
+**Precondition**: Output directory does not exist
+
+**Test Steps**:
+1. Run CLI with output directory: "test.pdf -o new_output_dir"
+2. Verify output directory is created
+3. Verify directory creation uses parents=True, exist_ok=True
+
+**Expected Result**: Output directory is created successfully
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00031
+**Title**: Test CLI Directory Input Support
+
+**Maturity**: accept
+
+**Description**: Verify that CLI supports directory input for PDF discovery.
+
+**Precondition**: A directory with PDF files exists
+
+**Test Steps**:
+1. Run CLI with directory path: "test_dir -o output"
+2. Verify glob("*.pdf") is called to find PDF files
+3. Verify all PDF files in directory are processed
+
+**Expected Result**: All PDF files in directory are discovered and processed
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00032
+**Title**: Test CLI Error Handling
+
+**Maturity**: accept
+
+**Description**: Verify that CLI handles exceptions gracefully.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Mock extract_tables_from_pdf to raise an exception
+2. Run CLI: "test.pdf -o output"
+3. Verify exit code is 1 (error)
+4. Verify error message is logged
+5. Verify exception traceback is NOT logged in non-verbose mode
+
+**Expected Result**: Error is handled gracefully without traceback in normal mode
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00033
+**Title**: Test CLI Verbose Mode Exception Traceback
+
+**Maturity**: accept
+
+**Description**: Verify that CLI shows exception traceback in verbose mode.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Mock extract_tables_from_pdf to raise an exception
+2. Run CLI with "-v" flag: "test.pdf -o output -v"
+3. Verify exit code is 1 (error)
+4. Verify error message is logged
+5. Verify exception traceback IS logged in verbose mode
+
+**Expected Result**: Exception traceback is logged in verbose mode
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00034
+**Title**: Test CLI Success Exit Code
+
+**Maturity**: accept
+
+**Description**: Verify that CLI returns success exit code on successful extraction.
+
+**Precondition**: A valid PDF file exists
+
+**Test Steps**:
+1. Mock extract_tables_from_pdf to return list of table paths
+2. Run CLI: "test.pdf -o output"
+3. Verify exit code is 0 (success)
+
+**Expected Result**: CLI returns success exit code
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00035
+**Title**: Test CLI Empty Directory Warning
+
+**Maturity**: accept
+
+**Description**: Verify that CLI warns about empty directories.
+
+**Precondition**: An empty directory exists
+
+**Test Steps**:
+1. Run CLI with empty directory: "empty_dir -o output"
+2. Verify warning is logged about no PDF files found
+3. Verify exit code is 1 (error)
+
+**Expected Result**: Warning is logged and CLI returns error
+
+**Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00036
+**Title**: Test CLI PDFMiner Warning Suppression
+
+**Maturity**: accept
+
+**Description**: Verify that CLI suppresses pdfminer warnings.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI: "test.pdf -o output"
+2. Verify logging.getLogger("pdfminer") is called
+3. Verify setLevel is called to suppress warnings
+
+**Expected Result**: PDFMiner warnings are suppressed
+
+**Requirements Coverage**: SWR_CLI_00013
+

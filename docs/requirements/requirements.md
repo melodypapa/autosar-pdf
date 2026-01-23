@@ -1232,7 +1232,7 @@ The separate hierarchy file shall be created in the same directory as the main o
 
 **Maturity**: accept
 
-**Description**: The system shall provide a command-line interface tool named `autosar-extract-table` for extracting tables from PDF files and saving them as images.
+**Description**: The system shall provide a command-line interface tool named `autosar-extract-table` for extracting AUTOSAR-related tables from PDF files and saving them as images.
 
 The CLI shall support the following features:
 
@@ -1244,15 +1244,24 @@ The CLI shall support the following features:
 **Output Configuration**:
 - Require an `-o` / `--output` option to specify the output directory path for extracted table images
 - Create the output directory if it does not exist
-- Extract tables from PDF files and save each table as a separate PNG image file
+- Extract only AUTOSAR-related tables from PDF files and save each table as a separate PNG image file
+- A table is considered AUTOSAR-related if its header contains both "Class" and "Package" fields (case-insensitive)
 - Crop each image to the bounding box of the table to remove surrounding page content
 - Name each image file with the format `table_page{page_number}_table{table_number}.png` where:
   - `{page_number}` is the PDF page number where the table was found
   - `{table_number}` is the sequential table number on that page
 
+**Table Filtering**:
+- Analyze the first row (header) of each extracted table
+- Normalize header values by converting to lowercase and stripping whitespace
+- Check if the header contains both "class" and "package" keywords
+- Only extract and save tables that meet the AUTOSAR-related criteria
+- Skip tables that do not contain both required fields
+- Log skipped tables in debug mode when verbose output is enabled
+
 **Logging and Feedback**:
 - Provide progress feedback via messages indicating the number of PDF files being processed, output directory location, number of tables extracted from each PDF file, and total number of tables extracted across all PDF files
-- Support a `-v` / `--verbose` option to enable verbose output mode, which prints detailed debug information during processing including the number of tables found on each page
+- Support a `-v` / `--verbose` option to enable verbose output mode, which prints detailed debug information during processing including the number of tables found on each page and which tables were skipped
 - Suppress pdfminer warnings about invalid color values in PDF files
 - Provide logging information to show the current processing progress, including detailed status messages for each operation step
 

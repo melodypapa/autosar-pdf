@@ -4,13 +4,58 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import pdfplumber
 
 
+def is_autosar_table(table: List[List[Optional[str]]]) -> bool:
+    """Check if a table is AUTOSAR-related by verifying it contains Class and/or Package fields.
+
+    Args:
+        table: The table data as a list of rows, where each row is a list of cell values
+
+    Returns:
+        True if the table is AUTOSAR-related, False otherwise
+    """
+    if not table or len(table) == 0:
+        return False
+
+    # Get the first row (header) and normalize it
+    header = table[0]
+    if not header:
+        return False
+
+    # Normalize header values: convert to lowercase, strip whitespace, handle None
+    normalized_header = []
+    for cell in header:
+        if cell is None:
+            normalized_header.append("")
+        else:
+            normalized_header.append(str(cell).strip().lower())
+
+    # Check if the header contains both "class" and "package" fields
+    has_class = False
+    has_package = False
+
+    for cell in normalized_header:
+        if "class" in cell:
+            has_class = True
+        if "package" in cell:
+            has_package = True
+
+    is_autosar = has_class and has_package
+
+    if is_autosar:
+        logging.debug(f"  AUTOSAR table detected - Header: {header}")
+
+    return is_autosar
+
+
 def extract_tables_from_pdf(pdf_path: Path, output_dir: Path) -> List[Path]:
-    """Extract all tables from a PDF file.
+    """Extract AUTOSAR-related tables from a PDF file.
+
+    Only extracts tables that contain both Class and Package fields in their header.
 
     Args:
         pdf_path: Path to the PDF file
@@ -31,6 +76,11 @@ def extract_tables_from_pdf(pdf_path: Path, output_dir: Path) -> List[Path]:
                     logging.debug(f"Found {len(tables)} table(s) on page {page_num}")
 
                     for table_num, table in enumerate(tables, start=1):
+                        # Check if this is an AUTOSAR-related table
+                        if not is_autosar_table(table):
+                            logging.debug(f"  Skipping table {table_num} on page {page_num} - not AUTOSAR-related")
+                            continue
+
                         # Create an image from the page
                         img = page.to_image()
 
@@ -47,7 +97,7 @@ def extract_tables_from_pdf(pdf_path: Path, output_dir: Path) -> List[Path]:
                         img.save(img_path)
 
                         table_image_paths.append(img_path)
-                        logging.debug(f"  Saved table {table_num} from page {page_num} to {img_path}")
+                        logging.debug(f"  Saved AUTOSAR table {table_num} from page {page_num} to {img_path}")
 
         return table_image_paths
 
@@ -63,7 +113,7 @@ def main() -> int:
         Exit code (0 for success, 1 for error).
     """
     parser = argparse.ArgumentParser(
-        description="Extract tables from PDF files and save them as images."
+        description="Extract AUTOSAR-related tables (containing Class and Package fields) from PDF files and save them as images."
     )
     parser.add_argument(
         "pdf_files",

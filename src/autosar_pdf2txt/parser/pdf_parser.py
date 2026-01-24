@@ -1,74 +1,39 @@
-"""PDF parser for extracting AUTOSAR class hierarchies from PDF files."""
+"""PDF parser for extracting AUTOSAR class hierarchies from PDF files.
+
+This module provides the main PdfParser class that orchestrates parsing
+and delegates to specialized parsers for each AUTOSAR type.
+
+Requirements:
+    SWR_PARSER_00001: PDF Parser Initialization
+    SWR_PARSER_00002: Backend Validation
+    SWR_PARSER_00003: PDF File Parsing
+    SWR_PARSER_00006: Package Hierarchy Building
+    SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+    SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
+    SWR_PARSER_00019: Backend Warning Suppression
+    SWR_PARSER_00022: PDF Source Location Extraction
+    SWR_PARSER_00027: Parser Backward Compatibility
+"""
 
 import logging
-import re
 import warnings
-from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Dict, List, Optional, Union
 
 from autosar_pdf2txt.models import (
-    ATPType,
-    AttributeKind,
-    AutosarAttribute,
     AutosarClass,
     AutosarDoc,
-    AutosarEnumLiteral,
     AutosarEnumeration,
     AutosarPackage,
     AutosarPrimitive,
-    AutosarSource,
 )
 
+from autosar_pdf2txt.parser.class_parser import AutosarClassParser
+from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+from autosar_pdf2txt.parser.primitive_parser import AutosarPrimitiveParser
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ClassDefinition:
-    """Represents a parsed class definition from PDF.
-
-    Requirements:
-        SWR_PARSER_00005: Class Definition Data Model
-        SWR_PARSER_00010: Attribute Extraction from PDF
-        SWR_PARSER_00014: Enumeration Literal Header Recognition
-        SWR_PARSER_00015: Enumeration Literal Extraction from PDF
-        SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
-        SWR_MODEL_00024: AUTOSAR Primitive Type Representation
-        SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-        SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-        SWR_MODEL_00027: AUTOSAR Source Location Representation
-        SWR_PARSER_00022: PDF Source Location Extraction
-
-    Attributes:
-        name: The name of the class, enumeration, or primitive type.
-        package_path: Full package path (e.g., "M2::AUTOSARTemplates::BswModuleTemplate::BswBehavior").
-        is_abstract: Whether the type is abstract.
-        atp_type: ATP marker type enum indicating the AUTOSAR Tool Platform marker.
-        base_classes: List of base class names.
-        subclasses: List of subclass names.
-        aggregated_by: List of class names that aggregate this class.
-        note: Documentation note extracted from the Note column.
-        attributes: Dictionary of class attributes (key: attribute name, value: AutosarAttribute).
-        is_enumeration: Whether this is an enumeration type (True) or a class type (False).
-        is_primitive: Whether this is a primitive type (True) or a class/enumeration type (False).
-        enumeration_literals: List of enumeration literals (for enumeration types only).
-        source: Source location where this type was defined (pdf_file, page_number).
-    """
-
-    name: str
-    package_path: str
-    is_abstract: bool
-    atp_type: ATPType = ATPType.NONE
-    base_classes: List[str] = field(default_factory=list)
-    subclasses: List[str] = field(default_factory=list)
-    aggregated_by: List[str] = field(default_factory=list)
-    note: Optional[str] = None
-    attributes: Dict[str, AutosarAttribute] = field(default_factory=dict)
-    is_enumeration: bool = False
-    is_primitive: bool = False
-    enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
-    source: Optional[AutosarSource] = None
 
 
 class PdfParser:
@@ -78,46 +43,14 @@ class PdfParser:
         SWR_PARSER_00001: PDF Parser Initialization
 
     The parser extracts class definitions from PDF files and builds
-    AutosarPackage and AutosarClass objects using pdfplumber as the
-    default PDF engine.
+    AutosarPackage and AutosarClass objects using specialized parsers
+    for each AUTOSAR type.
 
     Usage:
         >>> parser = PdfParser()
         >>> packages = parser.parse_pdf("path/to/file.pdf")
         >>> print(len(packages))
     """
-
-    # Regex patterns for parsing class definitions
-    # SWR_PARSER_00004: Class Definition Pattern Recognition
-    # SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-    # SWR_PARSER_00010: Attribute Extraction from PDF
-    # SWR_PARSER_00012: Multi-Line Attribute Handling
-    # SWR_PARSER_00014: Enumeration Literal Header Recognition
-    # SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-    CLASS_PATTERN = re.compile(r"^Class\s+(.+?)(?:\s*\((abstract)\))?\s*$")
-    PRIMITIVE_PATTERN = re.compile(r"^Primitive\s+(.+)$")
-    ENUMERATION_PATTERN = re.compile(r"^Enumeration\s+(.+)$")
-    PACKAGE_PATTERN = re.compile(r"^Package\s+(M2::)?(.+)$")
-    BASE_PATTERN = re.compile(r"^Base\s+(.+)$")
-    SUBCLASS_PATTERN = re.compile(r"^Subclasses\s+(.+)$")
-    AGGREGATED_BY_PATTERN = re.compile(r"^Aggregated\s+by\s+(.+)$")
-    NOTE_PATTERN = re.compile(r"^Note\s+(.+)$")
-    ATTRIBUTE_HEADER_PATTERN = re.compile(r"^Attribute\s+Type\s+Mult\.\s+Kind\s+Note$")
-    ENUMERATION_LITERAL_HEADER_PATTERN = re.compile(r"^Literal\s+Description$")
-    ENUMERATION_LITERAL_PATTERN = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\s+(.*)$")
-    ATTRIBUTE_PATTERN = re.compile(r"^(\S+)\s+(\S+)\s+.*$")
-    ATP_MIXED_STRING_PATTERN = re.compile(r"<<atpMixedString>>")
-    ATP_VARIATION_PATTERN = re.compile(r"<<atpVariation>>")
-    ATP_MIXED_PATTERN = re.compile(r"<<atpMixed>>")
-
-    # Class constants for filtering and continuation detection
-    # SWR_PARSER_00012: Multi-Line Attribute Handling
-    # SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-    CONTINUATION_TYPES = {"data", "If", "has", "to", "of", "CP", "atpSplitable"}
-    FRAGMENT_NAMES = {"Element", "SizeProfile", "intention", "ImplementationDataType"}
-    PARTIAL_NAMES = {"isStructWith"}
-    CONTINUATION_FRAGMENTS = {"Element", "Referrable", "Packageable", "Type", "Profile"}
-    REFERENCE_INDICATORS = {"Prototype", "Ref", "Dependency", "Trigger", "Mapping", "Group", "Set", "List", "Collection"}
 
     def __init__(self) -> None:
         """Initialize the PDF parser.
@@ -130,6 +63,11 @@ class PdfParser:
             ImportError: If pdfplumber is not installed.
         """
         self._validate_backend()
+
+        # Instantiate specialized parsers
+        self._class_parser = AutosarClassParser()
+        self._enum_parser = AutosarEnumerationParser()
+        self._primitive_parser = AutosarPrimitiveParser()
 
     def _validate_backend(self) -> None:
         """Validate that pdfplumber backend is available.
@@ -148,98 +86,6 @@ class PdfParser:
                 "pdfplumber is not installed. Install it with: pip install pdfplumber"
             )
 
-    def _is_reference_type(self, attr_type: str) -> bool:
-        """Determine if an attribute type is a reference type.
-
-        Requirements:
-            SWR_PARSER_00010: Attribute Extraction from PDF
-
-        Args:
-            attr_type: The attribute type string.
-
-        Returns:
-            True if the attribute type appears to be a reference type, False otherwise.
-
-        Reference types typically end with common AUTOSAR reference patterns.
-        """
-        return any(indicator in attr_type for indicator in self.REFERENCE_INDICATORS)
-
-    def _is_broken_attribute_fragment(
-        self, attr_name: str, attr_type: str
-    ) -> bool:
-        """Check if an attribute is a broken fragment from multi-line PDF table formatting.
-
-        Requirements:
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            attr_name: The attribute name.
-            attr_type: The attribute type.
-
-        Returns:
-            True if this is a broken fragment that should be filtered out, False otherwise.
-        """
-        return (
-            attr_type in self.CONTINUATION_TYPES
-            or attr_name in self.FRAGMENT_NAMES
-            or attr_name in self.PARTIAL_NAMES
-        )
-
-    def _is_valid_package_path(self, package_path: str) -> bool:
-        """Check if a package path is valid and should be accepted.
-
-        Requirements:
-            SWR_PARSER_00006: Package Hierarchy Building
-
-        Args:
-            package_path: The package path to validate (e.g., "M2::AUTOSAR::DataTypes").
-
-        Returns:
-            True if the package path is valid, False if it should be filtered out.
-
-        Valid package paths:
-        - Contain only alphanumeric characters, underscores, and :: separators
-        - Each part starts with an uppercase letter or underscore
-        - No spaces or special characters (parentheses, PDF artifacts like (cid:99))
-        - Parts follow PascalCase naming convention
-
-        Invalid examples:
-        - "live in various packages which do not have a common" (spaces, lowercase)
-        - "can coexist in the context of a ReferenceBase.(cid:99)()" (special characters)
-        """
-        # Filter out paths with obvious invalid characters
-        if "(" in package_path or ")" in package_path:
-            return False
-        if "(cid:" in package_path:
-            return False
-        if "." in package_path:
-            return False
-
-        # Split into parts and validate each
-        parts = package_path.split("::")
-
-        for part in parts:
-            part = part.strip()
-
-            # Empty part is invalid
-            if not part:
-                return False
-
-            # Check for spaces
-            if " " in part:
-                return False
-
-            # Valid package names are PascalCase or contain underscores
-            # Must start with uppercase letter or underscore
-            if not (part[0].isupper() or part[0] == "_"):
-                return False
-
-            # Must contain only alphanumeric characters and underscores
-            if not all(c.isalnum() or c == "_" for c in part):
-                return False
-
-        return True
-
     def parse_pdf(self, pdf_path: str) -> AutosarDoc:
         """Parse a PDF file and extract the package hierarchy.
 
@@ -248,7 +94,6 @@ class PdfParser:
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
-            SWR_PARSER_00018: Multiple PDF Parsing with Complete Model Resolution
 
         Args:
             pdf_path: Path to the PDF file.
@@ -284,18 +129,18 @@ class PdfParser:
             FileNotFoundError: If any PDF file doesn't exist.
             Exception: If PDF parsing fails.
         """
-        # Phase 1: Extract class definitions from ALL PDFs first
-        all_class_defs: List[ClassDefinition] = []
+        # Phase 1: Extract all model objects from ALL PDFs first
+        all_models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = []
         for pdf_path in pdf_paths:
             logger.info(f"  - {pdf_path}")
-            class_defs = self._extract_class_definitions(pdf_path)
-            all_class_defs.extend(class_defs)
+            models = self._extract_models(pdf_path)
+            all_models.extend(models)
 
         # Phase 2: Build complete package hierarchy once
-        return self._build_package_hierarchy(all_class_defs)
+        return self._build_package_hierarchy(all_models)
 
-    def _extract_class_definitions(self, pdf_path: str) -> List[ClassDefinition]:
-        """Extract all class definitions from the PDF.
+    def _extract_models(self, pdf_path: str) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
+        """Extract all model objects from the PDF.
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
@@ -304,18 +149,18 @@ class PdfParser:
             pdf_path: Path to the PDF file.
 
         Returns:
-            List of ClassDefinition objects.
+            List of model objects (AutosarClass, AutosarEnumeration, AutosarPrimitive).
         """
         return self._extract_with_pdfplumber(pdf_path)
 
-    def _extract_with_pdfplumber(self, pdf_path: str) -> List[ClassDefinition]:
-        """Extract class definitions using pdfplumber.
+    def _extract_with_pdfplumber(self, pdf_path: str) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
+        """Extract model objects using pdfplumber.
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00007: PDF Backend Support - pdfplumber
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
-            SWR_PARSER_00019: PDF Library Warning Suppression
+            SWR_PARSER_00019: PDF Backend Warning Suppression
             SWR_MODEL_00027: AUTOSAR Source Location Representation
             SWR_PARSER_00022: PDF Source Location Extraction
 
@@ -323,11 +168,11 @@ class PdfParser:
             pdf_path: Path to the PDF file.
 
         Returns:
-            List of ClassDefinition objects with source information.
+            List of model objects with source information.
         """
         import pdfplumber
 
-        class_defs: List[ClassDefinition] = []
+        models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = []
 
         # Extract PDF filename for source tracking
         pdf_filename = Path(pdf_path).name
@@ -341,6 +186,10 @@ class PdfParser:
             try:
                 with pdfplumber.open(pdf_path) as pdf:
                     # Process each page individually to track page numbers for source information
+                    # Maintain parsing state across pages for multi-page definitions
+                    current_models: Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = {}
+                    model_parsers: Dict[int, str] = {}  # Maps model index to parser type
+
                     for page_num, page in enumerate(pdf.pages, start=1):
                         text_buffer = StringIO()
 
@@ -367,35 +216,43 @@ class PdfParser:
                             text_buffer.write("\n")
 
                         page_text = text_buffer.getvalue()
-                        # Pass source information to parser
-                        page_class_defs = self._parse_class_text(
+                        # Parse text and get models with their parsers
+                        page_models = self._parse_page_text(
                             page_text,
                             pdf_filename=pdf_filename,
                             page_number=page_num,
+                            current_models=current_models,
+                            model_parsers=model_parsers,
                         )
-                        class_defs.extend(page_class_defs)
+                        models.extend(page_models)
 
             except Exception as e:
                 raise Exception(f"Failed to parse PDF with pdfplumber: {e}") from e
 
-        return class_defs
+        return models
 
-    def _parse_class_text(
+    def _parse_page_text(
         self,
         text: str,
         pdf_filename: Optional[str] = None,
         page_number: Optional[int] = None,
-    ) -> List[ClassDefinition]:
-        """Parse class definitions from extracted text.
+        current_models: Optional[Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]] = None,
+        model_parsers: Optional[Dict[int, str]] = None,
+    ) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
+        """Parse model definitions from extracted text.
+
+        This method processes the text from a single page and:
+        1. Detects new type definitions (Class, Enumeration, Primitive)
+        2. Delegates to the appropriate specialized parser
+        3. Continues parsing for existing models across pages
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
             SWR_PARSER_00012: Multi-Line Attribute Handling
             SWR_PARSER_00014: Enumeration Literal Header Recognition
             SWR_PARSER_00015: Enumeration Literal Extraction from PDF
             SWR_PARSER_00016: Enumeration Literal Section Termination
-            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
             SWR_MODEL_00027: AUTOSAR Source Location Representation
             SWR_PARSER_00022: PDF Source Location Extraction
 
@@ -403,1401 +260,370 @@ class PdfParser:
             text: The extracted text from PDF.
             pdf_filename: Optional PDF filename for source tracking.
             page_number: Optional page number for source tracking.
+            current_models: Dictionary of current models being parsed (for multi-page support).
+            model_parsers: Dictionary mapping model indices to parser types.
 
         Returns:
-            List of ClassDefinition objects with source information.
+            List of model objects parsed from this page.
         """
-        class_defs: List[ClassDefinition] = []
+        if current_models is None:
+            current_models = {}
+        if model_parsers is None:
+            model_parsers = {}
+
+        models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = []
         lines = text.split("\n")
 
-        current_class: Optional[ClassDefinition] = None
-        in_attribute_section = False
-        in_enumeration_literal_section = False
-        class_definition_complete = False
+        i = 0
+        new_model: Optional[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = None
+        while i < len(lines):
+            line = lines[i].strip()
 
-        # SWR_PARSER_00021: Generic tracking for class list attributes
-        # Maps section names to their pending lists and last item names
-        pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str]]] = {
-            "base_classes": (None, None),
-            "aggregated_by": (None, None),
-            "subclasses": (None, None),
-        }
-        in_class_list_section: Optional[str] = None
-
-        # Attribute parsing state
-        pending_attr_name: Optional[str] = None
-        pending_attr_type: Optional[str] = None
-        pending_attr_multiplicity: Optional[str] = None
-        pending_attr_kind: Optional[AttributeKind] = None
-        pending_attr_note: Optional[str] = None
-
-        for i, line in enumerate(lines):
-            line = line.strip()
-
-            # Skip empty lines
             if not line:
+                i += 1
                 continue
 
-            # Check for class definition (multiple patterns)
-            class_match = self.CLASS_PATTERN.match(line)
-            primitive_match = self.PRIMITIVE_PATTERN.match(line)
-            enumeration_match = self.ENUMERATION_PATTERN.match(line)
+            # Try to match type definition patterns
+            class_match = self._class_parser.CLASS_PATTERN.match(line)
+            primitive_match = self._primitive_parser.PRIMITIVE_PATTERN.match(line)
+            enumeration_match = self._enum_parser.ENUMERATION_PATTERN.match(line)
 
             if class_match or primitive_match or enumeration_match:
-                # Finalize pending class lists and attributes before processing new class
-                if current_class is not None:
-                    self._finalize_pending_class_lists(
-                        current_class, in_class_list_section, pending_class_lists
+                # This is a new type definition
+                # Delegate to appropriate parser
+                if class_match:
+                    new_model = self._class_parser.parse_definition(
+                        lines, i, pdf_filename, page_number
                     )
-                    (pending_attr_name, pending_attr_type, pending_attr_multiplicity,
-                     pending_attr_kind, pending_attr_note) = self._finalize_pending_attribute(
-                        current_class, pending_attr_name, pending_attr_type,
-                        pending_attr_multiplicity, pending_attr_kind, pending_attr_note
+                    parser_type = "class"
+                elif primitive_match:
+                    new_model = self._primitive_parser.parse_definition(
+                        lines, i, pdf_filename, page_number
                     )
-
-                # Process class definition patterns
-                result = self._process_class_definition_pattern(
-                    class_match, primitive_match, enumeration_match, lines, i,
-                    pdf_filename, page_number
-                )
-                if result:
-                    # Save previous class if exists
-                    if current_class is not None:
-                        class_defs.append(current_class)
-
-                    current_class = result
-                    # Reset all state when starting a new class
-                    in_attribute_section = False
-                    in_enumeration_literal_section = False
-                    in_class_list_section = None
-                    for section_name in pending_class_lists:
-                        pending_class_lists[section_name] = (None, None)
-                    class_definition_complete = False
-                    pending_attr_name = None
-                    pending_attr_type = None
-                continue
-
-            # Check for package definition
-            package_match = self.PACKAGE_PATTERN.match(line)
-            if package_match and current_class is not None and not class_definition_complete:
-                self._process_package_line(package_match, current_class)
-                continue
-
-            # SWR_PARSER_00021: Generic class list attribute pattern matching
-            # Try to match class list attribute patterns (Base, Aggregated by, Subclasses)
-            class_list_match = self._try_match_class_list_pattern(line, current_class, class_definition_complete)
-            if class_list_match is not None and current_class is not None:
-                section_name, match = class_list_match
-                self._finalize_pending_class_lists(
-                    current_class, in_class_list_section, pending_class_lists
-                )
-                pending_class_lists[section_name] = self._parse_class_list_line(section_name, match)
-                in_class_list_section = section_name
-                continue
-
-            # Check for note
-            note_match = self.NOTE_PATTERN.match(line)
-            if note_match and current_class is not None and not class_definition_complete:
-                self._finalize_pending_class_lists(
-                    current_class, in_class_list_section, pending_class_lists
-                )
-                in_class_list_section = None
-                self._process_note_line(note_match, lines, i, current_class)
-                continue
-
-            # Check for attribute header
-            attr_header_match = self.ATTRIBUTE_HEADER_PATTERN.match(line)
-            if attr_header_match and current_class is not None:
-                self._finalize_pending_class_lists(
-                    current_class, in_class_list_section, pending_class_lists
-                )
-                in_class_list_section = None
-                (in_attribute_section, pending_attr_name, pending_attr_type,
-                 pending_attr_multiplicity, pending_attr_kind, pending_attr_note) = self._process_attribute_header(
-                    pending_attr_name, pending_attr_type, pending_attr_multiplicity,
-                    pending_attr_kind, pending_attr_note
-                )
-                continue
-
-            # Check for enumeration literal header
-            enum_literal_header_match = self.ENUMERATION_LITERAL_HEADER_PATTERN.match(line)
-            if enum_literal_header_match and current_class is not None and current_class.is_enumeration:
-                self._finalize_pending_class_lists(
-                    current_class, in_class_list_section, pending_class_lists
-                )
-                in_class_list_section = None
-                in_enumeration_literal_section = True
-                continue
-
-            # Check for enumeration literal line
-            if in_enumeration_literal_section and current_class is not None and current_class.is_enumeration:
-                enum_section_ended = self._process_enumeration_literal_line(line, current_class)
-                if enum_section_ended:
-                    in_enumeration_literal_section = False
-                    class_definition_complete = True
-                continue
-
-            # SWR_PARSER_00021: Generic class list continuation handling
-            if in_class_list_section and current_class is not None and not class_definition_complete:
-                # Check if this line looks like a continuation
-                if "," in line or any(fragment in line for fragment in self.CONTINUATION_FRAGMENTS):
-                    pending_class_lists[in_class_list_section] = self._handle_class_list_continuation(
-                        line, pending_class_lists[in_class_list_section][0], pending_class_lists[in_class_list_section][1]
+                    parser_type = "primitive"
+                else:  # enumeration_match
+                    new_model = self._enum_parser.parse_definition(
+                        lines, i, pdf_filename, page_number
                     )
+                    parser_type = "enumeration"
+
+                if new_model:
+                    # Store the model for continuation parsing
+                    model_index = len(models)
+                    current_models[model_index] = new_model
+                    model_parsers[model_index] = parser_type
+                    models.append(new_model)
+
+                    # Continue parsing with this model
+                    i += 1
+                    while i < len(lines):
+                        # Use the appropriate parser to continue parsing
+                        if parser_type == "class":
+                            new_i, is_complete = self._class_parser.continue_parsing(
+                                new_model, lines, i
+                            )
+                        elif parser_type == "primitive":
+                            new_i, is_complete = self._primitive_parser.continue_parsing(
+                                new_model, lines, i
+                            )
+                        else:  # enumeration
+                            new_i, is_complete = self._enum_parser.continue_parsing(
+                                new_model, lines, i
+                            )
+
+                        i = new_i
+
+                        if is_complete:
+                            # Remove from current_models as parsing is complete
+                            if model_index in current_models:
+                                del current_models[model_index]
+                                del model_parsers[model_index]
+                            # Advance past the line that caused completion
+                            i += 1
+                            break
                     continue
 
-            # Check for attribute (only if we're in the attribute section)
-            if in_attribute_section and current_class is not None and line and " " in line:
-                attr_result: Dict[str, Union[bool, Optional[str], Optional[AttributeKind]]] = self._process_attribute_line(
-                    line, current_class, pending_attr_name, pending_attr_type,
-                    pending_attr_multiplicity, pending_attr_kind, pending_attr_note
-                )
-                if attr_result["section_ended"]:
-                    in_attribute_section = False
-                    class_definition_complete = True
-
-                pending_attr_name = cast(Optional[str], attr_result["pending_attr_name"])
-                pending_attr_type = cast(Optional[str], attr_result["pending_attr_type"])
-                pending_attr_multiplicity = cast(Optional[str], attr_result["pending_attr_multiplicity"])
-                pending_attr_kind = cast(Optional[AttributeKind], attr_result["pending_attr_kind"])
-                pending_attr_note = cast(Optional[str], attr_result["pending_attr_note"])
-
-        # Don't forget the last class
-        if current_class is not None:
-            self._finalize_pending_class_lists(
-                current_class, in_class_list_section, pending_class_lists
-            )
-            self._finalize_pending_attribute(
-                current_class, pending_attr_name, pending_attr_type,
-                pending_attr_multiplicity, pending_attr_kind, pending_attr_note
-            )
-            class_defs.append(current_class)
-
-        return class_defs
-
-    def _finalize_pending_attribute(
-        self,
-        current_class: ClassDefinition,
-        pending_attr_name: Optional[str],
-        pending_attr_type: Optional[str],
-        pending_attr_multiplicity: Optional[str],
-        pending_attr_kind: Optional[AttributeKind],
-        pending_attr_note: Optional[str],
-    ) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[AttributeKind], Optional[str]]:
-        """Finalize a pending attribute and add it to the current class if valid.
-
-        Requirements:
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            current_class: The current class definition being processed.
-            pending_attr_name: Name of the pending attribute.
-            pending_attr_type: Type of the pending attribute.
-            pending_attr_multiplicity: Multiplicity of the pending attribute.
-            pending_attr_kind: Kind of the pending attribute.
-            pending_attr_note: Note of the pending attribute.
-
-        Returns:
-            Tuple of reset pending attribute values (all None).
-        """
-        if pending_attr_name is not None and pending_attr_type is not None:
-            if (":" not in pending_attr_name and ";" not in pending_attr_name and
-                not pending_attr_name.isdigit() and
-                pending_attr_type not in [":", "of", "CP", "atpSplitable"] and
-                not self._is_broken_attribute_fragment(pending_attr_name, pending_attr_type)):
-                is_ref = self._is_reference_type(pending_attr_type)
-                kind = pending_attr_kind or (AttributeKind.REF if is_ref else AttributeKind.ATTR)
-                attr = AutosarAttribute(
-                    name=pending_attr_name,
-                    type=pending_attr_type,
-                    is_ref=is_ref,
-                    multiplicity=pending_attr_multiplicity or "1",
-                    kind=kind,
-                    note=pending_attr_note or ""
-                )
-                current_class.attributes[pending_attr_name] = attr
-
-        return (None, None, None, None, None)
-
-    def _finalize_pending_class_lists(
-        self,
-        current_class: ClassDefinition,
-        in_class_list_section: Optional[str],
-        pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str]]],
-    ) -> None:
-        """Finalize a pending class list when transitioning to another section.
-
-        Requirements:
-            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-
-        This method is called when transitioning from one class list section
-        (base classes, aggregated by, or subclasses) to another section
-        (note, attribute, etc.). It finalizes the pending list by assigning
-        it to the current class definition.
-
-        Args:
-            current_class: The current class definition being processed.
-            in_class_list_section: Which class list section is currently active.
-            pending_class_lists: Dictionary mapping section names to (pending_list, last_item_name) tuples.
-        """
-        if in_class_list_section and in_class_list_section in pending_class_lists:
-            pending_list, _ = pending_class_lists[in_class_list_section]
-            if pending_list is not None:
-                setattr(current_class, in_class_list_section, pending_list)
-
-    def _try_match_class_list_pattern(
-        self,
-        line: str,
-        current_class: Optional[ClassDefinition],
-        class_definition_complete: bool,
-    ) -> Optional[Tuple[str, re.Match]]:
-        """Try to match a class list attribute pattern (Base, Aggregated by, Subclasses).
-
-        Requirements:
-            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-
-        This method tries to match the line against any known class list attribute pattern
-        and returns the section name and match object if successful.
-
-        Args:
-            line: The current line being processed.
-            current_class: The current class definition being processed.
-            class_definition_complete: Whether the class definition is complete.
-
-        Returns:
-            Tuple of (section_name, match) if a pattern matches, None otherwise.
-        """
-        if current_class is None or class_definition_complete:
-            return None
-
-        # Try Base pattern
-        base_match = self.BASE_PATTERN.match(line)
-        if base_match:
-            return ("base_classes", base_match)
-
-        # Try Aggregated by pattern
-        aggregated_by_match = self.AGGREGATED_BY_PATTERN.match(line)
-        if aggregated_by_match:
-            return ("aggregated_by", aggregated_by_match)
-
-        # Try Subclasses pattern
-        subclass_match = self.SUBCLASS_PATTERN.match(line)
-        if subclass_match:
-            return ("subclasses", subclass_match)
-
-        return None
-
-    def _parse_class_list_line(
-        self,
-        section_name: str,
-        match: re.Match,
-    ) -> Tuple[Optional[List[str]], Optional[str]]:
-        """Parse a class list line (Base, Aggregated by, or Subclasses).
-
-        Requirements:
-            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-
-        This is a generic method that parses any class list attribute line based on the section name.
-
-        Args:
-            section_name: The name of the section ("base_classes", "aggregated_by", or "subclasses").
-            match: The regex match object.
-
-        Returns:
-            Tuple of (list of parsed items, last item name).
-        """
-        items_str = match.group(1)
-        items = [item.strip() for item in items_str.split(",") if item.strip()]
-        last_item = items[-1] if items else None
-        return (items, last_item)
-
-    def _add_attribute_if_valid(
-        self,
-        current_class: ClassDefinition,
-        pending_attr_name: Optional[str],
-        pending_attr_type: Optional[str],
-        pending_attr_multiplicity: Optional[str],
-        pending_attr_kind: Optional[AttributeKind],
-        pending_attr_note: Optional[str],
-    ) -> None:
-        """Add a pending attribute to the current class if it's valid.
-
-        Requirements:
-            SWR_PARSER_00010: Attribute Extraction from PDF
-            SWR_PARSER_00011: Attribute Metadata Filtering
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            current_class: The current class definition being processed.
-            pending_attr_name: Name of the pending attribute.
-            pending_attr_type: Type of the pending attribute.
-            pending_attr_multiplicity: Multiplicity of the pending attribute.
-            pending_attr_kind: Kind of the pending attribute.
-            pending_attr_note: Note of the pending attribute.
-        """
-        if pending_attr_name is not None and pending_attr_type is not None:
-            if not self._should_filter_attribute(pending_attr_name, pending_attr_type):
-                attr = self._create_attribute_from_pending(
-                    pending_attr_name,
-                    pending_attr_type,
-                    pending_attr_multiplicity or "1",
-                    pending_attr_kind or AttributeKind.ATTR,
-                    pending_attr_note or ""
-                )
-                current_class.attributes[pending_attr_name] = attr
-
-    def _validate_atp_markers(self, raw_class_name: str) -> Tuple[ATPType, str]:
-        """Validate ATP markers and extract ATP type and clean class name.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-
-        Args:
-            raw_class_name: The raw class name that may contain ATP markers.
-
-        Returns:
-            Tuple of (atp_type, clean_class_name).
-
-        Raises:
-            ValueError: If multiple ATP markers are detected on the same class.
-        """
-        # Detect ATP patterns
-        has_atp_mixed_string = bool(self.ATP_MIXED_STRING_PATTERN.search(raw_class_name))
-        has_atp_variation = bool(self.ATP_VARIATION_PATTERN.search(raw_class_name))
-        has_atp_mixed = bool(self.ATP_MIXED_PATTERN.search(raw_class_name))
-
-        # Validate: multiple ATP markers on same class is an error
-        atp_markers = []
-        if has_atp_mixed_string:
-            atp_markers.append("<<atpMixedString>>")
-        if has_atp_variation:
-            atp_markers.append("<<atpVariation>>")
-        if has_atp_mixed:
-            atp_markers.append("<<atpMixed>>")
-
-        if len(atp_markers) > 1:
-            logger.error(
-                f"Class '{raw_class_name}' has multiple ATP markers: "
-                f"{', '.join(atp_markers)}. A class cannot have multiple ATP markers."
-            )
-            raise ValueError(
-                f"Class '{raw_class_name}' has multiple ATP markers: "
-                f"{', '.join(atp_markers)}. A class cannot have multiple ATP markers."
-            )
-
-        # Determine ATP type
-        if has_atp_mixed_string:
-            atp_type = ATPType.ATP_MIXED_STRING
-        elif has_atp_variation:
-            atp_type = ATPType.ATP_VARIATION
-        elif has_atp_mixed:
-            atp_type = ATPType.ATP_MIXED
-        else:
-            atp_type = ATPType.NONE
-
-        # Strip ATP patterns from class name
-        clean_class_name = self.ATP_MIXED_STRING_PATTERN.sub("", raw_class_name)
-        clean_class_name = self.ATP_VARIATION_PATTERN.sub("", clean_class_name)
-        clean_class_name = self.ATP_MIXED_PATTERN.sub("", clean_class_name)
-        clean_class_name = clean_class_name.strip()
-
-        return (atp_type, clean_class_name)
-
-    def _is_valid_class_definition(self, lines: List[str], start_index: int) -> bool:
-        """Check if a class definition is valid by looking ahead for a package path.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-
-        Args:
-            lines: List of text lines.
-            start_index: The index to start looking from.
-
-        Returns:
-            True if a valid package path is found within the next 5 lines, False otherwise.
-        """
-        # Look ahead to see if this is followed by a valid package path within the next 5 lines
-        # This helps avoid treating page headers as new class definitions
-        for j in range(start_index + 1, min(len(lines), start_index + 6)):
-            package_match = self.PACKAGE_PATTERN.match(lines[j].strip())
-            if package_match:
-                m2_prefix = package_match.group(1) or ""
-                package_path = package_match.group(2).strip()
-                full_package_path = m2_prefix + package_path
-                # Only accept if the package path is valid
-                if self._is_valid_package_path(full_package_path):
-                    return True
-        return False
-
-    def _process_class_definition_pattern(
-        self,
-        class_match: Optional[re.Match],
-        primitive_match: Optional[re.Match],
-        enumeration_match: Optional[re.Match],
-        lines: List[str],
-        line_index: int,
-        pdf_filename: Optional[str] = None,
-        page_number: Optional[int] = None,
-    ) -> Optional[ClassDefinition]:
-        """Process class/primitive/enumeration definition patterns and create ClassDefinition.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-            SWR_MODEL_00027: AUTOSAR Source Location Representation
-            SWR_PARSER_00022: PDF Source Location Extraction
-
-        Args:
-            class_match: Match object for class pattern, or None.
-            primitive_match: Match object for primitive pattern, or None.
-            enumeration_match: Match object for enumeration pattern, or None.
-            lines: List of text lines.
-            line_index: Current line index.
-            pdf_filename: Optional PDF filename for source tracking.
-            page_number: Optional page number for source tracking.
-
-        Returns:
-            ClassDefinition if valid, None otherwise.
-        """
-        # Determine which pattern matched and extract class name
-        is_enumeration = False
-        is_primitive = False
-        if class_match:
-            raw_class_name = class_match.group(1).strip()
-            is_abstract = class_match.group(2) is not None
-        elif primitive_match:
-            raw_class_name = primitive_match.group(1).strip()
-            is_abstract = False
-            is_primitive = True
-        else:  # enumeration_match
-            # Since one of the three patterns matched, this must be not None
-            assert enumeration_match is not None  # Help mypy type checker
-            raw_class_name = enumeration_match.group(1).strip()
-            is_abstract = False
-            is_enumeration = True
-
-        # Check if this is a valid class definition (followed by package path)
-        if not self._is_valid_class_definition(lines, line_index):
-            return None
-
-        # Validate ATP markers and get clean class name
-        atp_type, clean_class_name = self._validate_atp_markers(raw_class_name)
-
-        # Determine if abstract: explicitly marked OR clean name starts with "Abstract"
-        if class_match and class_match.group(2) is not None:
-            is_abstract = True
-        elif clean_class_name.startswith("Abstract"):
-            is_abstract = True
-        else:
-            is_abstract = False
-
-        # Create source if filename and page provided
-        source = None
-        if pdf_filename and page_number:
-            source = AutosarSource(pdf_file=pdf_filename, page_number=page_number)
-
-        return ClassDefinition(
-            name=clean_class_name,
-            package_path="",
-            is_abstract=is_abstract,
-            atp_type=atp_type,
-            is_enumeration=is_enumeration,
-            is_primitive=is_primitive,
-            source=source,
-        )
-
-    def _process_package_line(
-        self,
-        package_match: re.Match,
-        current_class: ClassDefinition,
-    ) -> None:
-        """Process a package definition line.
-
-        Requirements:
-            SWR_PARSER_00006: Package Hierarchy Building
-
-        Args:
-            package_match: Match object for package pattern.
-            current_class: The current class definition being processed.
-        """
-        # Include M2 prefix if present to preserve the full package hierarchy
-        m2_prefix = package_match.group(1) or ""
-        package_path = package_match.group(2).strip()
-        full_package_path = m2_prefix + package_path
-
-        # Validate package path before accepting it
-        # This filters out descriptive text that looks like a package path
-        # but contains spaces, special characters, or invalid naming
-        if self._is_valid_package_path(full_package_path):
-            current_class.package_path = full_package_path
-
-    def _handle_class_list_continuation(
-        self,
-        line: str,
-        pending_list: Optional[List[str]],
-        last_item_name: Optional[str],
-    ) -> Tuple[Optional[List[str]], Optional[str]]:
-        """Handle continuation lines for multi-line class list attributes.
-
-        Requirements:
-            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
-
-        This method handles continuation lines for comma-separated class reference attributes:
-        - Base classes
-        - Aggregated by
-        - Subclasses
-
-        This method handles:
-        1. Word splitting across lines (e.g., "Packageable" + "Element" = "PackageableElement")
-        2. Adding new items from the continuation line
-        3. Proper comma separation
-
-        Args:
-            line: The continuation line to process.
-            pending_list: List of class names parsed so far.
-            last_item_name: The last class name from the previous line.
-
-        Returns:
-            Tuple of (updated list, updated last item name).
-        """
-        if pending_list is None:
-            pending_list = []
-
-        parts = [part.strip() for part in line.split(",") if part.strip()]
-
-        if not parts:
-            return (pending_list, last_item_name)
-
-        # Check if the first part should be appended to the last item
-        if last_item_name and parts:
-            first_part = parts[0]
-
-            # Combine if first part starts with lowercase or is a known continuation fragment
-            if first_part and (first_part[0].islower() or first_part in self.CONTINUATION_FRAGMENTS):
-                combined_name = last_item_name + first_part
-                pending_list[-1] = combined_name
-                parts = parts[1:]
-
-        # Add remaining parts as new items
-        for part in parts:
-            if part:
-                pending_list.append(part)
-
-        new_last_item = pending_list[-1] if pending_list else None
-        return (pending_list, new_last_item)
-
-    def _process_note_line(
-        self,
-        note_match: re.Match,
-        lines: List[str],
-        line_index: int,
-        current_class: ClassDefinition,
-    ) -> None:
-        """Process a note line with multi-line support.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-
-        Args:
-            note_match: Match object for note pattern.
-            lines: List of text lines.
-            line_index: Current line index.
-            current_class: The current class definition being processed.
-        """
-        # Notes can span multiple lines, capture all lines until we hit another pattern
-        note_text = note_match.group(1).strip()
-
-        # Look ahead to capture continuation lines (including Tags: line)
-        for j in range(line_index + 1, len(lines)):
-            next_line = lines[j].strip()
-
-            # Stop if we hit another known pattern (but include Tags: line)
-            # Note: Tags: should be included in the note, so we don't stop at it
-            # We stop AFTER Tags: at Base, Attribute, Class, etc.
-            if (next_line.startswith("Base ") or
-                next_line.startswith("Subclasses ") or
-                next_line.startswith("Attribute ") or
-                next_line.startswith("Class ") or
-                next_line.startswith("Primitive ") or
-                next_line.startswith("Enumeration ") or
-                next_line.startswith("Table ") or
-                next_line.startswith("Package ") or
-                next_line.startswith("Aggregated ")):
-                break
-
-            # Append the continuation line (including Tags: line)
-            if next_line:
-                note_text += " " + next_line
-
-        current_class.note = note_text.strip()
-
-    def _process_attribute_header(
-        self,
-        _pending_attr_name: Optional[str],
-        _pending_attr_type: Optional[str],
-        _pending_attr_multiplicity: Optional[str],
-        _pending_attr_kind: Optional[AttributeKind],
-        _pending_attr_note: Optional[str],
-    ) -> Tuple[bool, Optional[str], Optional[str], Optional[str], Optional[AttributeKind], Optional[str]]:
-        """Process an attribute header line.
-
-        Requirements:
-            SWR_PARSER_00010: Attribute Extraction from PDF
-
-        Args:
-            _pending_attr_name: Current pending attribute name (unused, reset to None).
-            _pending_attr_type: Current pending attribute type (unused, reset to None).
-            _pending_attr_multiplicity: Current pending attribute multiplicity (unused, reset to None).
-            _pending_attr_kind: Current pending attribute kind (unused, reset to None).
-            _pending_attr_note: Current pending attribute note (unused, reset to None).
-
-        Returns:
-            Tuple of (in_attribute_section, pending_attr_name, pending_attr_type,
-                     pending_attr_multiplicity, pending_attr_kind, pending_attr_note).
-        """
-        # Attribute section starts, reset pending attributes
-        return (True, None, None, None, None, None)
-
-    def _process_enumeration_literal_line(
-        self,
-        line: str,
-        current_class: ClassDefinition,
-    ) -> bool:
-        """Process an enumeration literal line.
-
-        Requirements:
-            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
-            SWR_PARSER_00016: Enumeration Literal Section Termination
-
-        Args:
-            line: The current line being processed.
-            current_class: The current class definition being processed.
-
-        Returns:
-            True if the enumeration literal section ended, False otherwise.
-        """
-        # Check if this line ends the enumeration literal section
-        if line.startswith("Table ") or line.startswith("Class ") or line.startswith("Primitive ") or line.startswith("Enumeration "):
-            return True
-
-        # Try to match enumeration literal pattern
-        enum_literal_match = self.ENUMERATION_LITERAL_PATTERN.match(line)
-        if enum_literal_match:
-            literal_name = enum_literal_match.group(1)
-            description = enum_literal_match.group(2).strip()
-
-            # Extract index from description if present (e.g., "atp.EnumerationLiteralIndex=0")
-            index = None
-            index_match = re.search(r"atp\.EnumerationLiteralIndex=(\d+)", description)
-            if index_match:
-                index = int(index_match.group(1))
-                # Remove the index tag from description
-                description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+\s*", "", description).strip()
-
-            # Create enumeration literal
-            literal = AutosarEnumLiteral(
-                name=literal_name,
-                index=index,
-                description=description if description else None
-            )
-            current_class.enumeration_literals.append(literal)
-
-        return False
-
-    def _should_filter_attribute(
-        self,
-        attr_name: str,
-        attr_type: str,
-    ) -> bool:
-        """Check if an attribute should be filtered out.
-
-        Requirements:
-            SWR_PARSER_00011: Attribute Metadata Filtering
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            attr_name: The attribute name.
-            attr_type: The attribute type.
-
-        Returns:
-            True if the attribute should be filtered, False otherwise.
-        """
-        return (
-            ":" in attr_name or
-            ";" in attr_name or
-            attr_name.isdigit() or
-            attr_type in self.CONTINUATION_TYPES or
-            attr_name in self.FRAGMENT_NAMES or
-            attr_name in self.PARTIAL_NAMES
-        )
-
-    def _create_attribute_from_pending(
-        self,
-        attr_name: str,
-        attr_type: str,
-        multiplicity: str,
-        kind: AttributeKind,
-        note: str,
-    ) -> AutosarAttribute:
-        """Create an AutosarAttribute from pending attribute data.
-
-        Requirements:
-            SWR_PARSER_00010: Attribute Extraction from PDF
-
-        Args:
-            attr_name: The attribute name.
-            attr_type: The attribute type.
-            multiplicity: The attribute multiplicity.
-            kind: The attribute kind.
-            note: The attribute note.
-
-        Returns:
-            AutosarAttribute object.
-        """
-        is_ref = self._is_reference_type(attr_type)
-        final_kind = kind or (AttributeKind.REF if is_ref else AttributeKind.ATTR)
-        return AutosarAttribute(
-            name=attr_name,
-            type=attr_type,
-            is_ref=is_ref,
-            multiplicity=multiplicity or "1",
-            kind=final_kind,
-            note=note or ""
-        )
-
-    def _process_attribute_line(
-        self,
-        line: str,
-        current_class: ClassDefinition,
-        pending_attr_name: Optional[str],
-        pending_attr_type: Optional[str],
-        pending_attr_multiplicity: Optional[str],
-        pending_attr_kind: Optional[AttributeKind],
-        pending_attr_note: Optional[str],
-    ) -> Dict[str, Union[bool, Optional[str], Optional[AttributeKind]]]:
-        """Process an attribute line in the attribute section.
-
-        Requirements:
-            SWR_PARSER_00010: Attribute Extraction from PDF
-            SWR_PARSER_00011: Attribute Metadata Filtering
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            line: The current line being processed.
-            current_class: The current class definition being processed.
-            pending_attr_name: Current pending attribute name.
-            pending_attr_type: Current pending attribute type.
-            pending_attr_multiplicity: Current pending attribute multiplicity.
-            pending_attr_kind: Current pending attribute kind.
-            pending_attr_note: Current pending attribute note.
-
-        Returns:
-            Dict with keys: section_ended, pending_attr_name, pending_attr_type,
-            pending_attr_multiplicity, pending_attr_kind, pending_attr_note.
-        """
-        result = {
-            "section_ended": False,
-            "pending_attr_name": pending_attr_name,
-            "pending_attr_type": pending_attr_type,
-            "pending_attr_multiplicity": pending_attr_multiplicity,
-            "pending_attr_kind": pending_attr_kind,
-            "pending_attr_note": pending_attr_note,
-        }
-
-        # Check if this line ends the attribute section
-        # End attribute section if we encounter:
-        # 1. Table header (e.g., "Table F.18: ImplementationDataType")
-        # 2. Enumeration definition (e.g., "Enumeration IntervalTypeEnum")
-        if line.startswith("Table ") or line.startswith("Enumeration "):
-            # Finalize pending attribute before ending section
-            self._add_attribute_if_valid(
-                current_class, pending_attr_name, pending_attr_type,
-                pending_attr_multiplicity, pending_attr_kind, pending_attr_note
-            )
-
-            result["section_ended"] = True
-            result["pending_attr_name"] = None
-            result["pending_attr_type"] = None
-            result["pending_attr_multiplicity"] = None
-            result["pending_attr_kind"] = None
-            result["pending_attr_note"] = None
-            return result
-
-        # This might be an attribute line or continuation
-        attr_match = self.ATTRIBUTE_PATTERN.match(line)
-        if attr_match:
-            # This is a potential attribute line
-            attr_name = attr_match.group(1)
-            attr_type = attr_match.group(2)
-            words = line.split()
-
-            # A real attribute line should have:
-            # - Third word as multiplicity (0..1, *, 0..*) or kind (attr, aggr)
-            # - Type should start with uppercase or be a valid type
-            third_word = words[2] if len(words) > 2 else ""
-            fourth_word = words[3] if len(words) > 3 else ""
-
-            is_new_attribute = (
-                # Third word is multiplicity or kind
-                third_word in ["0..1", "0..*", "*", "attr", "aggr"] or
-                # Fourth word is kind (for lines like "dynamicArray String 0..1 attr")
-                fourth_word in ["attr", "aggr"]
-            )
-
-            if is_new_attribute:
-                # This is a new attribute line with proper structure
-                # Finalize any pending attribute first
-                self._add_attribute_if_valid(
-                    current_class, pending_attr_name, pending_attr_type,
-                    pending_attr_multiplicity, pending_attr_kind, pending_attr_note
-                )
-
-                # Save as pending (might be a multi-line attribute)
-                result["pending_attr_name"] = attr_name
-                result["pending_attr_type"] = attr_type
-
-                # Extract multiplicity, kind, and note from the attribute line
-                # Format: name type mult kind note
-                multiplicity = "1"
-                kind = AttributeKind.ATTR
-                note = ""
-
-                if len(words) > 2:
-                    # Check if third word is multiplicity or kind
-                    if words[2] in ["0..1", "0..*", "*"]:
-                        multiplicity = words[2]
-                        # Fourth word is kind
-                        if len(words) > 3 and words[3] in ["attr", "aggr", "ref"]:
-                            if words[3] == "attr":
-                                kind = AttributeKind.ATTR
-                            elif words[3] == "aggr":
-                                kind = AttributeKind.AGGR
-                            else:  # words[3] == "ref"
-                                kind = AttributeKind.REF
-                            # Fifth word onwards is note
-                            if len(words) > 4:
-                                note = " ".join(words[4:])
-                    elif words[2] in ["attr", "aggr", "ref"]:
-                        if words[2] == "attr":
-                            kind = AttributeKind.ATTR
-                        elif words[2] == "aggr":
-                            kind = AttributeKind.AGGR
-                        else:  # words[2] == "ref"
-                            kind = AttributeKind.REF
-                        # Third word onwards is note
-                        if len(words) > 3:
-                            note = " ".join(words[3:])
-
-                result["pending_attr_multiplicity"] = multiplicity
-                result["pending_attr_kind"] = kind
-                result["pending_attr_note"] = note
-            elif pending_attr_name is not None and pending_attr_type is not None:
-                # This is a continuation line for the pending attribute
-                continuation_result = self._handle_attribute_continuation(
-                    words, pending_attr_name, pending_attr_note
-                )
-                # Update result with continuation data
-                result.update(continuation_result)
-        elif pending_attr_name is not None and pending_attr_type is not None:
-            # No match but we have a pending attribute, check if it's a continuation
-            words = line.split()
-            continuation_result = self._handle_attribute_continuation(
-                words, pending_attr_name, pending_attr_note
-            )
-            # Update result with continuation data
-            result.update(continuation_result)
-
-        return result
-
-    def _handle_attribute_continuation(
-        self,
-        words: List[str],
-        pending_attr_name: str,
-        pending_attr_note: Optional[str],
-    ) -> Dict[str, Union[Optional[str], Optional[AttributeKind], bool]]:
-        """Handle continuation lines for multi-line attributes.
-
-        Requirements:
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            words: List of words in the continuation line.
-            pending_attr_name: Current pending attribute name.
-            pending_attr_note: Current pending attribute note.
-
-        Returns:
-            Dict with keys that should be updated (pending_attr_name, pending_attr_note).
-            Note: This dict only contains keys that should be updated; other keys are preserved.
-        """
-        result: Dict[str, Union[Optional[str], Optional[AttributeKind], bool]] = {}
-
-        if len(words) > 0:
-            first_word = words[0]
-
-            # Check if this is a continuation of the attribute name
-            # Only append specific continuation words in specific contexts
-            # (e.g., "Optional" continuing "isStructWith" to make "isStructWithOptionalElement")
-            if first_word == "Optional" and pending_attr_name == "isStructWith":
-                # This is a continuation of the attribute name
-                result["pending_attr_name"] = pending_attr_name + first_word
-            elif first_word == "Element" and pending_attr_name == "isStructWithOptional":
-                # This is a continuation of the attribute name
-                result["pending_attr_name"] = pending_attr_name + first_word
+            # Try to continue parsing existing models
+            if current_models:
+                for model_index, current_model in list(current_models.items()):
+                    parser_type = model_parsers[model_index]
+                    
+                    if parser_type == "class":
+                        new_i, is_complete = self._class_parser.continue_parsing(
+                            current_model, lines, i
+                        )
+                    elif parser_type == "primitive":
+                        new_i, is_complete = self._primitive_parser.continue_parsing(
+                            current_model, lines, i
+                        )
+                    else:  # enumeration
+                        new_i, is_complete = self._enum_parser.continue_parsing(
+                            current_model, lines, i
+                        )
+
+                    i = new_i
+
+                    if is_complete:
+                        # Remove from current_models as parsing is complete
+                        del current_models[model_index]
+                        del model_parsers[model_index]
+                        # Advance past the line that caused completion
+                        i += 1
+                    else:
+                        # Model still being parsed, don't advance i
+                        break
             else:
-                # This is a continuation of the attribute note/description
-                # Append the entire line to the pending note
-                continuation_text = " ".join(words)
-                if pending_attr_note:
-                    result["pending_attr_note"] = pending_attr_note + " " + continuation_text
-                else:
-                    result["pending_attr_note"] = continuation_text
+                i += 1
 
-        return result
+        return models
 
-    def _build_package_hierarchy(
-        self, class_defs: List[ClassDefinition]
-    ) -> AutosarDoc:
-        """Build AutosarPackage hierarchy from class definitions.
+    def _build_package_hierarchy(self, models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]) -> AutosarDoc:
+        """Build complete package hierarchy from model objects.
 
         Requirements:
             SWR_PARSER_00006: Package Hierarchy Building
-            SWR_PARSER_00007: Top-Level Package Selection
-            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+            SWR_MODEL_00023: AUTOSAR Document Model
 
         Args:
-            class_defs: List of ClassDefinition objects.
+            models: List of model objects (AutosarClass, AutosarEnumeration, AutosarPrimitive).
 
         Returns:
             AutosarDoc containing packages and root classes.
         """
-        # Filter out class definitions without package paths
-        # These are typically false positives from page headers/footers
-        valid_class_defs = [cd for cd in class_defs if cd.package_path]
-
-        # Track all packages by their full path
-        package_map: Dict[str, AutosarPackage] = {}
-
-        # Track which classes have been added to packages
-        processed_classes: Set[Tuple[str, str]] = set()
-
-        for class_def in valid_class_defs:
-            # Parse package path
-            package_parts = [p.strip() for p in class_def.package_path.split("::") if p.strip()]
-
-            # Create/get packages in hierarchy
-            current_path = ""
-            parent_package: Optional[AutosarPackage] = None
-
-            for part in package_parts:
-                if current_path:
-                    current_path += "::" + part
-                else:
-                    current_path = part
-
-                # Get or create package
-                if current_path not in package_map:
-                    pkg = AutosarPackage(name=part)
-                    package_map[current_path] = pkg
-
-                    # Add to parent package if exists
-                    if parent_package is not None:
-                        parent_package.add_subpackage(pkg)
-
-                parent_package = package_map[current_path]
-
-            # Add class, enumeration, or primitive to the last package
-            if parent_package is not None:
-                class_key = (parent_package.name, class_def.name)
-                if class_key not in processed_classes:
-                    # SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
-                    # SWR_MODEL_00024: AUTOSAR Primitive Type Representation
-                    # SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
-                    # SWR_MODEL_00027: AUTOSAR Source Location Representation
-                    # Create AutosarEnumeration for enumeration types, AutosarPrimitive for primitive types, AutosarClass for class types
-                    autosar_type: Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]
-                    if class_def.is_enumeration:
-                        autosar_type = AutosarEnumeration(
-                            name=class_def.name,
-                            package=class_def.package_path,
-                            note=class_def.note,
-                            enumeration_literals=class_def.enumeration_literals.copy(),
-                            source=class_def.source,
-                        )
-                    elif class_def.is_primitive:
-                        autosar_type = AutosarPrimitive(
-                            name=class_def.name,
-                            package=class_def.package_path,
-                            note=class_def.note,
-                            attributes=class_def.attributes.copy(),
-                            source=class_def.source,
-                        )
-                    else:
-                        autosar_type = AutosarClass(
-                            name=class_def.name,
-                            package=class_def.package_path,
-                            is_abstract=class_def.is_abstract,
-                            atp_type=class_def.atp_type,
-                            bases=class_def.base_classes.copy(),
-                            note=class_def.note,
-                            attributes=class_def.attributes.copy(),
-                            aggregated_by=class_def.aggregated_by.copy(),
-                            source=class_def.source,
-                        )
-                    parent_package.add_type(autosar_type)
-                    processed_classes.add(class_key)
-
-        # Return top-level packages (those with no "::" in path)
-        top_level_packages = [
-            pkg
-            for path, pkg in package_map.items()
-            if "::" not in path and (pkg.types or pkg.subpackages)
+        # Filter out invalid models (those with empty or whitespace names)
+        valid_models = [
+            model for model in models
+            if model.name and not model.name.isspace()
         ]
 
-        # SWR_PARSER_00017: AUTOSAR Class Parent Resolution
-        # After building all packages and classes, resolve parent references and collect root classes
-        root_classes = self._resolve_parent_references(top_level_packages)
+        # Create a dictionary to track packages by path
+        packages_dict: Dict[str, AutosarPackage] = {}
 
-        return AutosarDoc(packages=top_level_packages, root_classes=root_classes)
+        # Process each model and build package hierarchy
+        for model in valid_models:
+            # Get or create package chain
+            current_pkg = self._get_or_create_package_chain(
+                model.package, packages_dict
+            )
+
+            # Add model to package
+            if isinstance(model, AutosarClass):
+                current_pkg.add_type(model)
+            elif isinstance(model, AutosarEnumeration):
+                current_pkg.add_type(model)
+            elif isinstance(model, AutosarPrimitive):
+                current_pkg.add_type(model)
+
+        # Collect root packages (those that are not subpackages of any other package)
+        all_subpackages: set[str] = set()
+        for pkg in packages_dict.values():
+            all_subpackages.update(subpkg.name for subpkg in pkg.subpackages)
+
+        root_packages = [
+            pkg for pkg in packages_dict.values()
+            if pkg.name not in all_subpackages
+        ]
+
+        # Collect root classes (classes with no bases)
+        root_classes = [
+            model for model in valid_models
+            if isinstance(model, AutosarClass) and not model.bases
+        ]
+
+        # Create AutosarDoc
+        doc = AutosarDoc(packages=root_packages, root_classes=root_classes)
+
+        # Resolve parent/children references (pass all packages, not just root)
+        all_packages = list(packages_dict.values())
+        self._resolve_parent_references(all_packages)
+
+        return doc
+
+    def _get_or_create_package_chain(
+        self, package_path: str, packages_dict: Dict[str, AutosarPackage]
+    ) -> AutosarPackage:
+        """Get or create package chain for a given package path.
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+
+        Args:
+            package_path: The package path (e.g., "M2::AUTOSAR::DataTypes").
+            packages_dict: Dictionary of existing packages.
+
+        Returns:
+            The leaf package in the chain.
+        """
+        # Remove M2:: prefix if present
+        if package_path.startswith("M2::"):
+            package_path = package_path[4:]
+
+        # Split by ::
+        parts = package_path.split("::")
+
+        # Build package chain
+        current_path = ""
+        current_pkg: Optional[AutosarPackage] = None
+
+        for part in parts:
+            if current_path:
+                current_path += "::"
+            current_path += part
+
+            if current_path not in packages_dict:
+                new_pkg = AutosarPackage(name=part)
+                packages_dict[current_path] = new_pkg
+
+                if current_pkg:
+                    current_pkg.add_subpackage(new_pkg)
+
+            current_pkg = packages_dict[current_path]
+
+        # current_pkg is guaranteed to be non-None here because we always create packages
+        assert current_pkg is not None
+        return current_pkg
 
     def _resolve_parent_references(self, packages: List[AutosarPackage]) -> List[AutosarClass]:
-        """Resolve parent references for all classes in the package hierarchy.
+        """Resolve parent and children references for all classes.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
-            SWR_MODEL_00026: AUTOSAR Class Children Attribute
-
-        This method:
-        1. Sets the `parent` attribute for each AutosarClass to the name
-           of its immediate parent class based on the class's `bases` list
-        2. Populates the `children` attribute for each parent class with
-           the names of classes that inherit from it
-        3. Collects root classes (classes with empty bases).
+            SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
 
         Args:
-            packages: List of top-level AutosarPackage objects.
+            packages: List of packages to process.
 
         Returns:
-            List of root AutosarClass objects (classes with empty bases).
+            List of root classes (classes without parents).
         """
+        # Build ancestry cache for efficient parent lookup
+        ancestry_cache = self._build_ancestry_cache(packages)
+
+        # Track warned base classes for deduplication
+        warned_bases: set[str] = set()
+
+        # Set parent references for all classes
         root_classes: List[AutosarClass] = []
-
-        # First pass: set parent references and collect root classes
         for pkg in packages:
-            self._set_parent_references(pkg, root_classes, packages)
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass):
+                    self._set_parent_references(typ, ancestry_cache, packages, warned_bases)
+                    if typ.parent is None:
+                        root_classes.append(typ)
 
-        # Second pass: populate children lists based on parent references
-        for pkg in packages:
-            self._populate_children_lists(pkg, packages)
+        # Populate children lists
+        self._populate_children_lists(ancestry_cache, packages)
 
         return root_classes
 
-    def _build_ancestry_cache(
-        self,
-        class_registry: Dict[str, AutosarClass],
-        missing_classes_buffer: Set[str]
-    ) -> Dict[str, Set[str]]:
-        """Build ancestry cache mapping each class to all its ancestors.
+    def _build_ancestry_cache(self, packages: List[AutosarPackage]) -> Dict[str, List[str]]:
+        """Build a cache of ancestry relationships for efficient parent lookup.
 
         Requirements:
-            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
-            SWR_PARSER_00020: Missing Base Class Logging
-
-        This method recursively traverses the inheritance hierarchy to collect
-        all ancestors for each class. ARObject is filtered out from the ancestry
-        cache as it's the implicit root.
+            SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
 
         Args:
-            class_registry: Dictionary mapping class names to AutosarClass objects.
-            missing_classes_buffer: Set to collect missing class names for deduplicated warning logging.
+            packages: List of packages to process.
 
         Returns:
-            Dictionary mapping each class name to a set of its ancestor names.
+            Dictionary mapping class names to lists of base class names.
         """
-        ancestry_cache: Dict[str, Set[str]] = {}
-
-        def collect_ancestors(class_name: str, visited: Optional[Set[str]] = None) -> Set[str]:
-            """Recursively collect all ancestors of a class.
-
-            Args:
-                class_name: The name of the class to collect ancestors for.
-                visited: Set of already visited classes to prevent infinite loops.
-
-            Returns:
-                Set of ancestor names.
-            """
-            if visited is None:
-                visited = set()
-
-            if class_name in visited:
-                return set()
-
-            visited.add(class_name)
-
-            if class_name not in class_registry:
-                # Collect missing class names for later deduplicated logging
-                if missing_classes_buffer is not None:
-                    missing_classes_buffer.add(class_name)
-                return set()
-
-            cls = class_registry[class_name]
-            ancestors: Set[str] = set()
-
-            for base_name in cls.bases:
-                # Skip ARObject from ancestry cache (implicit root)
-                if base_name == "ARObject":
-                    continue
-
-                # Add the base itself as an ancestor
-                ancestors.add(base_name)
-
-                # Recursively collect ancestors of this base
-                base_ancestors = collect_ancestors(base_name, visited.copy())
-                ancestors.update(base_ancestors)
-
-            return ancestors
-
-        # Build ancestry cache for all classes
-        for class_name in class_registry:
-            ancestry_cache[class_name] = collect_ancestors(class_name)
-
-        return ancestry_cache
+        cache: Dict[str, List[str]] = {}
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass):
+                    cache[typ.name] = typ.bases
+        return cache
 
     def _set_parent_references(
         self,
-        pkg: AutosarPackage,
-        root_classes: List[AutosarClass],
-        all_packages: List[AutosarPackage],
-        missing_base_errors: Optional[Dict[str, Set[str]]] = None,
-        is_initial_call: bool = True,
-        class_registry: Optional[Dict[str, AutosarClass]] = None,
-        ancestry_cache: Optional[Dict[str, Set[str]]] = None,
-        missing_ancestry_buffer: Optional[Set[str]] = None
+        cls: AutosarClass,
+        ancestry_cache: Dict[str, List[str]],
+        packages: List[AutosarPackage],
+        warned_bases: set[str],
     ) -> None:
-        """Recursively set parent references for all AutosarClass objects in a package.
+        """Set parent reference for a class by finding the actual direct parent.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
-            SWR_PARSER_00020: Missing Base Class Logging
-
-        This method sets the `parent` attribute to the name of the most appropriate
-        immediate base class using ancestry-based analysis, and collects root classes
-        (classes with empty bases).
-
-        The parent selection algorithm:
-        1. Build complete inheritance graph data structures (class registry, ancestry cache)
-        2. Filter out "ARObject" from bases list (implicit root)
-        3. Filter out bases that don't exist in the model (strict validation)
-        4. For each remaining base, check if it's an ancestor of any OTHER base
-        5. The direct parent is the base that is NOT an ancestor of any other base
-        6. If multiple candidates exist, pick the last one (backward compatibility)
+            SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
 
         Args:
-            pkg: The package to process.
-            root_classes: List to populate with root AutosarClass objects.
-            all_packages: List of all top-level packages for searching base classes.
-            missing_base_errors: Dictionary to collect unique missing base class errors.
-                Keys are error identifiers, values are sets of missing base names.
-            is_initial_call: Flag indicating if this is the initial (non-recursive) call.
-                Only the initial call prints warnings after analysis.
-            class_registry: Shared class registry (built on initial call, reused in recursion).
-            ancestry_cache: Shared ancestry cache (built on initial call, reused in recursion).
-            missing_ancestry_buffer: Shared buffer for missing ancestry classes (built on initial call).
+            cls: The class to set parent for.
+            ancestry_cache: Cache of ancestry relationships.
+            packages: List of all packages.
+            warned_bases: Set of base classes that have already been warned about.
         """
-        # Initialize error buffer and shared data structures for initial call
-        if missing_base_errors is None:
-            missing_base_errors = {}
-            is_initial_call = True
+        if not cls.bases:
+            return
 
-        # Build class registry and ancestry cache only on initial call
-        if is_initial_call:
-            # Reassign with concrete type (not Optional)
-            class_registry = {}
-            missing_ancestry_buffer = set()
+        # Try to find the most specific parent by filtering out ARObject
+        # and choosing the last (most specific) base class
+        filtered_bases = [b for b in cls.bases if b != "ARObject"]
 
-            def collect_classes(pkg_to_scan: AutosarPackage) -> None:
-                """Collect all classes into the registry."""
-                for typ in pkg_to_scan.types:
-                    if isinstance(typ, AutosarClass):
-                        # Type narrowing: class_registry is Dict here, not Optional
-                        assert class_registry is not None
-                        class_registry[typ.name] = typ
-                for subpkg in pkg_to_scan.subpackages:
-                    collect_classes(subpkg)
+        # If we have bases after filtering ARObject, use the most specific one
+        # Otherwise, fall back to the original bases (may include ARObject)
+        bases_to_check = filtered_bases if filtered_bases else cls.bases
 
-            for pkg_to_scan in all_packages:
-                collect_classes(pkg_to_scan)
-
-            # Build ancestry cache (with missing classes buffer for deduplication)
-            # Type narrowing: class_registry is non-Optional here
-            assert class_registry is not None
-            ancestry_cache = self._build_ancestry_cache(class_registry, missing_ancestry_buffer)
-
-        # Set parent references using ancestry-based analysis
-        for typ in pkg.types:
-            if isinstance(typ, AutosarClass):
-                if typ.bases:
-                    # Check if the original bases list contains only "ARObject"
-                    has_only_arobject = all(b == "ARObject" for b in typ.bases)
-
-                    # Filter out ARObject (implicit root of all AUTOSAR classes)
-                    candidate_bases = [b for b in typ.bases if b != "ARObject"]
-
-                    # Type narrowing for Optional parameters
-                    if class_registry is None:
-                        class_registry = {}
-                    if ancestry_cache is None:
-                        ancestry_cache = {}
-
-                    # Filter out bases that don't exist in the model (strict validation)
-                    # Track missing base classes for logging (buffer for later)
-                    missing_bases = [b for b in candidate_bases if b not in class_registry]
-                    valid_bases = [b for b in candidate_bases if b in class_registry]
-
-                    # Collect missing base class errors (buffer instead of immediate logging)
-                    if missing_bases and missing_base_errors is not None:
-                        # Create unique key for this error: class name + package name
-                        error_key = f"{typ.name} (in {pkg.name})"
-                        if error_key not in missing_base_errors:
-                            missing_base_errors[error_key] = set()
-                        missing_base_errors[error_key].update(missing_bases)
-
-                    if valid_bases:
-                        # Find the direct parent using ancestry-based analysis
-                        # The direct parent is the base that is NOT an ancestor of any other base
-                        direct_parents: List[str] = []
-                        for base_name in valid_bases:
-                            # Check if this base is an ancestor of any OTHER base
-                            is_ancestor = False
-                            for other_base in valid_bases:
-                                if other_base != base_name:
-                                    other_base_ancestors = ancestry_cache.get(other_base, set())
-                                    if base_name in other_base_ancestors:
-                                        is_ancestor = True
-                                        break
-                            if not is_ancestor:
-                                direct_parents.append(base_name)
-
-                        # If multiple candidates exist, pick the last one (backward compatibility)
-                        if direct_parents:
-                            typ.parent = direct_parents[-1]
-                        else:
-                            # Fallback: pick the last valid base
-                            typ.parent = valid_bases[-1]
-                    elif has_only_arobject:
-                        # Only ARObject in bases → parent is ARObject (but not a root class)
-                        typ.parent = "ARObject"
-                    else:
-                        # All bases were filtered out (don't exist in model) → parent is None
-                        typ.parent = None
-                else:
-                    # No bases means this is a root class (only ARObject itself)
-                    root_classes.append(typ)
-
-        # Recursively process subpackages (pass shared data structures)
-        for subpkg in pkg.subpackages:
-            self._set_parent_references(
-                subpkg, root_classes, all_packages, missing_base_errors,
-                is_initial_call=False, class_registry=class_registry,
-                ancestry_cache=ancestry_cache, missing_ancestry_buffer=missing_ancestry_buffer
-            )
-
-        # Print warnings after analysis is complete (only for initial call)
-        if is_initial_call:
-            # This is the initial top-level call - print all collected warnings
-            # SWR_PARSER_00020: List each missing base class separately
-
-            # 1. Warn about missing base classes (from parent resolution)
-            all_missing_bases: Set[str] = set()
-            for missing_bases_set in missing_base_errors.values():
-                all_missing_bases.update(missing_bases_set)
-
-            # Warn only once for each unique missing base class
-            for missing_base in sorted(all_missing_bases):
-                logger.warning(
-                    f"Class '{missing_base}' could not be located in the model"
-                )
-
-            # 2. Warn about missing classes from ancestry traversal
-            if missing_ancestry_buffer:
-                for missing_class in sorted(missing_ancestry_buffer):
+        # Find the last (most specific) base class that exists in the model
+        # Also warn about ALL missing bases (not just until first found)
+        parent_found = False
+        for base_name in reversed(bases_to_check):
+            base_class = self._find_class_in_all_packages(base_name, packages)
+            if base_class is not None and not parent_found:
+                cls.parent = base_class.name
+                parent_found = True
+            else:
+                # Base class not found - log warning if not already warned
+                if base_name not in warned_bases:
                     logger.warning(
-                        f"Class '{missing_class}' referenced in base classes could not be "
-                        f"located in the model during ancestry traversal. "
-                        f"Ancestry analysis may be incomplete."
+                        "Class '%s' references base class '%s' which could not be located in the model",
+                        cls.name,
+                        base_name,
                     )
+                    warned_bases.add(base_name)
 
-    def _populate_children_lists(self, pkg: AutosarPackage, all_packages: List[AutosarPackage]) -> None:
-        """Populate children lists for all classes based on parent references.
+    def _populate_children_lists(
+        self, ancestry_cache: Dict[str, List[str]], packages: List[AutosarPackage]
+    ) -> None:
+        """Populate children lists for all classes.
 
         Requirements:
-            SWR_MODEL_00026: AUTOSAR Class Children Attribute
-
-        This method iterates through all classes in the package and adds each class's
-        name to the children list of its parent class (if it has a parent).
-        After populating all children lists, they are sorted alphabetically for consistency.
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
         Args:
-            pkg: The package to process.
-            all_packages: List of all top-level packages for searching parent classes.
+            ancestry_cache: Cache of ancestry relationships.
+            packages: List of all packages.
         """
-        for typ in pkg.types:
-            if isinstance(typ, AutosarClass) and typ.parent:
-                # Find the parent class and add this class to its children list
-                parent_class = self._find_class_in_all_packages(all_packages, typ.parent)
-                if parent_class is not None:
-                    parent_class.children.append(typ.name)
+        # Build a parent-to-children mapping (O(n) complexity)
+        parent_to_children: Dict[str, List[str]] = {}
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass) and typ.parent:
+                    if typ.parent not in parent_to_children:
+                        parent_to_children[typ.parent] = []
+                    parent_to_children[typ.parent].append(typ.name)
+        
+        # Populate children lists using the mapping
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass) and typ.name in parent_to_children:
+                    typ.children = parent_to_children[typ.name]
 
-        # Recursively process subpackages
-        for subpkg in pkg.subpackages:
-            self._populate_children_lists(subpkg, all_packages)
-
-        # Sort children lists alphabetically for all classes in this package
-        for typ in pkg.types:
-            if isinstance(typ, AutosarClass):
-                typ.children.sort()
-
-    def _find_class_in_all_packages(self, packages: List[AutosarPackage], class_name: str) -> Optional[AutosarClass]:
-        """Recursively search for a class by name across all packages.
+    def _find_class_in_all_packages(
+        self, class_name: str, packages: List[AutosarPackage]
+    ) -> Optional[AutosarClass]:
+        """Find a class by name across all packages.
 
         Args:
-            packages: List of top-level packages to search in.
-            class_name: The name of the class to find.
+            class_name: Name of the class to find.
+            packages: List of packages to search.
 
         Returns:
             The AutosarClass if found, None otherwise.
         """
         for pkg in packages:
-            # Check current package
-            for typ in pkg.types:
-                if isinstance(typ, AutosarClass) and typ.name == class_name:
-                    return typ
-
-            # Recursively search subpackages
-            result = self._find_class_in_package(pkg, class_name)
-            if result is not None:
-                return result
-
-        return None
-
-    def _find_class_in_package(self, pkg: AutosarPackage, class_name: str) -> Optional[AutosarClass]:
-        """Recursively search for a class by name in a package and its subpackages.
-
-        Args:
-            pkg: The package to search in.
-            class_name: The name of the class to find.
-
-        Returns:
-            The AutosarClass if found, None otherwise.
-        """
-        # Check current package
-        for typ in pkg.types:
-            if isinstance(typ, AutosarClass) and typ.name == class_name:
-                return typ
-
-        # Recursively search subpackages
-        for subpkg in pkg.subpackages:
-            result = self._find_class_in_package(subpkg, class_name)
-            if result is not None:
-                return result
-
+            cls = pkg.get_class(class_name)
+            if cls is not None:
+                return cls
         return None

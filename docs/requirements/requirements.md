@@ -1368,3 +1368,82 @@ The CLI shall support the following features:
 - Description and long description
 - Project URL
 - License classification (MIT)
+
+---
+
+### 2. Parser
+
+#### SWR_PARSER_00023
+**Title**: Abstract Base Parser for Common Functionality
+
+**Maturity**: draft
+
+**Description**: The system shall provide an abstract base parser class that defines common parsing functionality shared across all AUTOSAR type parsers. This shall include:
+- Common regex patterns for parsing (CLASS_PATTERN, PRIMITIVE_PATTERN, ENUMERATION_PATTERN, PACKAGE_PATTERN, NOTE_PATTERN, ATTRIBUTE_HEADER_PATTERN, etc.)
+- Common validation methods (package path validation, ATP marker validation, reference type detection, attribute filtering)
+- Common attribute creation methods
+- Constants for continuation types, fragment names, reference indicators
+- Abstract methods for type-specific parsing
+
+---
+
+#### SWR_PARSER_00024
+**Title**: AutosarClass Specialized Parser
+
+**Maturity**: draft
+
+**Description**: The system shall provide a specialized parser for AutosarClass definitions that inherits from the abstract base parser. This parser shall:
+- Maintain its own parsing state (pending attributes, class lists, etc.)
+- Parse class definition patterns with ATP markers and abstract status
+- Create AutosarClass objects directly (no intermediate ClassDefinition)
+- Parse class-specific sections: base classes, subclasses, aggregated by, notes, attributes
+- Handle multi-line attribute parsing
+- Manage attribute parsing state across multiple pages
+
+---
+
+#### SWR_PARSER_00025
+**Title**: AutosarEnumeration Specialized Parser
+
+**Maturity**: draft
+
+**Description**: The system shall provide a specialized parser for AutosarEnumeration definitions that inherits from the abstract base parser. This parser shall:
+- Maintain its own parsing state
+- Parse enumeration definition patterns
+- Create AutosarEnumeration objects directly (no intermediate ClassDefinition)
+- Parse enumeration literal headers
+- Parse enumeration literals with indices
+- Extract literal indices from descriptions
+- Handle enumeration literal section termination
+
+---
+
+#### SWR_PARSER_00026
+**Title**: AutosarPrimitive Specialized Parser
+
+**Maturity**: draft
+
+**Description**: The system shall provide a specialized parser for AutosarPrimitive definitions that inherits from the abstract base parser. This parser shall:
+- Maintain its own parsing state
+- Parse primitive definition patterns
+- Create AutosarPrimitive objects directly (no intermediate ClassDefinition)
+- Parse primitive attributes (simplified version)
+- Parse primitive notes
+
+---
+
+#### SWR_PARSER_00027
+**Title**: Parser Backward Compatibility
+
+**Maturity**: draft
+
+**Description**: The refactored parser shall maintain 100% backward compatibility with the existing PdfParser API. All existing code using PdfParser shall continue to work without modification. The public interface shall remain identical.
+
+---
+
+#### SWR_PARSER_00028
+**Title**: Direct Model Creation by Specialized Parsers
+
+**Maturity**: draft
+
+**Description**: Specialized parsers shall create final model objects (AutosarClass, AutosarEnumeration, AutosarPrimitive) directly during parsing, without using an intermediate ClassDefinition dataclass. Each parser shall maintain its own parsing state and return the completed model object.

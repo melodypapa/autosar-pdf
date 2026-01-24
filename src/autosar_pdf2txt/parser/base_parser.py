@@ -135,32 +135,52 @@ class AbstractTypeParser(ABC):
         Valid package paths:
         - Start with "M2::" (AUTOSAR meta-model packages)
         - Contain at least two levels (e.g., "AUTOSAR::DataTypes")
+        - Single-level paths with proper naming (TitleCase or starts with underscore)
         - Do not contain suspicious patterns that look like descriptive text
 
         Invalid package paths:
-        - Single-level paths (e.g., "AUTOSAR")
+        - Single-level paths with lowercase start (likely descriptive text)
         - Paths with suspicious patterns (e.g., "This is the package for...")
         """
-        # Must have at least two levels (e.g., "AUTOSAR::DataTypes")
-        if "::" not in package_path:
-            return False
-
-        # Remove M2:: prefix if present
-        if package_path.startswith("M2::"):
-            package_path = package_path[4:]
-
         # Check for suspicious patterns that indicate descriptive text
         # rather than actual package paths
         suspicious_patterns = [
             "the ", " is ", " of ", " for ", " and ", " or ", " a ", " an ",
             "This ", "These ", "The ", "A ", "An ",
-            "package", "Package", "template", "Template",
         ]
         for pattern in suspicious_patterns:
             if pattern in package_path:
                 return False
 
-        return True
+        # Check for standalone "package", "Package", "template", or "Template" words
+        # Use word boundary matching to avoid false positives (e.g., "Some_Package", "Templates")
+        import re
+        if re.search(r"\bpackage\b|\bPackage\b|\btemplate\b|\bTemplate\b", package_path):
+            return False
+
+        # Remove M2:: prefix if present for further validation
+        test_path = package_path
+        if test_path.startswith("M2::"):
+            test_path = test_path[4:]
+
+        # Check for empty parts (e.g., "AUTOSAR::" or "::Package")
+        if "::" in test_path:
+            parts = test_path.split("::")
+            if any(not part for part in parts):
+                return False
+
+        # Multi-level paths are generally valid if they pass the above checks
+        if "::" in test_path:
+            return True
+
+        # Single-level paths: only accept if they follow proper naming conventions
+        # - Start with underscore (e.g., _PrivatePackage)
+        # - TitleCase format (e.g., SomePackage, Some_Package)
+        if test_path.startswith("_") or re.match(r"^[A-Z][a-zA-Z0-9]*(_[a-zA-Z0-9]+)*$", test_path):
+            return True
+
+        # Single-level paths with lowercase start are likely descriptive text
+        return False
 
     def _validate_atp_markers(self, raw_class_name: str) -> Tuple[ATPType, str]:
         """Validate ATP markers and extract ATP type and clean class name.

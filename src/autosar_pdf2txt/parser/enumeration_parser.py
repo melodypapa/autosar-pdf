@@ -255,6 +255,11 @@ class AutosarEnumerationParser(AbstractTypeParser):
             # Extract index from description if present
             index = self._extract_literal_index(literal_description)
 
+            # Clean description by removing ATP marker
+            if index is not None:
+                import re
+                literal_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", literal_description).strip()
+
             # Create and add the literal
             literal = AutosarEnumLiteral(
                 name=literal_name,

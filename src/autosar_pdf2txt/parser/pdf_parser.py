@@ -499,12 +499,15 @@ class PdfParser:
         # Build ancestry cache for efficient parent lookup
         ancestry_cache = self._build_ancestry_cache(packages)
 
+        # Track warned base classes for deduplication
+        warned_bases: set[str] = set()
+
         # Set parent references for all classes
         root_classes: List[AutosarClass] = []
         for pkg in packages:
             for typ in pkg.types:
                 if isinstance(typ, AutosarClass):
-                    self._set_parent_references(typ, ancestry_cache, packages)
+                    self._set_parent_references(typ, ancestry_cache, packages, warned_bases)
                     if typ.parent is None:
                         root_classes.append(typ)
 
@@ -537,6 +540,7 @@ class PdfParser:
         cls: AutosarClass,
         ancestry_cache: Dict[str, List[str]],
         packages: List[AutosarPackage],
+        warned_bases: set[str],
     ) -> None:
         """Set parent reference for a class by finding the actual direct parent.
 
@@ -548,16 +552,36 @@ class PdfParser:
             cls: The class to set parent for.
             ancestry_cache: Cache of ancestry relationships.
             packages: List of all packages.
+            warned_bases: Set of base classes that have already been warned about.
         """
         if not cls.bases:
             return
 
-        # Find the first base class that exists in the model
-        for base_name in cls.bases:
+        # Try to find the most specific parent by filtering out ARObject
+        # and choosing the last (most specific) base class
+        filtered_bases = [b for b in cls.bases if b != "ARObject"]
+
+        # If we have bases after filtering ARObject, use the most specific one
+        # Otherwise, fall back to the original bases (may include ARObject)
+        bases_to_check = filtered_bases if filtered_bases else cls.bases
+
+        # Find the last (most specific) base class that exists in the model
+        # Also warn about ALL missing bases (not just until first found)
+        parent_found = False
+        for base_name in reversed(bases_to_check):
             base_class = self._find_class_in_all_packages(base_name, packages)
-            if base_class is not None:
+            if base_class is not None and not parent_found:
                 cls.parent = base_class.name
-                break
+                parent_found = True
+            else:
+                # Base class not found - log warning if not already warned
+                if base_name not in warned_bases:
+                    logger.warning(
+                        "Class '%s' references base class '%s' which could not be located in the model",
+                        cls.name,
+                        base_name,
+                    )
+                    warned_bases.add(base_name)
 
     def _populate_children_lists(
         self, ancestry_cache: Dict[str, List[str]], packages: List[AutosarPackage]

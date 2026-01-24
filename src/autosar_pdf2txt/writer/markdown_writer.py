@@ -332,6 +332,7 @@ class MarkdownWriter:
         - Parent class name (if parent is not None)
         - ATP type (if any ATP flags are present)
         - Base classes (if any)
+        - Subclasses (if any)
         - Source location (if available)
         - Children classes (if any)
         - Note as description (if present)
@@ -380,6 +381,13 @@ class MarkdownWriter:
                 output.write(f"* {base}\n")
             output.write("\n")
 
+        # Write subclasses if present
+        if cls.subclasses:
+            output.write("## Subclasses\n\n")
+            for subclass in sorted(cls.subclasses):
+                output.write(f"* {subclass}\n")
+            output.write("\n")
+
         # Write source section if available
         if cls.source:
             output.write("## Source\n\n")
@@ -388,7 +396,7 @@ class MarkdownWriter:
         # Write children if present
         if cls.children:
             output.write("## Children\n\n")
-            for child in cls.children:
+            for child in sorted(cls.children):
                 output.write(f"* {child}\n")
             output.write("\n")
 

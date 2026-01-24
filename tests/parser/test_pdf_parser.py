@@ -413,7 +413,7 @@ class TestPdfParser:
         class_defs = _parse_class_text(text)
         assert len(class_defs) == 1
         assert class_defs[0].name == "BaseClass"
-        assert class_defs[0].children == ["DerivedClass1", "DerivedClass2"]
+        assert class_defs[0].subclasses == ["DerivedClass1", "DerivedClass2"]
 
     def test_extract_multiple_classes(self) -> None:
         """Test extracting multiple classes.
@@ -2270,14 +2270,14 @@ class TestPdfParser:
         base_type = class_defs[0]
 
         # Should include all subclasses from both lines
-        assert "DerivedType1" in base_type.children
-        assert "DerivedType2" in base_type.children
-        assert "DerivedType3" in base_type.children
-        assert "DerivedType4" in base_type.children
-        assert "DerivedType5" in base_type.children
+        assert "DerivedType1" in base_type.subclasses
+        assert "DerivedType2" in base_type.subclasses
+        assert "DerivedType3" in base_type.subclasses
+        assert "DerivedType4" in base_type.subclasses
+        assert "DerivedType5" in base_type.subclasses
 
         # Verify exact count (5 items total)
-        assert len(base_type.children) == 5
+        assert len(base_type.subclasses) == 5
 
     def test_extract_class_with_aggregated_by_and_base_classes_multiline(self) -> None:
         """Test extracting class with both aggregated by and base classes, both multi-line.
@@ -2606,3 +2606,150 @@ def _parse_all_types(text: str) -> List[Union[AutosarClass, AutosarEnumeration, 
         i += 1
 
     return models
+
+
+class TestAncestryBasedParentSelection:
+    """Tests for ancestry-based parent selection algorithm.
+
+    Requirements:
+        SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+    """
+
+    def test_parent_selection_with_multiple_bases_ancestry(self) -> None:
+        """Test ancestry-based parent selection with multiple bases.
+
+        SWUT_PARSER_00061: Test Ancestry-Based Parent Selection with Multiple Bases
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies that when a class has multiple base classes with ancestry
+        relationships, the system correctly identifies the direct parent by filtering
+        out ancestors.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create classes with inheritance hierarchy
+        level1 = AutosarClass(name="Level1", package="M2::Test", is_abstract=False)
+        level1.bases = []
+
+        level2 = AutosarClass(name="Level2", package="M2::Test", is_abstract=False)
+        level2.bases = ["Level1"]
+
+        level3 = AutosarClass(name="Level3", package="M2::Test", is_abstract=False)
+        level3.bases = ["Level2"]
+
+        level4 = AutosarClass(name="Level4", package="M2::Test", is_abstract=False)
+        level4.bases = ["Level3"]
+
+        derived = AutosarClass(name="DerivedWithMultipleBases", package="M2::Test", is_abstract=False)
+        derived.bases = ["Level1", "Level2", "Level3", "Level4"]
+
+        # Create package and add classes
+        pkg = AutosarPackage(name="TestPackage")
+        pkg.add_class(level1)
+        pkg.add_class(level2)
+        pkg.add_class(level3)
+        pkg.add_class(level4)
+        pkg.add_class(derived)
+
+        # Build package hierarchy and resolve parent references
+        parser = PdfParser()
+        parser._build_package_hierarchy([level1, level2, level3, level4, derived])
+        # Resolve parent references (this is where ancestry-based selection happens)
+        all_packages = [pkg]  # In real scenario, this would be doc.packages
+        parser._resolve_parent_references(all_packages)
+
+        # Verify parent is correctly identified as Level4 (most specific, not ancestor)
+        derived_class = pkg.get_class("DerivedWithMultipleBases")
+        assert derived_class is not None
+        assert derived_class.parent == "Level4", \
+            f"Expected parent to be 'Level4' but got '{derived_class.parent}'"
+
+    def test_parent_selection_with_independent_bases(self) -> None:
+        """Test parent selection with independent base classes.
+
+        SWUT_PARSER_00062: Test Parent Selection with Independent Bases
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies that when a class has multiple independent base classes
+        (no ancestry relationships), the system selects the last base as the parent.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create classes with independent bases
+        base1 = AutosarClass(name="BaseClass1", package="M2::Test", is_abstract=False)
+        base1.bases = []
+
+        base2 = AutosarClass(name="BaseClass2", package="M2::Test", is_abstract=False)
+        base2.bases = []
+
+        base3 = AutosarClass(name="BaseClass3", package="M2::Test", is_abstract=False)
+        base3.bases = []
+
+        derived = AutosarClass(name="DerivedClass", package="M2::Test", is_abstract=False)
+        derived.bases = ["BaseClass1", "BaseClass2", "BaseClass3"]
+
+        # Create package and add classes
+        pkg = AutosarPackage(name="TestPackage")
+        pkg.add_class(base1)
+        pkg.add_class(base2)
+        pkg.add_class(base3)
+        pkg.add_class(derived)
+
+        # Build package hierarchy
+        parser = PdfParser()
+        doc = parser._build_package_hierarchy([base1, base2, base3, derived])
+
+        # Verify parent is correctly identified as BaseClass3 (last base)
+        derived_class = None
+        for pkg in doc.packages:
+            derived_class = pkg.get_class("DerivedClass")
+            if derived_class:
+                break
+
+        assert derived_class is not None
+        assert derived_class.parent == "BaseClass3", \
+            f"Expected parent to be 'BaseClass3' but got '{derived_class.parent}'"
+
+    def test_parent_selection_with_missing_base_classes(self) -> None:
+        """Test parent selection with missing base classes.
+
+        SWUT_PARSER_00063: Test Parent Selection with Missing Base Classes
+
+        Requirements:
+            SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+
+        This test verifies that when a class has base classes that don't exist
+        in the model, the system filters them out and selects from the remaining bases.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create classes
+        existing = AutosarClass(name="ExistingClass", package="M2::Test", is_abstract=False)
+        existing.bases = []
+
+        derived = AutosarClass(name="DerivedClass", package="M2::Test", is_abstract=False)
+        derived.bases = ["ExistingClass", "NonExistentBase"]
+
+        # Create package and add classes
+        pkg = AutosarPackage(name="TestPackage")
+        pkg.add_class(existing)
+        pkg.add_class(derived)
+
+        # Build package hierarchy
+        parser = PdfParser()
+        doc = parser._build_package_hierarchy([existing, derived])
+
+        # Verify parent is correctly identified as ExistingClass
+        derived_class = None
+        for pkg in doc.packages:
+            derived_class = pkg.get_class("DerivedClass")
+            if derived_class:
+                break
+
+        assert derived_class is not None
+        assert derived_class.parent == "ExistingClass", \
+            f"Expected parent to be 'ExistingClass' but got '{derived_class.parent}'"

@@ -881,6 +881,89 @@ class TestAutosarClass:
         assert "Child3" in cls.children
         assert "Child1" not in cls.children
 
+    def test_init_default_subclasses_is_empty_list(self) -> None:
+        """Test that subclasses defaults to empty list.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        assert cls.subclasses == []
+
+    def test_init_with_subclasses(self) -> None:
+        """Test creating a class with subclasses.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            subclasses=["Subclass1", "Subclass2"]
+        )
+        assert len(cls.subclasses) == 2
+        assert "Subclass1" in cls.subclasses
+        assert "Subclass2" in cls.subclasses
+
+    def test_subclasses_mutation(self) -> None:
+        """Test that subclasses list can be mutated.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="ParentClass", package="M2::Test", is_abstract=False)
+        assert cls.subclasses == []
+        cls.subclasses.append("Subclass1")
+        cls.subclasses.append("Subclass2")
+        assert len(cls.subclasses) == 2
+        cls.subclasses.remove("Subclass1")
+        assert len(cls.subclasses) == 1
+        assert "Subclass2" in cls.subclasses
+
+    def test_repr_shows_subclasses_count(self) -> None:
+        """Test that __repr__ includes subclasses count.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            subclasses=["Subclass1", "Subclass2", "Subclass3"]
+        )
+        result = repr(cls)
+        assert "subclasses=3" in result
+
+    def test_repr_shows_subclasses_zero_when_no_subclasses(self) -> None:
+        """Test that __repr__ shows subclasses=0 when no subclasses.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False)
+        result = repr(cls)
+        assert "subclasses=0" in result
+
+    def test_subclasses_can_be_reassigned(self) -> None:
+        """Test that subclasses can be reassigned.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            subclasses=["Subclass1", "Subclass2"]
+        )
+        assert len(cls.subclasses) == 2
+        cls.subclasses = ["Subclass3", "Subclass4", "Subclass5"]
+        assert len(cls.subclasses) == 3
+        assert "Subclass3" in cls.subclasses
+        assert "Subclass1" not in cls.subclasses
+
 
 class TestAutosarEnumeration:
     """Tests for AutosarEnumeration class.

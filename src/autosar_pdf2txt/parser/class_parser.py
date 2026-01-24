@@ -394,7 +394,7 @@ class AutosarClassParser(AbstractTypeParser):
                 if section_name == "base_classes":
                     current_model.bases.extend(items)
                 elif section_name == "subclasses":
-                    current_model.children.extend(items)
+                    current_model.subclasses.extend(items)
                 elif section_name == "aggregated_by":
                     current_model.aggregated_by.extend(items)
             # Reset

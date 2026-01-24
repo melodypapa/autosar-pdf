@@ -30,6 +30,7 @@ All existing requirements in this document are currently at maturity level **acc
 - `bases`: List of base class names for inheritance tracking (List[str], defaults to empty list)
 - `parent`: Name of the immediate parent class from the bases list (Optional[str], None for root classes)
 - `children`: List of child class names that inherit from this class (List[str], defaults to empty list)
+- `subclasses`: List of subclass names explicitly listed in the PDF source document (List[str], defaults to empty list)
 - `aggregated_by`: List of class names that aggregate this class (List[str], defaults to empty list)
 - `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
 
@@ -490,7 +491,7 @@ The source location shall be:
 - Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>` (extracted from the Base column in class tables)
-- Subclasses: `Subclasses <class_list>`
+- Subclasses: `Subclasses <class_list>` (extracted and stored in the subclasses attribute)
 - Notes: Extracted from the Note column in class tables as free-form documentation text. Notes may span multiple lines in the PDF and are captured completely until encountering another known pattern (Base, Subclasses, Tags:, Attribute, Class, Primitive, Enumeration, Table, Package).
 
 The system shall preserve the "M2::" prefix in package paths when present, treating "M2" as the root metamodel package. This ensures that the complete package hierarchy is maintained, with "M2" as the top-level package containing all AUTOSAR packages (e.g., M2 → AUTOSARTemplates → BswModuleTemplate).
@@ -957,7 +958,7 @@ The system shall:
 2. Apply multi-line parsing to the following class attributes:
    - **Base classes**: List of parent class names (comma-separated)
    - **Aggregated by**: List of class names that aggregate this class (comma-separated)
-   - **Subclasses**: List of child class names (comma-separated)
+   - **Subclasses**: List of child class names explicitly listed in the PDF (comma-separated)
    - Any other comma-separated class reference attributes that may be added in the future
 3. For each attribute, recognize continuation lines that:
    - Come immediately after the attribute header line (e.g., "Base ", "Aggregated by ", "Subclasses ")
@@ -1007,12 +1008,33 @@ Without multi-line parsing, only the first line is read, missing:
 - Trigger
 - SwDataDefPropsConditional
 
+**Example 3: Multi-Line Subclasses**:
+```
+Class Identifiable
+Package M2::AUTOSAR
+Subclasses ApplicationSwComponentType,InternalBehavior,Prototype,Referrable,Trigger,
+SwDataDefProps,SwComponentType
+Note This class is the base for all identifiable elements.
+```
+
+The subclasses list wraps across two lines:
+- Line 1: `Subclasses ApplicationSwComponentType,InternalBehavior,Prototype,Referrable,Trigger,SwDataDefProps,SwComponent`
+- Line 2: `Type` (continuation)
+
+Without multi-line parsing, only the first line is read, resulting in:
+- Missing: `SwComponentType` (should combine "SwComponent" + "Type")
+
+With multi-line parsing, the complete subclasses list is:
+- ApplicationSwComponentType, InternalBehavior, Prototype, Referrable, Trigger
+- SwComponentType (combined from "SwComponent" + "Type")
+
 **Rationale**:
 - PDF table formatting often causes attribute lists to wrap across multiple lines
 - Missing attribute values leads to incomplete model representation
 - Word splitting across line boundaries must be handled correctly (e.g., "Packageable" + "Element" = "PackageableElement")
 - Without complete base class lists, parent resolution fails (e.g., CanTpConfig.parent would be incorrectly set)
 - Without complete "aggregated by" lists, aggregation relationships are incomplete
+- Without complete "subclasses" lists, the explicitly listed subclass relationships in the PDF are lost
 
 **Implementation**:
 - Track state when parsing each attribute section (generalized `in_attribute_section` flag)
@@ -1090,9 +1112,11 @@ This requirement enables:
 **Maturity**: accept
 
 **Description**: The system shall provide functionality to write AUTOSAR classes to separate markdown files organized in a directory structure that mirrors the package hierarchy. The root directory for the file structure shall be the same as the output markdown file location. For each package:
-- Create a directory corresponding to the package name
+- Create a directory corresponding to the package name (if it does not exist)
 - Create a single markdown file for each class in the package, named with the class name
 - Maintain nested directory structure for subpackages
+
+If the destination directory or any intermediate directories in the path do not exist, they shall be created automatically.
 
 ---
 
@@ -1108,6 +1132,8 @@ This requirement enables:
 - Parent: The immediate parent class name from the parent attribute (included only when parent is not None)
 - ATP Type section: List of ATP markers based on the ATP type enum value, included only when the ATP type is not NONE
 - Base classes: List of base class names that this class inherits from
+- Subclasses: List of subclass names explicitly listed in the PDF source document (included only when the subclasses list is not empty)
+- Children: List of child class names that inherit from this class (included only when the children list is not empty)
 - Note: Class documentation/description extracted from the note field
 - Attributes list: Complete list of class attributes showing name, type, and reference indicator for each attribute
 
@@ -1120,6 +1146,18 @@ The ATP Type section shall:
 - Be included only when ATP type is ATP_MIXED_STRING or ATP_VARIATION
 - List the applicable marker: atpVariation for ATP_VARIATION, or atpMixedString for ATP_MIXED_STRING
 - Appear immediately after the Parent section (or Type section if no parent) and before the Base Classes section when present
+
+The Subclasses section shall:
+- Be included only when the subclasses list is not empty
+- Display the list of subclass names as a comma-separated list
+- Sort subclass names alphabetically in ascending order
+- Appear immediately after the Base Classes section and before the Note section when present
+
+The Children section shall:
+- Be included only when the children list is not empty
+- Display the list of child class names as bullet points
+- Sort child class names alphabetically in ascending order
+- Appear immediately after the Source section (if present) or Subclasses section (if no source) and before the Note section when present
 
 ---
 

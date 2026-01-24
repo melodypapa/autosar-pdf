@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Test runner script for autosar-pdf2txt.
 
 This script provides convenient options to run tests and generate coverage reports:

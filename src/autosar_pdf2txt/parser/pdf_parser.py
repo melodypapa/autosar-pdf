@@ -19,7 +19,7 @@ import logging
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Set, Union
 
 from autosar_pdf2txt.models import (
     AutosarClass,
@@ -512,11 +512,11 @@ class PdfParser:
                         root_classes.append(typ)
 
         # Populate children lists
-        self._populate_children_lists(ancestry_cache, packages)
+        self._populate_children_lists(packages)
 
         return root_classes
 
-    def _build_ancestry_cache(self, packages: List[AutosarPackage]) -> Dict[str, List[str]]:
+    def _build_ancestry_cache(self, packages: List[AutosarPackage]) -> Dict[str, Set[str]]:
         """Build a cache of ancestry relationships for efficient parent lookup.
 
         Requirements:
@@ -526,19 +526,42 @@ class PdfParser:
             packages: List of packages to process.
 
         Returns:
-            Dictionary mapping class names to lists of base class names.
+            Dictionary mapping class names to sets of all ancestor class names.
         """
-        cache: Dict[str, List[str]] = {}
+        # First, build a direct bases map
+        direct_bases: Dict[str, List[str]] = {}
         for pkg in packages:
             for typ in pkg.types:
                 if isinstance(typ, AutosarClass):
-                    cache[typ.name] = typ.bases
+                    direct_bases[typ.name] = typ.bases
+        
+        # Then, recursively collect all ancestors for each class
+        def collect_ancestors(class_name: str, visited: Set[str]) -> Set[str]:
+            """Recursively collect all ancestors of a class."""
+            if class_name in visited:
+                return set()
+            
+            visited.add(class_name)
+            ancestors = set()
+            
+            for base_name in direct_bases.get(class_name, []):
+                if base_name != "ARObject":  # Filter out ARObject (implicit root)
+                    ancestors.add(base_name)
+                    # Recursively collect ancestors of this base
+                    ancestors.update(collect_ancestors(base_name, visited))
+            
+            return ancestors
+        
+        cache: Dict[str, Set[str]] = {}
+        for class_name in direct_bases.keys():
+            cache[class_name] = collect_ancestors(class_name, set())
+        
         return cache
 
     def _set_parent_references(
         self,
         cls: AutosarClass,
-        ancestry_cache: Dict[str, List[str]],
+        ancestry_cache: Dict[str, Set[str]],
         packages: List[AutosarPackage],
         warned_bases: set[str],
     ) -> None:
@@ -557,22 +580,19 @@ class PdfParser:
         if not cls.bases:
             return
 
-        # Try to find the most specific parent by filtering out ARObject
-        # and choosing the last (most specific) base class
+        # Filter out ARObject from the bases list (ARObject is the implicit root)
         filtered_bases = [b for b in cls.bases if b != "ARObject"]
 
         # If we have bases after filtering ARObject, use the most specific one
         # Otherwise, fall back to the original bases (may include ARObject)
         bases_to_check = filtered_bases if filtered_bases else cls.bases
 
-        # Find the last (most specific) base class that exists in the model
-        # Also warn about ALL missing bases (not just until first found)
-        parent_found = False
-        for base_name in reversed(bases_to_check):
+        # Find existing bases only (for ancestry analysis)
+        existing_bases = []
+        for base_name in bases_to_check:
             base_class = self._find_class_in_all_packages(base_name, packages)
-            if base_class is not None and not parent_found:
-                cls.parent = base_class.name
-                parent_found = True
+            if base_class is not None:
+                existing_bases.append(base_name)
             else:
                 # Base class not found - log warning if not already warned
                 if base_name not in warned_bases:
@@ -583,16 +603,40 @@ class PdfParser:
                     )
                     warned_bases.add(base_name)
 
-    def _populate_children_lists(
-        self, ancestry_cache: Dict[str, List[str]], packages: List[AutosarPackage]
-    ) -> None:
+        if not existing_bases:
+            # No valid bases found, parent remains None
+            return
+
+        # Ancestry-based parent selection:
+        # Filter out bases that are ancestors of other bases
+        # The direct parent is the base that is NOT an ancestor of any other base
+        direct_parent = None
+        for i, base_name in enumerate(existing_bases):
+            is_ancestor = False
+            for j, other_base_name in enumerate(existing_bases):
+                if i != j:
+                    # Check if base_name is an ancestor of other_base_name
+                    # This means other_base_name's ancestors include base_name
+                    if base_name in ancestry_cache.get(other_base_name, set()):
+                        is_ancestor = True
+                        break
+            
+            if not is_ancestor:
+                # This base is not an ancestor of any other base
+                # It could be the direct parent
+                # If multiple candidates exist, choose the last one (backward compatibility)
+                direct_parent = base_name
+
+        if direct_parent:
+            cls.parent = direct_parent
+
+    def _populate_children_lists(self, packages: List[AutosarPackage]) -> None:
         """Populate children lists for all classes.
 
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
         Args:
-            ancestry_cache: Cache of ancestry relationships.
             packages: List of all packages.
         """
         # Build a parent-to-children mapping (O(n) complexity)

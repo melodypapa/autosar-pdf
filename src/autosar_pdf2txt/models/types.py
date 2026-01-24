@@ -66,6 +66,7 @@ class AutosarClass(AbstractAutosarBase):
     bases: List[str] = field(default_factory=list)
     parent: Optional[str] = None
     children: List[str] = field(default_factory=list)
+    subclasses: List[str] = field(default_factory=list)
     aggregated_by: List[str] = field(default_factory=list)
 
     def __init__(
@@ -78,6 +79,7 @@ class AutosarClass(AbstractAutosarBase):
         bases: Optional[List[str]] = None,
         parent: Optional[str] = None,
         children: Optional[List[str]] = None,
+        subclasses: Optional[List[str]] = None,
         aggregated_by: Optional[List[str]] = None,
         note: Optional[str] = None,
         source: Optional[AutosarSource] = None,
@@ -99,6 +101,7 @@ class AutosarClass(AbstractAutosarBase):
             bases: List of base class names.
             parent: Name of immediate parent class.
             children: List of child class names that inherit from this class.
+            subclasses: List of subclass names explicitly listed in the PDF.
             aggregated_by: List of class names that aggregate this class.
             note: Optional documentation.
             source: Optional source location for this class definition.
@@ -113,6 +116,7 @@ class AutosarClass(AbstractAutosarBase):
         self.bases = bases or []
         self.parent = parent
         self.children = children or []
+        self.subclasses = subclasses or []
         self.aggregated_by = aggregated_by or []
 
     def __str__(self) -> str:
@@ -138,12 +142,13 @@ class AutosarClass(AbstractAutosarBase):
         attrs_count = len(self.attributes)
         bases_count = len(self.bases)
         children_count = len(self.children)
+        subclasses_count = len(self.subclasses)
         note_present = self.note is not None
         return (
             f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
             f"atp_type={self.atp_type.name}, "
             f"attributes={attrs_count}, bases={bases_count}, parent={self.parent}, "
-            f"children={children_count}, note={note_present})"
+            f"children={children_count}, subclasses={subclasses_count}, note={note_present})"
         )
 
 

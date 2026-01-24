@@ -729,6 +729,135 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_MODEL_00083
+**Title**: Test Default Subclasses Is Empty List
+
+**Maturity**: accept
+
+**Description**: Verify that subclasses defaults to empty list.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", package="M2::Test", is_abstract=False
+2. Verify cls.subclasses is []
+3. Verify len(cls.subclasses) is 0
+
+**Expected Result**: Subclasses is empty list by default
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00084
+**Title**: Test Creating Class with Subclasses
+
+**Maturity**: accept
+
+**Description**: Verify that a class can be created with subclasses.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False, subclasses=["Subclass1", "Subclass2"]
+2. Verify len(cls.subclasses) is 2
+3. Verify "Subclass1" is in cls.subclasses
+4. Verify "Subclass2" is in cls.subclasses
+
+**Expected Result**: Class is created with subclasses list
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00085
+**Title**: Test Subclasses List Mutation
+
+**Maturity**: accept
+
+**Description**: Verify that the subclasses list can be mutated after class creation.
+
+**Precondition**: An AutosarClass instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False
+2. Verify cls.subclasses is []
+3. Append "Subclass1" to cls.subclasses
+4. Append "Subclass2" to cls.subclasses
+5. Verify len(cls.subclasses) is 2
+6. Remove "Subclass1" from cls.subclasses
+7. Verify len(cls.subclasses) is 1
+8. Verify "Subclass2" is in cls.subclasses
+
+**Expected Result**: Subclasses list can be mutated
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00086
+**Title**: Test Debug Representation Shows Subclasses Count
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ includes subclasses count.
+
+**Precondition**: An AutosarClass instance with subclasses exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False, subclasses=["Subclass1", "Subclass2", "Subclass3"]
+2. Call repr(cls)
+3. Verify "subclasses=3" is in the result
+
+**Expected Result**: Debug representation shows subclasses count
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00087
+**Title**: Test Debug Representation Shows Subclasses Zero When No Subclasses
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ shows subclasses=0 when no subclasses.
+
+**Precondition**: An AutosarClass instance without subclasses exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="MyClass", package="M2::Test", is_abstract=False
+2. Call repr(cls)
+3. Verify "subclasses=0" is in the result
+
+**Expected Result**: Debug representation shows subclasses=0
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
+#### SWUT_MODEL_00088
+**Title**: Test Subclasses Can Be Reassigned
+
+**Maturity**: accept
+
+**Description**: Verify that subclasses can be reassigned after class creation.
+
+**Precondition**: An AutosarClass instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="ParentClass", package="M2::Test", is_abstract=False, subclasses=["Subclass1", "Subclass2"]
+2. Verify len(cls.subclasses) is 2
+3. Set cls.subclasses = ["Subclass3", "Subclass4", "Subclass5"]
+4. Verify len(cls.subclasses) is 3
+5. Verify "Subclass3" is in cls.subclasses
+6. Verify "Subclass1" is not in cls.subclasses
+
+**Expected Result**: Subclasses can be reassigned
+
+**Requirements Coverage**: SWR_MODEL_00001
+
+---
+
 ### 2. Attribute Tests
 
 #### SWUT_MODEL_00024
@@ -1989,6 +2118,813 @@ All existing test cases in this document are currently at maturity level **accep
 **Expected Result**: Both packages are written (no writer-level deduplication)
 
 **Requirements Coverage**: SWR_WRITER_00002, SWR_WRITER_00004
+
+---
+
+#### SWUT_WRITER_00016
+**Title**: Test Writing a Single Class to a File
+
+**Maturity**: accept
+
+**Description**: Verify that a single class can be written to a separate markdown file.
+
+**Precondition**: A MarkdownWriter instance and an AutosarPackage with a class exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a single concrete class
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify the package directory exists
+5. Verify the class file exists with correct name
+6. Verify the file content contains the class title, package, and type sections
+
+**Expected Result**: Class file is created with correct structure
+
+**Requirements Coverage**: SWR_WRITER_00005, SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00017
+**Title**: Test Writing an Abstract Class to a File
+
+**Maturity**: accept
+
+**Description**: Verify that an abstract class is written with "(abstract)" suffix in the title.
+
+**Precondition**: A MarkdownWriter instance and an abstract AutosarClass exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with an abstract class
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify the title contains "(abstract)" suffix
+6. Verify the Type section shows "Abstract"
+
+**Expected Result**: Abstract class is correctly marked in the file
+
+**Requirements Coverage**: SWR_WRITER_00005, SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00018
+**Title**: Test Writing Multiple Classes to Separate Files
+
+**Maturity**: accept
+
+**Description**: Verify that multiple classes in a package are written to separate files.
+
+**Precondition**: A MarkdownWriter instance and a package with multiple classes exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with two classes (concrete and abstract)
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify two class files exist
+5. Verify each file contains the correct class content
+
+**Expected Result**: Each class is written to its own file
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00019
+**Title**: Test Writing Nested Packages to Directory Structure
+
+**Maturity**: accept
+
+**Description**: Verify that nested packages create corresponding nested directory structure.
+
+**Precondition**: A MarkdownWriter instance and nested packages exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a parent package with a subpackage, each with classes
+3. Call writer.write_packages_to_files([parent], base_dir=tmp_path)
+4. Verify parent directory exists
+5. Verify subdirectory for subpackage exists
+6. Verify class files are in correct directories
+
+**Expected Result**: Nested directory structure mirrors package hierarchy
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00020
+**Title**: Test Writing a Class with Attributes to File
+
+**Maturity**: accept
+
+**Description**: Verify that class attributes are written in a table format.
+
+**Precondition**: A MarkdownWriter instance and a class with attributes exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with multiple attributes (including reference types)
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify Attributes section exists
+6. Verify attribute table has correct columns and rows
+7. Verify reference attributes have "(ref)" suffix
+
+**Expected Result**: Attributes are written in table format with reference indicators
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00021
+**Title**: Test Writing a Class with Base Classes to File
+
+**Maturity**: accept
+
+**Description**: Verify that base classes are written in the Base Classes section.
+
+**Precondition**: A MarkdownWriter instance and a class with base classes exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with multiple base classes
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify Base Classes section exists
+6. Verify all base classes are listed as bullet points
+
+**Expected Result**: Base classes are written in bullet list format
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00022
+**Title**: Test Writing a Class with a Note to File
+
+**Maturity**: accept
+
+**Description**: Verify that class notes are written in the Note section.
+
+**Precondition**: A MarkdownWriter instance and a class with a note exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with a note/description
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify Note section exists
+6. Verify note content is preserved
+
+**Expected Result**: Note is written in Note section
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00023
+**Title**: Test Writing a Class with All Fields to File
+
+**Maturity**: accept
+
+**Description**: Verify that a class with all fields populated is written correctly.
+
+**Precondition**: A MarkdownWriter instance and a complete class exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with attributes, base classes, note, parent, and ATP type
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify all sections are present: Package, Type, Parent, ATP Type, Base Classes, Note, Attributes
+6. Verify all content is correctly formatted
+
+**Expected Result**: Complete class file with all sections
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00024
+**Title**: Test Class File Content Structure
+
+**Maturity**: accept
+
+**Description**: Verify that class file content follows SWR_WRITER_00006 structure with correct section order.
+
+**Precondition**: A MarkdownWriter instance and a class with base classes and attributes exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create an abstract class with base classes, attributes, and note
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Find section indices for: Package, Type, Base Classes, Note, Attributes
+6. Verify all sections exist
+7. Verify correct order: Package < Type < Base Classes < Note < Attributes
+
+**Expected Result**: All sections present in correct order
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00025
+**Title**: Test Concrete Class Type Indicator
+
+**Maturity**: accept
+
+**Description**: Verify that concrete classes show "Concrete" in the Type section.
+
+**Precondition**: A MarkdownWriter instance and a concrete class exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a concrete class (is_abstract=False)
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify Type section shows "Concrete"
+6. Verify title does not have "(abstract)" suffix
+
+**Expected Result**: Concrete class is correctly marked
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00026
+**Title**: Test Writing Empty Package Creates Directory but No Files
+
+**Maturity**: accept
+
+**Description**: Verify that an empty package creates a directory but no class files.
+
+**Precondition**: A MarkdownWriter instance and an empty package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create an empty package (no classes)
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify package directory exists
+5. Verify no .md files in the directory
+
+**Expected Result**: Directory created but no files for empty package
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00027
+**Title**: Test Writing Multiple Top-Level Packages to Files
+
+**Maturity**: accept
+
+**Description**: Verify that multiple top-level packages are written to separate directories.
+
+**Precondition**: A MarkdownWriter instance and multiple packages exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create two top-level packages, each with classes
+3. Call writer.write_packages_to_files([pkg1, pkg2], base_dir=tmp_path)
+4. Verify both package directories exist
+5. Verify class files are in correct directories
+
+**Expected Result**: Multiple packages written to separate directories
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00028
+**Title**: Test Writing Packages with pathlib.Path Object
+
+**Maturity**: accept
+
+**Description**: Verify that pathlib.Path objects work as base_dir parameter.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path) where tmp_path is a Path object
+4. Verify class file is created successfully
+
+**Expected Result**: Path objects work correctly
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00029
+**Title**: Test Writing Packages with output_path Parameter
+
+**Maturity**: accept
+
+**Description**: Verify that output_path parameter works and uses parent directory as root.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Create output file path: tmp_path / "output.md"
+4. Call writer.write_packages_to_files([pkg], output_path=output_file)
+5. Verify package directory is in tmp_path (same as output file location)
+6. Verify class file is created
+
+**Expected Result**: output_path parameter works correctly
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00030
+**Title**: Test Writing Packages with output_path in Subdirectory
+
+**Maturity**: accept
+
+**Description**: Verify that output_path in a subdirectory works correctly.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Create output file in subdirectory: tmp_path / "subdir" / "output.md"
+4. Call writer.write_packages_to_files([pkg], output_path=output_file)
+5. Verify package directory is created in subdir
+6. Verify class file is created
+
+**Expected Result**: Nested output paths work correctly
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00031
+**Title**: Test Providing Both output_path and base_dir Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that providing both output_path and base_dir raises ValueError.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Attempt to call writer.write_packages_to_files([pkg], output_path="/tmp/output.md", base_dir="/tmp")
+4. Verify ValueError is raised
+5. Verify error message mentions both parameters
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00032
+**Title**: Test Providing Neither output_path nor base_dir Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that providing neither output_path nor base_dir raises ValueError.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Attempt to call writer.write_packages_to_files([pkg])
+4. Verify ValueError is raised
+5. Verify error message mentions neither parameter
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00033
+**Title**: Test Invalid Base Directory Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that an empty base directory raises ValueError.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Attempt to call writer.write_packages_to_files([pkg], base_dir="")
+4. Verify ValueError is raised
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00034
+**Title**: Test Invalid Output Path Raises ValueError
+
+**Maturity**: accept
+
+**Description**: Verify that an empty output path raises ValueError.
+
+**Precondition**: A MarkdownWriter instance and a package exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a package with a class
+3. Attempt to call writer.write_packages_to_files([pkg], output_path="")
+4. Verify ValueError is raised
+
+**Expected Result**: ValueError is raised
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00035
+**Title**: Test Writing Deeply Nested Package Structure
+
+**Maturity**: accept
+
+**Description**: Verify that deeply nested package structures (3+ levels) are written correctly.
+
+**Precondition**: A MarkdownWriter instance and deeply nested packages exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create 3-level package hierarchy: Level1 → Level2 → Level3
+3. Add classes to each level
+4. Call writer.write_packages_to_files([root], base_dir=tmp_path)
+5. Verify all 3 directory levels exist
+6. Verify class files are in correct directories
+
+**Expected Result**: Deeply nested structure created correctly
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00036
+**Title**: Test Sanitizing a Normal Class Name
+
+**Maturity**: accept
+
+**Description**: Verify that normal class names are not modified.
+
+**Precondition**: A MarkdownWriter instance and a class with normal name exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with name "NormalClassName"
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify file is named "NormalClassName.md"
+
+**Expected Result**: Normal names are preserved
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00037
+**Title**: Test Sanitizing Class Name with Invalid Characters
+
+**Maturity**: accept
+
+**Description**: Verify that invalid filename characters are removed from class names.
+
+**Precondition**: A MarkdownWriter instance and a class with invalid characters exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with name "Class/Name:With*Invalid?Chars"
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify file is created with invalid characters removed
+
+**Expected Result**: Invalid characters are removed
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00038
+**Title**: Test Sanitizing Class Name with Leading/Trailing Spaces and Dots
+
+**Maturity**: accept
+
+**Description**: Verify that leading/trailing spaces and dots are removed from class names.
+
+**Precondition**: A MarkdownWriter instance and a class with spaces/dots exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with name "  .ClassName.  "
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify file is named "ClassName.md" (spaces and dots removed)
+
+**Expected Result**: Leading/trailing spaces and dots are removed
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00039
+**Title**: Test Sanitizing Class Name that Becomes Empty
+
+**Maturity**: accept
+
+**Description**: Verify that a class name that becomes empty after sanitization is handled.
+
+**Precondition**: A MarkdownWriter instance and a class with only invalid characters exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with name "..."
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify file is created (empty name is handled)
+
+**Expected Result**: Empty name is handled gracefully
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00040
+**Title**: Test Writing a Class with Invalid Filename Characters
+
+**Maturity**: accept
+
+**Description**: Verify that class names with invalid filename characters are handled correctly.
+
+**Precondition**: A MarkdownWriter instance and a class with invalid characters exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with name "Class<>|?*"
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Verify file is created with sanitized name
+5. Verify file content is correct
+
+**Expected Result**: File created with sanitized name
+
+**Requirements Coverage**: SWR_WRITER_00005
+
+---
+
+#### SWUT_WRITER_00041
+**Title**: Test Writing Class with Only atpVariation Type
+
+**Maturity**: accept
+
+**Description**: Verify that a class with only atpVariation ATP marker shows correct ATP section.
+
+**Precondition**: A MarkdownWriter instance and a class with ATP_VARIATION exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with atp_type=ATPType.ATP_VARIATION
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify ATP Type section exists
+6. Verify "atpVariation" is listed
+
+**Expected Result**: ATP section shows atpVariation
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00042
+**Title**: Test Writing Class with Only atpMixedString Type
+
+**Maturity**: accept
+
+**Description**: Verify that a class with only atpMixedString ATP marker shows correct ATP section.
+
+**Precondition**: A MarkdownWriter instance and a class with ATP_MIXED_STRING exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with atp_type=ATPType.ATP_MIXED_STRING
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify ATP Type section exists
+6. Verify "atpMixedString" is listed
+
+**Expected Result**: ATP section shows atpMixedString
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00043
+**Title**: Test Writing Class with Only atpMixed Type
+
+**Maturity**: accept
+
+**Description**: Verify that a class with only atpMixed ATP marker shows correct ATP section.
+
+**Precondition**: A MarkdownWriter instance and a class with ATP_MIXED exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with atp_type=ATPType.ATP_MIXED
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify ATP Type section exists
+6. Verify "atpMixed" is listed
+
+**Expected Result**: ATP section shows atpMixed
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00044
+**Title**: Test Class Without ATP Type Doesn't Show ATP Section
+
+**Maturity**: accept
+
+**Description**: Verify that a class without ATP markers doesn't show ATP section.
+
+**Precondition**: A MarkdownWriter instance and a class with ATP_NONE exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with atp_type=ATPType.NONE (default)
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify ATP Type section does NOT exist
+
+**Expected Result**: No ATP section when ATP type is NONE
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00045
+**Title**: Test ATP Section Appears After Type and Before Base Classes
+
+**Maturity**: accept
+
+**Description**: Verify that ATP section appears in correct position in the file.
+
+**Precondition**: A MarkdownWriter instance and a class with ATP type and base classes exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with atp_type=ATPType.ATP_VARIATION and base classes
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Find section indices for: Type, ATP Type, Base Classes
+6. Verify order: Type < ATP Type < Base Classes
+
+**Expected Result**: ATP section is in correct position
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00046
+**Title**: Test Main Hierarchy Output Doesn't Show ATP Markers
+
+**Maturity**: accept
+
+**Description**: Verify that the main hierarchy output doesn't show ATP markers in class names.
+
+**Precondition**: A MarkdownWriter instance and classes with ATP markers exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create classes with ATP markers (atpVariation, atpMixedString)
+3. Call writer.write_packages([pkg])
+4. Verify output doesn't show ATP markers in class names
+5. Verify ATP markers are only in individual class files
+
+**Expected Result**: Main hierarchy output is clean
+
+**Requirements Coverage**: SWR_WRITER_00003
+
+---
+
+#### SWUT_WRITER_00047
+**Title**: Test Writing a Class with Children to a File
+
+**Maturity**: accept
+
+**Description**: Verify that child classes are written in the Children section.
+
+**Precondition**: A MarkdownWriter instance and a class with children exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a parent class with children list
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify Children section exists
+6. Verify all children are listed as bullet points
+
+**Expected Result**: Children are written in bullet list format
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00048
+**Title**: Test Writing a Class Without Children Doesn't Create Children Section
+
+**Maturity**: accept
+
+**Description**: Verify that a class without children doesn't show Children section.
+
+**Precondition**: A MarkdownWriter instance and a class without children exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with empty children list
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Verify Children section does NOT exist
+
+**Expected Result**: No Children section when children list is empty
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00049
+**Title**: Test Children Section Appears After Source and Before Note
+
+**Maturity**: accept
+
+**Description**: Verify that Children section appears in correct position in the file.
+
+**Precondition**: A MarkdownWriter instance and a class with children and source exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with children list and source location
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Find section indices for: Source, Children, Note
+6. Verify order: Source < Children < Note
+
+**Expected Result**: Children section is in correct position
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00050
+**Title**: Test Subclasses Section is Sorted Alphabetically
+
+**Maturity**: accept
+
+**Description**: Verify that the Subclasses section displays subclass names in alphabetical order.
+
+**Precondition**: A MarkdownWriter instance and a class with unsorted subclasses exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with subclasses list in unsorted order: ["Zulu", "Alpha", "Bravo"]
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Extract the Subclasses section
+6. Verify the subclasses are displayed in alphabetical order: Alpha, Bravo, Zulu
+
+**Expected Result**: Subclasses are sorted alphabetically in ascending order
+
+**Requirements Coverage**: SWR_WRITER_00006
+
+---
+
+#### SWUT_WRITER_00051
+**Title**: Test Children Section is Sorted Alphabetically
+
+**Maturity**: accept
+
+**Description**: Verify that the Children section displays child class names in alphabetical order.
+
+**Precondition**: A MarkdownWriter instance and a class with unsorted children exist
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with children list in unsorted order: ["Zulu", "Alpha", "Bravo"]
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Extract the Children section
+6. Verify the children are displayed in alphabetical order: Alpha, Bravo, Zulu
+
+**Expected Result**: Children are sorted alphabetically in ascending order
+
+**Requirements Coverage**: SWR_WRITER_00006
 
 ---
 
@@ -3261,6 +4197,90 @@ All existing test cases in this document are currently at maturity level **accep
 - No redundant computation occurs
 
 **Requirements Coverage**: SWR_PARSER_00020
+
+---
+
+#### SWUT_PARSER_00061
+**Title**: Test Ancestry-Based Parent Selection with Multiple Bases
+
+**Maturity**: accept
+
+**Description**: Verify that when a class has multiple base classes with ancestry relationships, the system correctly identifies the direct parent by filtering out ancestors.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create class definitions with inheritance hierarchy:
+   - Level1 (root class with no bases)
+   - Level2 (inherits from Level1)
+   - Level3 (inherits from Level2)
+   - Level4 (inherits from Level3)
+   - DerivedWithMultipleBases (inherits from Level1, Level2, Level3, Level4)
+3. Build package hierarchy from class definitions
+4. Verify DerivedWithMultipleBases.parent is "Level4" (the most specific base, not an ancestor)
+5. Verify Level4 is NOT an ancestor of any other base in the list
+
+**Expected Result**:
+- Parent is correctly identified as Level4 (the most recent base)
+- Ancestors (Level1, Level2, Level3) are filtered out
+- Only the direct parent is selected
+
+**Requirements Coverage**: SWR_PARSER_00017
+
+---
+
+#### SWUT_PARSER_00062
+**Title**: Test Parent Selection with Independent Bases
+
+**Maturity**: accept
+
+**Description**: Verify that when a class has multiple independent base classes (no ancestry relationships), the system selects the last base as the parent.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create class definitions with independent bases:
+   - BaseClass1 (root class)
+   - BaseClass2 (root class, independent from BaseClass1)
+   - BaseClass3 (root class, independent from BaseClass1 and BaseClass2)
+   - DerivedClass (inherits from BaseClass1, BaseClass2, BaseClass3)
+3. Build package hierarchy from class definitions
+4. Verify DerivedClass.parent is "BaseClass3" (the last base in the list)
+
+**Expected Result**:
+- Parent is correctly identified as BaseClass3 (the last base)
+- All bases are independent, so the last one is chosen
+
+**Requirements Coverage**: SWR_PARSER_00017
+
+---
+
+#### SWUT_PARSER_00063
+**Title**: Test Parent Selection with Missing Base Classes
+
+**Maturity**: accept
+
+**Description**: Verify that when a class has base classes that don't exist in the model, the system filters them out and selects from the remaining bases.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create class definitions:
+   - ExistingClass (root class)
+   - NonExistentBase (NOT defined in the model)
+   - DerivedClass (inherits from ExistingClass, NonExistentBase)
+3. Build package hierarchy from class definitions
+4. Verify DerivedClass.parent is "ExistingClass"
+5. Verify warning is logged for NonExistentBase
+
+**Expected Result**:
+- Parent is correctly identified as ExistingClass (the only valid base)
+- Missing base is filtered out and warning is logged
+
+**Requirements Coverage**: SWR_PARSER_00017
 
 ---
 

@@ -1437,3 +1437,107 @@ class TestMarkdownWriterFiles:
             assert "**MyEnum**" in content
             assert "VALUE1" in content
             assert "VALUE2" in content
+
+    def test_write_packages_creates_directory_if_not_exists(self, tmp_path: Path) -> None:
+        """Test that directories are created automatically if they don't exist.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+
+        This test verifies that the writer creates destination directories
+        automatically without requiring manual creation.
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
+
+        writer = MarkdownWriter()
+
+        # Use a non-existent subdirectory path
+        output_dir = tmp_path / "nonexistent" / "subdir"
+        assert not output_dir.exists(), "Output directory should not exist initially"
+
+        writer.write_packages_to_files([pkg], base_dir=output_dir)
+
+        # Verify directory was created
+        assert output_dir.exists(), "Output directory should be created"
+        assert output_dir.is_dir(), "Output should be a directory"
+
+        # Verify package directory was created
+        pkg_dir = output_dir / "TestPackage"
+        assert pkg_dir.exists(), "Package directory should be created"
+        assert pkg_dir.is_dir(), "Package should be a directory"
+
+        # Verify class file was created
+        class_file = pkg_dir / "MyClass.md"
+        assert class_file.exists(), "Class file should be created"
+        assert class_file.is_file(), "Class should be a file"
+
+    def test_subclasses_sorted_alphabetically(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00050: Test Subclasses section is sorted alphabetically.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Model
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            subclasses=["Zulu", "Alpha", "Bravo", "Delta", "Charlie"]
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "ParentClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Subclasses section exists
+        assert "## Subclasses\n\n" in content
+
+        # Extract the Subclasses section
+        subclasses_start = content.find("## Subclasses\n\n")
+        subclasses_end = content.find("\n\n", subclasses_start + len("## Subclasses\n\n"))
+        subclasses_section = content[subclasses_start:subclasses_end]
+
+        # Verify subclasses are in alphabetical order
+        lines = [line.strip() for line in subclasses_section.split("\n") if line.strip().startswith("*")]
+        expected_order = ["* Alpha", "* Bravo", "* Charlie", "* Delta", "* Zulu"]
+        assert lines == expected_order, f"Expected {expected_order}, got {lines}"
+
+    def test_children_sorted_alphabetically(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00051: Test Children section is sorted alphabetically.
+
+        Requirements:
+            SWR_MODEL_00026: AUTOSAR Class Children Attribute
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            name="ParentClass",
+            package="M2::Test",
+            is_abstract=False,
+            children=["Zulu", "Alpha", "Bravo", "Delta", "Charlie"]
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "ParentClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Children section exists
+        assert "## Children\n\n" in content
+
+        # Extract the Children section
+        children_start = content.find("## Children\n\n")
+        children_end = content.find("\n\n", children_start + len("## Children\n\n"))
+        children_section = content[children_start:children_end]
+
+        # Verify children are in alphabetical order
+        lines = [line.strip() for line in children_section.split("\n") if line.strip().startswith("*")]
+        expected_order = ["* Alpha", "* Bravo", "* Charlie", "* Delta", "* Zulu"]
+        assert lines == expected_order, f"Expected {expected_order}, got {lines}"

@@ -144,6 +144,8 @@ def main() -> int:
         # SWR_CLI_00004: CLI Output File Option
         if args.output:
             output_path = Path(args.output)
+            # Create parent directory if it doesn't exist
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(markdown, encoding="utf-8")
             logging.info(f"Output written to: {args.output}")
 

@@ -185,14 +185,10 @@ class PdfParser:
 
             try:
                 with pdfplumber.open(pdf_path) as pdf:
-                    # Process each page individually to track page numbers for source information
-                    # Maintain parsing state across pages for multi-page definitions
-                    current_models: Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = {}
-                    model_parsers: Dict[int, str] = {}  # Maps model index to parser type
-
+                    # Phase 1: Extract all text from all pages into a single buffer
+                    text_buffer = StringIO()
+                    
                     for page_num, page in enumerate(pdf.pages, start=1):
-                        text_buffer = StringIO()
-
                         # Use extract_words() with x_tolerance=1 to properly extract words with spaces
                         # This fixes the issue where words are concatenated without spaces
                         words = page.extract_words(x_tolerance=1)
@@ -215,33 +211,35 @@ class PdfParser:
                             # Add newline after each page
                             text_buffer.write("\n")
 
-                        page_text = text_buffer.getvalue()
-                        # Parse text and get models with their parsers
-                        page_models = self._parse_page_text(
-                            page_text,
-                            pdf_filename=pdf_filename,
-                            page_number=page_num,
-                            current_models=current_models,
-                            model_parsers=model_parsers,
-                        )
-                        models.extend(page_models)
+                    # Phase 2: Parse the complete text at once
+                    complete_text = text_buffer.getvalue()
+                    
+                    # Parse all text with state management for multi-page definitions
+                    current_models: Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = {}
+                    model_parsers: Dict[int, str] = {}  # Maps model index to parser type
+                    
+                    models = self._parse_complete_text(
+                        complete_text,
+                        pdf_filename=pdf_filename,
+                        current_models=current_models,
+                        model_parsers=model_parsers,
+                    )
 
             except Exception as e:
                 raise Exception(f"Failed to parse PDF with pdfplumber: {e}") from e
 
         return models
 
-    def _parse_page_text(
+    def _parse_complete_text(
         self,
         text: str,
         pdf_filename: Optional[str] = None,
-        page_number: Optional[int] = None,
         current_models: Optional[Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]] = None,
         model_parsers: Optional[Dict[int, str]] = None,
     ) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
-        """Parse model definitions from extracted text.
+        """Parse model definitions from complete PDF text.
 
-        This method processes the text from a single page and:
+        This method processes the complete text from the entire PDF and:
         1. Detects new type definitions (Class, Enumeration, Primitive)
         2. Delegates to the appropriate specialized parser
         3. Continues parsing for existing models across pages
@@ -257,14 +255,13 @@ class PdfParser:
             SWR_PARSER_00022: PDF Source Location Extraction
 
         Args:
-            text: The extracted text from PDF.
+            text: The complete extracted text from the entire PDF.
             pdf_filename: Optional PDF filename for source tracking.
-            page_number: Optional page number for source tracking.
             current_models: Dictionary of current models being parsed (for multi-page support).
             model_parsers: Dictionary mapping model indices to parser types.
 
         Returns:
-            List of model objects parsed from this page.
+            List of model objects parsed from the PDF.
         """
         if current_models is None:
             current_models = {}
@@ -293,17 +290,17 @@ class PdfParser:
                 # Delegate to appropriate parser
                 if class_match:
                     new_model = self._class_parser.parse_definition(
-                        lines, i, pdf_filename, page_number
+                        lines, i, pdf_filename, None
                     )
                     parser_type = "class"
                 elif primitive_match:
                     new_model = self._primitive_parser.parse_definition(
-                        lines, i, pdf_filename, page_number
+                        lines, i, pdf_filename, None
                     )
                     parser_type = "primitive"
                 else:  # enumeration_match
                     new_model = self._enum_parser.parse_definition(
-                        lines, i, pdf_filename, page_number
+                        lines, i, pdf_filename, None
                     )
                     parser_type = "enumeration"
 

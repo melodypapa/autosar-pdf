@@ -2122,3 +2122,35 @@ class TestAutosarDoc:
         assert len(doc.packages) == 0
         assert len(doc.root_classes) == 0
         assert str(doc) == "AutosarDoc(0 packages, 0 root classes)"
+
+
+class TestAutosarSource:
+    """Tests for AutosarSource class.
+
+    Requirements:
+        SWR_MODEL_00027: AUTOSAR Source Location Representation
+    """
+
+    def test_init_with_pdf_file_and_page_number(self) -> None:
+        """Test initialization with PDF file and page number.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+        """
+        from autosar_pdf2txt.models.base import AutosarSource
+
+        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        assert source.pdf_file == "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+        assert source.page_number == 42
+
+    def test_str_with_pdf_file_and_page_number(self) -> None:
+        """Test __str__ method with PDF file and page number.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+        """
+        from autosar_pdf2txt.models.base import AutosarSource
+
+        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        result = str(source)
+        assert result == "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42"

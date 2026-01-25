@@ -3376,7 +3376,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_PARSER_00010
+#### SWUT_PARSER_00064
 **Title**: Test Building Package Hierarchy with Bases and Notes
 
 **Maturity**: accept
@@ -4281,6 +4281,35 @@ All existing test cases in this document are currently at maturity level **accep
 - Missing base is filtered out and warning is logged
 
 **Requirements Coverage**: SWR_PARSER_00017
+
+---
+
+#### SWUT_PARSER_00010
+**Title**: Test Two-Phase PDF Parsing
+
+**Maturity**: accept
+
+**Description**: Verify that the PDF parser uses a two-phase parsing approach: first extracting all text from all pages, then parsing the complete text. This ensures multi-page definitions and cross-page references are handled correctly.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create a mock PDF with 2 pages containing:
+   - Page 1: "Class BaseClass", "Package M2::AUTOSAR", "Base ARElement"
+   - Page 2: "Class DerivedClass", "Base BaseClass"
+3. Parse the PDF using _extract_with_pdfplumber method
+4. Verify that both classes are extracted correctly
+5. Verify that DerivedClass.base_classes contains "BaseClass"
+6. Verify that BaseClass.base_classes contains "ARElement"
+7. Verify that the parser maintains state across pages (current_models and model_parsers are preserved)
+
+**Expected Result**:
+- Both BaseClass and DerivedClass are extracted from different pages
+- Cross-page inheritance relationships are correctly established
+- State management ensures multi-page definitions are handled correctly
+
+**Requirements Coverage**: SWR_PARSER_00003
 
 ---
 

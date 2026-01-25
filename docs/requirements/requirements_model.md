@@ -440,6 +440,8 @@ This requirement enables:
 **Description**: The system shall provide a data model to represent source location information for AUTOSAR types. The source location shall include:
 - `pdf_file`: Path to the PDF file (relative or absolute)
 - `page_number`: Page number in the PDF (1-indexed)
+- `autosar_standard`: Optional AUTOSAR standard identifier (e.g., "Foundation", "Classic Platform", "Adaptive Platform", "Methodology")
+- `standard_release`: Optional AUTOSAR standard release (e.g., "R23-11", "R22-11", "R24-03")
 
 The source location shall be:
 - Immutable (frozen dataclass)

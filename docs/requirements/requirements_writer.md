@@ -129,5 +129,35 @@ The Children section shall:
 **Description**: The markdown writer shall output source information in individual class files when using the `--include-class-details` flag. The output shall include:
 - A "Source" section for the class's own definition location (if available)
 - Proper formatting with PDF filename and page number for the source
+- Optional AUTOSAR standard identifier (if available from the parsing process)
+- Optional AUTOSAR standard release (if available from the parsing process)
 
-The source section shall only be included when source information is available from the parsing process.
+The source section shall:
+- Only be included when source information is available from the parsing process
+- Display the PDF filename and page number on the first line
+- Display "AUTOSAR Standard: <identifier>" on a separate line if autosar_standard is not None
+- Display "Standard Release: <release>" on a separate line if standard_release is not None
+- Format each piece of information on its own line for readability
+
+**Example Output**:
+```
+Source
+AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42
+AUTOSAR Standard: TPS_BSWModuleDescriptionTemplate
+Standard Release: R21-11
+```
+
+**Example Output (without release)**:
+```
+Source
+AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42
+AUTOSAR Standard: TPS_BSWModuleDescriptionTemplate
+```
+
+**Example Output (minimal)**:
+```
+Source
+AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42
+```
+
+This requirement enables complete traceability of AUTOSAR type definitions to their source documents, including specification document identification and version tracking.

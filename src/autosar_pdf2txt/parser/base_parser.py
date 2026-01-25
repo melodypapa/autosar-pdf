@@ -328,6 +328,8 @@ class AbstractTypeParser(ABC):
         line_index: int,
         pdf_filename: Optional[str] = None,
         page_number: Optional[int] = None,
+        autosar_standard: Optional[str] = None,
+        standard_release: Optional[str] = None,
     ) -> Optional[AutosarType]:
         """Parse a type definition from PDF lines.
 
@@ -342,6 +344,8 @@ class AbstractTypeParser(ABC):
             line_index: Current line index in the lines list.
             pdf_filename: Optional PDF filename for source tracking.
             page_number: Optional page number for source tracking.
+            autosar_standard: Optional AUTOSAR standard identifier for source tracking.
+            standard_release: Optional AUTOSAR standard release for source tracking.
 
         Returns:
             The parsed model object (AutosarClass, AutosarEnumeration, or AutosarPrimitive),

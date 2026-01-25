@@ -633,14 +633,33 @@ This requirement ensures complete model representation by guaranteeing that all 
 
 **Maturity**: accept
 
-**Description**: The PDF parser shall track source locations (PDF file and page number) during parsing. The parser shall:
+**Description**: The PDF parser shall track source locations (PDF file, page number, and optional AUTOSAR standard and release information) during parsing. The parser shall:
 - Extract PDF filename from the file path for cleaner output
 - Track current page number during PDF processing (1-indexed)
+- Extract AUTOSAR standard identifier from PDF document content (headers or footers)
+- Extract AUTOSAR standard release from PDF document content (headers or footers)
 - Attach source information to ClassDefinition objects when creating class definitions
 - Transfer source info from ClassDefinition to model objects during hierarchy building
 
+The AUTOSAR standard and release extraction shall:
+- Parse AUTOSAR standard from document content patterns like "Part of AUTOSAR Standard: <StandardName>" (e.g., "Foundation", "Classic Platform", "Adaptive Platform", "Methodology")
+- Parse AUTOSAR standard release from document content patterns like "Part of Standard Release: R<YY>-<MM>" (e.g., "R23-11", "R22-11", "R24-03")
+- Extract this information from the first few pages of the PDF where document metadata is typically displayed
+- Set autosar_standard and standard_release to None if they cannot be found in the PDF content
+- Support backward compatibility with PDFs that don't include this metadata
+
+**Extraction Strategy**:
+- Scan the extracted text buffer for patterns indicating AUTOSAR standard and release
+- Look for keywords like "Part of AUTOSAR Standard" and "Part of Standard Release"
+- Extract the values following these keywords
+- Apply the extracted values to all types defined in the PDF document
+
 This requirement enables:
 - Complete traceability of where each AUTOSAR type was defined
+- Identification of the specific AUTOSAR specification document and version from the document itself
+- Better documentation and reference tracking for parsed models
+
+**Note**: The AUTOSAR standard and release fields are optional and may be None if the PDF document does not contain this metadata or if the extraction pattern cannot be matched.
 
 ---
 

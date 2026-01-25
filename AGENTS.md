@@ -11,13 +11,14 @@ This document provides context information for iFlow CLI agents working on the a
 - **Two-Phase Parsing**: Read phase extracts all text from PDF, parse phase processes complete buffer for multi-page definitions
 - **Specialized Parsers**: Dedicated parsers for classes, enumerations, and primitive types with shared base functionality
 - **Hierarchical Parsing**: Parse complex hierarchical class structures with inheritance relationships
-- **Source Location Tracking**: Track PDF file and page number for each type definition and base class reference
+- **Source Location Tracking**: Track PDF file and page number for each type definition and base class reference, with optional AUTOSAR standard and release information
 - **Markdown Output**: Generate well-formatted Markdown output with proper indentation
 - **Class Details**: Support for abstract classes, attributes, ATP markers, and source information
 - **Class Hierarchy**: Generate separate class inheritance hierarchy files showing root classes and their subclasses
 - **Individual Class Files**: Create separate markdown files for each class with detailed information
-- **Model Validation**: Built-in duplicate prevention and validation at the model level
-- **Subclasses Validation**: Validate subclass relationships against actual inheritance hierarchy
+- **Model Validation**: Built-in duplicate handling with warnings for multiple PDFs that may define the same class name
+- **Subclasses Validation**: Validate subclass relationships against actual inheritance hierarchy (SWR_PARSER_00029)
+- **Log File Support**: CLI supports persistent logging with timestamps via --log-file option
 - **Comprehensive Coverage**: 97%+ test coverage with robust error handling
 
 ### Technology Stack
@@ -167,6 +168,8 @@ python scripts/run_tests.py --all && ruff check src/ tests/ && mypy src/autosar_
 
 ### Command Line Interface Usage
 
+**autosar-extract** - Extract AUTOSAR models from PDF files:
+
 ```bash
 # Parse a single PDF and output to stdout
 autosar-extract input.pdf
@@ -185,6 +188,28 @@ autosar-extract input.pdf -o output.md --include-class-details
 
 # Generate class inheritance hierarchy in separate file
 autosar-extract input.pdf -o output.md --include-class-hierarchy
+
+# Write log messages to a file with timestamps
+autosar-extract input.pdf -o output.md --log-file extraction.log
+
+# Combine multiple options
+autosar-extract input.pdf -o output.md --include-class-details --include-class-hierarchy --log-file extraction.log -v
+```
+
+**autosar-extract-table** - Extract AUTOSAR-related tables from PDF files as images (SWR_CLI_00013):
+
+```bash
+# Extract tables from a single PDF
+autosar-extract-table input.pdf -o output_dir/
+
+# Extract tables from multiple PDFs
+autosar-extract-table file1.pdf file2.pdf -o output_dir/
+
+# Extract tables from all PDFs in a directory
+autosar-extract-table /path/to/pdfs/ -o output_dir/
+
+# Verbose mode for detailed debug information
+autosar-extract-table input.pdf -o output_dir/ -v
 ```
 
 ## Development Standards
@@ -252,13 +277,16 @@ Key coding rules summary:
 **Exception Testing**:
 ```python
 def test_add_class_duplicate(self) -> None:
-    """Test adding duplicate class raises ValueError."""
+    """Test adding duplicate class logs warning and skips."""
     pkg = AutosarPackage(name="TestPackage")
     cls1 = AutosarClass(name="DuplicateClass", is_abstract=False)
     cls2 = AutosarClass(name="DuplicateClass", is_abstract=True)
     pkg.add_class(cls1)
-    with pytest.raises(ValueError, match="already exists"):
+    with pytest.warns(UserWarning, match="already exists"):
         pkg.add_class(cls2)
+    # Verify only one class was added
+    assert len(pkg.types) == 1
+    assert pkg.types[0].name == "DuplicateClass"
 ```
 
 ### Test-Driven Development (TDD) - MANDATORY
@@ -336,7 +364,7 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
 - **Model**: SWR_MODEL_00001 - SWR_MODEL_00027
 - **Parser**: SWR_PARSER_00001 - SWR_PARSER_00029
 - **Writer**: SWR_WRITER_00001 - SWR_WRITER_00008
-- **CLI**: SWR_CLI_00001 - SWR_CLI_00013
+- **CLI**: SWR_CLI_00001 - SWR_CLI_00014
 - **Package**: SWR_PACKAGE_00001 - SWR_PACKAGE_00003
 
 **Key New Requirements**:
@@ -347,8 +375,9 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
 - SWR_PARSER_00028: Direct model creation by specialized parsers
 - SWR_PARSER_00029: Subclasses contradiction validation
 - SWR_MODEL_00018: AUTOSAR type abstract base class
-- SWR_MODEL_00027: AUTOSAR source location representation
+- SWR_MODEL_00027: AUTOSAR source location representation with optional AUTOSAR standard and release
 - SWR_WRITER_00008: Markdown source information output
+- SWR_CLI_00014: CLI logger file specification for persistent logging with timestamps
 
 ## Custom Slash Commands
 
@@ -627,11 +656,13 @@ Each AUTOSAR type can track its definition location using `AutosarSource`:
 ```python
 @dataclass(frozen=True)
 class AutosarSource:
-    pdf_file: str      # Path to the PDF file
-    page_number: int   # Page number (1-indexed)
+    pdf_file: str                      # Path to the PDF file
+    page_number: int                   # Page number (1-indexed)
+    autosar_standard: Optional[str]    # AUTOSAR standard identifier (e.g., "TPS_BSWModuleDescriptionTemplate")
+    standard_release: Optional[str]    # AUTOSAR standard release (e.g., "R21-11")
 ```
 
-Types include source location in their `source` attribute, enabling traceability back to the original PDF documentation.
+Types include source location in their `source` attribute, enabling traceability back to the original PDF documentation with optional AUTOSAR standard and release information.
 
 ### Parent Resolution and Validation (SWR_PARSER_00018, SWR_PARSER_00029)
 
@@ -651,16 +682,18 @@ The parser uses ancestry-based parent resolution:
 - Format: `* <name>` or `* <name> (abstract)`
 
 ### Duplicate Handling
-- Model-level duplicate prevention in `AutosarPackage.add_type()`, `add_class()`, and `add_subpackage()`
+- Model-level duplicate handling in `AutosarPackage.add_type()`, `add_class()`, and `add_subpackage()`
 - Checks for duplicates by name before adding
-- Raises `ValueError` when attempting to add duplicates
+- Logs warnings and skips duplicate type definitions (allows parsing multiple PDFs that may define the same class name, which is common in AUTOSAR specifications)
+- Raises `ValueError` when attempting to add duplicate subpackages
 - No writer-level deduplication needed (model guarantees uniqueness)
 
 ### Model Validation
 - Empty/whitespace names raise `ValueError`
-- Duplicate types in package raise `ValueError`
+- Duplicate types in package log warnings and are skipped (allows parsing multiple PDFs with same class names)
 - Duplicate subpackages in package raise `ValueError`
 - Multiple ATP markers on same class raise `ValueError`
+- Subclasses contradictions raise `ValueError` with descriptive messages (SWR_PARSER_00029)
 
 ### PDF Parsing Patterns
 - Class definitions: `Class <name> (abstract)`
@@ -684,10 +717,33 @@ The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_to
 
 The parser preserves the "M2::" prefix in package paths when present, treating "M2" as the root metamodel package. This ensures complete package hierarchy is maintained (e.g., M2 → AUTOSARTemplates → BswModuleTemplate).
 
+## Changelog
+
+### Version 0.16.0
+- Added CLI log file support (`--log-file`) for persistent logging with timestamps (SWR_CLI_00014)
+- Implemented subclasses validation (SWR_PARSER_00029) to detect inheritance contradictions
+- Refactored duplicate type handling to log warnings instead of raising errors, allowing parsing of multiple PDFs that may define the same class name
+- Enhanced AutosarSource with optional AUTOSAR standard and release fields
+- Enhanced test documentation with 15 new test cases for log file feature
+- Enhanced test documentation with 10 new test cases for subclasses validation
+- Improved test coverage from 96% to 97%
+- Updated AGENTS.md with mandatory TDD section
+- Updated development guidelines with TDD enforcement and common mistakes
+
+### Version 0.15.0
+- Implemented two-phase PDF parsing approach (read phase + parse phase)
+- Added specialized parsers for classes, enumerations, and primitives
+- Added ancestry-based parent resolution for complex inheritance hierarchies
+- Added source location tracking for PDF file and page number
+- Added subclasses attribute to track explicitly documented subclass relationships
+- Refactored requirements documentation into separate module files
+- Enhanced TDD rules with test type selection strategy
+- Fixed multi-line class list parsing and multi-page class definition handling
+
 ## Version Information
 
-- **Current Version**: 0.15.1
-- **Python Requirement**: >= 3.7 (supports 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13)
+- **Current Version**: 0.16.0
+- **Python Requirement**: >= 3.7 (supports 3.7, 3.8, 3.9, 3.10, 3.11)
 - **Main Dependency**: pdfplumber >= 0.10.0
 
 ## License

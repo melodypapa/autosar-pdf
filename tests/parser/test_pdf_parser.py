@@ -2419,7 +2419,6 @@ class TestPdfParser:
             assert len(base_names) == len(set(base_names)), \
                 f"Each base class should appear only once, got duplicates: {base_names}"
 
-    @pytest.mark.skip(reason="Ancestry traversal warning functionality not implemented")
     def test_parent_resolution_missing_ancestry_deduplicated_warnings(self) -> None:
         """Test that missing ancestry class warnings are deduplicated.
 
@@ -2543,9 +2542,9 @@ class TestPdfParser:
         original_build_cache = parser._build_ancestry_cache
         call_count = [0]
 
-        def mock_build_cache(packages):
+        def mock_build_cache(packages, warned_bases):
             call_count[0] += 1
-            return original_build_cache(packages)
+            return original_build_cache(packages, warned_bases)
 
         with patch.object(parser, '_build_ancestry_cache', side_effect=mock_build_cache):
             parser._build_package_hierarchy(class_defs)

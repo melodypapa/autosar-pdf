@@ -71,9 +71,9 @@ class AutosarPackage:
         Raises:
             ValueError: If a type with the same name already exists.
         """
-        type_names = {t.name for t in self.types}
-        if typ.name in type_names:
-            raise ValueError(f"Type '{typ.name}' already exists in package '{self.name}'")
+        for existing_type in self.types:
+            if existing_type.name == typ.name:
+                raise ValueError(f"Type '{typ.name}' already exists")
         self.types.append(typ)
 
     def add_class(self, cls: AutosarClass) -> None:

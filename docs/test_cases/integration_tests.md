@@ -21,21 +21,22 @@ All existing integration test cases in this document are currently at maturity l
 ### 1. PDF Parser Integration Tests
 
 #### SWIT_00001
-**Title**: Test Parsing Real AUTOSAR PDF and Verifying AUTOSAR and SwComponentType Classes
+**Title**: Test Parsing Real AUTOSAR PDF and Verifying AUTOSAR, SwComponentType, and ARElement Classes
 
 **Maturity**: accept
 
-**Description**: Integration test that parses real AUTOSAR PDF files and verifies two classes:
-1. The AUTOSAR class from BSW Module Template PDF
+**Description**: Integration test that parses real AUTOSAR PDF files and verifies three classes:
+1. The AUTOSAR class from GenericStructureTemplate PDF
 2. The SwComponentType class from GenericStructureTemplate PDF (including attributes, attribute kinds, and note support)
+3. The ARElement class and its subclasses from GenericStructureTemplate PDF
 
-**Precondition**: Files examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf and examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exist
+**Precondition**: examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exist
 
 **Test Steps**:
 
-**Part 1: Verify AUTOSAR class from BSW Module Template PDF**
-1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
-2. Find the first class in the extracted packages (searching through M2 → AUTOSARTemplates → AutosarTopLevelStructure)
+**Part 1: Verify AUTOSAR class from GenericStructureTemplate PDF**
+1. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
+2. Find the AUTOSAR class in the extracted packages (searching through M2 → AUTOSARTemplates → AutosarTopLevelStructure)
 3. Verify the class name is "AUTOSAR"
 4. Verify the class is not abstract (is_abstract=False)
 5. Verify the class has one base class "ARObject" (bases=["ARObject"])
@@ -55,6 +56,15 @@ All existing integration test cases in this document are currently at maturity l
 9. Verify attribute types match expected values: consistency: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup
 10. Verify attributes have notes (multi-line attribute note support is verified in SWIT_00006)
 
+**Part 3: Verify ARElement class and its subclasses from GenericStructureTemplate PDF**
+1. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
+2. Find the ARElement class in the extracted packages
+3. Verify the class name is "ARElement"
+4. Verify the class is abstract (is_abstract=True)
+5. Verify the subclasses list contains all expected subclasses (128 total)
+6. Verify all expected subclasses are present: AclObjectSet, AclOperation, AclPermission, AclRole, AliasNameSet, ApplicabilityInfoSet, ApplicationPartition, AutosarDataType, BaseType, BlueprintMappingSet, BswEntryRelationshipSet, BswModuleDescription, BswModuleEntry, BuildActionManifest, CalibrationParameterValueSet, ClientIdDefinitionSet, ClientServerInterfaceToBswModuleEntryBlueprintMapping, Collection, CompuMethod, ConsistencyNeedsBlueprintSet, ConstantSpecification, ConstantSpecificationMappingSet, CpSoftwareCluster, CpSoftwareClusterBinaryManifestDescriptor, CpSoftwareClusterMappingSet, CpSoftwareClusterResourcePool, CryptoEllipticCurveProps, CryptoServiceCertificate, CryptoServiceKey, CryptoServicePrimitive, CryptoServiceQueue, CryptoSignatureScheme, DataConstr, DataExchangePoint, DataTransformationSet, DataTypeMappingSet, DdsCpConfig, DiagnosticCommonElement, DiagnosticConnection, DiagnosticContributionSet, DltContext, DltEcu, Documentation, E2EProfileCompatibilityProps, EcucDefinitionCollection, EcucDestinationUriDefSet, EcucModuleConfigurationValues, EcucModuleDef, EcucValueCollection, EndToEndProtectionSet, EthIpProps, EthTcpIpIcmpProps, EthTcpIpProps, EvaluatedVariantSet, FMFeature, FMFeatureMap, FMFeatureModel, FMFeatureSelectionSet, FirewallRule, FlatMap, GeneralPurposeConnection, HwCategory, HwElement, HwType, IEEE1722TpConnection, IPSecConfigProps, IPv6ExtHeaderFilterSet, IdsCommonElement, IdsDesign, Implementation, ImpositionTimeDefinitionGroup, InterpolationRoutineMappingSet, J1939ControllerApplication, KeywordSet, LifeCycleInfoSet, LifeCycleStateDefinitionGroup, LogAndTraceMessageCollectionSet, MacSecGlobalKayProps, MacSecParticipantSet, McFunction, McGroup, ModeDeclarationGroup, ModeDeclarationMappingSet, OsTaskProxy, PhysicalDimension, PhysicalDimensionMappingSet, PortInterface, PortInterfaceMappingSet, PortPrototypeBlueprint, PostBuildVariantCriterion, PostBuildVariantCriterionValueSet, PredefinedVariant, RapidPrototypingScenario, SdgDef, SignalServiceTranslationPropsSet, SomeipSdClientEventGroupTimingConfig, SomeipSdClientServiceInstanceConfig, SomeipSdServerEventGroupTimingConfig, SomeipSdServerServiceInstanceConfig, SwAddrMethod, SwAxisType, SwComponentMappingConstraints, SwComponentType, SwRecordLayout, SwSystemconst, SwSystemconstantValueSet, SwcBswMapping, System, SystemSignal, SystemSignalGroup, TDCpSoftwareClusterMappingSet, TcpOptionFilterSet, TimingExtension, TlsConnectionGroup, TlvDataIdDefinitionSet, TransformationPropsSet, Unit, UnitGroup, UploadablePackageElement, ViewMapSet
+7. Verify no unexpected subclasses were extracted
+
 **Expected Result**:
 
 **Part 1: AUTOSAR class**
@@ -73,6 +83,13 @@ All existing integration test cases in this document are currently at maturity l
 - swcMapping.kind == "ref" and swcMapping.is_ref == True
 - Attribute types: {consistency: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup}
 - All attributes have notes (single-line for SwComponentType)
+
+**Part 3: ARElement class and subclasses**
+- Name: "ARElement"
+- Abstract: True
+- Subclasses: 128 total
+- All expected subclasses present: YES
+- No unexpected subclasses: YES
 
 **Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_MODEL_00001, SWR_MODEL_00010, SWR_MODEL_00023
 

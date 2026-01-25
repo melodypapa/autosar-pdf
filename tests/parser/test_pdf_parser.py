@@ -2553,6 +2553,229 @@ class TestPdfParser:
             assert call_count[0] == 1, \
                 f"_build_ancestry_cache should be called once, was called {call_count[0]} times"
 
+    def test_build_ancestry_cache_missing_class_warning_deduplicated(self) -> None:
+        """Test that missing class warnings are deduplicated during ancestry traversal.
+
+        SWUT_PARSER_00062: Test Missing Ancestry Base Deduplicated Warnings
+
+        Requirements:
+            SWR_PARSER_00020: Missing Ancestry Base Logging
+
+        This test verifies that when a missing class is encountered multiple times
+        during ancestry traversal, the warning is logged only once (deduplicated).
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create classes with missing base classes
+        existing = AutosarClass(name="ExistingClass", package="M2::Test", is_abstract=False)
+        existing.bases = []
+
+        # Multiple classes reference the same missing base
+        derived1 = AutosarClass(name="DerivedClass1", package="M2::Test", is_abstract=False)
+        derived1.bases = ["ExistingClass", "MissingBase"]
+
+        derived2 = AutosarClass(name="DerivedClass2", package="M2::Test", is_abstract=False)
+        derived2.bases = ["ExistingClass", "MissingBase"]
+
+        # Create package and add classes
+        pkg = AutosarPackage(name="TestPackage")
+        pkg.add_class(existing)
+        pkg.add_class(derived1)
+        pkg.add_class(derived2)
+
+        parser = PdfParser()
+        warned_bases = set()
+
+        # Build ancestry cache
+        ancestry_cache = parser._build_ancestry_cache([pkg], warned_bases)
+
+        # Verify that MissingBase was warned about only once
+        assert "MissingBase" in warned_bases, "MissingBase should be in warned set"
+        assert len([b for b in warned_bases if b == "MissingBase"]) == 1, \
+            "MissingBase should be warned about only once (deduplicated)"
+
+        # Verify ancestry cache structure
+        assert "ExistingClass" in ancestry_cache
+        assert "DerivedClass1" in ancestry_cache
+        assert "DerivedClass2" in ancestry_cache
+
+    def test_extract_class_with_multiline_tags_in_note(self) -> None:
+        """Test extracting class with multi-line tags in note.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        This test verifies that multi-line tags in the note section
+        are correctly parsed and not truncated.
+        """
+        text = """Class TestClass
+Package M2::AUTOSAR
+Note This is a note with
+Tags: tag1, tag2, tag3
+more content after tags.
+"""
+        classes = _parse_class_text(text)
+
+        assert len(classes) == 1
+        assert classes[0].name == "TestClass"
+        assert "Tags:" in classes[0].note
+        assert "tag1" in classes[0].note
+        assert "tag2" in classes[0].note
+        assert "tag3" in classes[0].note
+        assert "more content after tags" in classes[0].note
+
+    def test_extract_class_with_line_starts_with_comma(self) -> None:
+        """Test extracting class with line starting with comma in class list.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies that when a line in a class list starts with a comma,
+        it's treated as a new item rather than a continuation.
+        """
+        text = """Class BaseClass
+Package M2::AUTOSAR
+Subclasses DerivedClass1,
+, DerivedClass2,
+, DerivedClass3
+"""
+        classes = _parse_class_text(text)
+
+        assert len(classes) == 1
+        assert classes[0].name == "BaseClass"
+        assert len(classes[0].subclasses) == 3
+        assert "DerivedClass1" in classes[0].subclasses
+        assert "DerivedClass2" in classes[0].subclasses
+        assert "DerivedClass3" in classes[0].subclasses
+
+    def test_extract_class_with_complete_class_names_heuristic(self) -> None:
+        """Test extracting class with complete class names using heuristic.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies that the heuristic for complete class names
+        (Timing, Tcp, Tls, etc.) correctly identifies new items.
+        """
+        text = """Class BaseClass
+Package M2::AUTOSAR
+Base ARElement
+Subclasses TimingConfig, TcpConfig, TlsConfig, TlvConfig, TransformationConfig
+"""
+        classes = _parse_class_text(text)
+
+        assert len(classes) == 1
+        assert classes[0].name == "BaseClass"
+        assert len(classes[0].subclasses) == 5
+        assert "TimingConfig" in classes[0].subclasses
+        assert "TcpConfig" in classes[0].subclasses
+        assert "TlsConfig" in classes[0].subclasses
+        assert "TlvConfig" in classes[0].subclasses
+        assert "TransformationConfig" in classes[0].subclasses
+
+    def test_extract_class_with_multiline_base_classes_comma_delimiter(self) -> None:
+        """Test extracting class with multi-line base classes using comma delimiter rule.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies the comma delimiter rule for multi-line base classes:
+        - Line ends with comma → next line starts NEW item
+        - Line doesn't end with comma → next line is CONTINUATION
+        """
+        text = """Class DerivedClass
+Package M2::AUTOSAR
+Base BaseClass1, BaseClass2, BaseClass3,
+BaseClass4, BaseClass5
+"""
+        classes = _parse_class_text(text)
+
+        assert len(classes) == 1
+        assert classes[0].name == "DerivedClass"
+        assert len(classes[0].bases) == 5
+        assert classes[0].bases == ["BaseClass1", "BaseClass2", "BaseClass3", "BaseClass4", "BaseClass5"]
+
+    def test_extract_class_with_multiline_subclasses_comma_delimiter(self) -> None:
+        """Test extracting class with multi-line subclasses using comma delimiter rule.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        This test verifies the comma delimiter rule for multi-line subclasses.
+        """
+        text = """Class BaseClass
+Package M2::AUTOSAR
+Subclasses DerivedClass1, DerivedClass2, DerivedClass3,
+DerivedClass4, DerivedClass5
+"""
+        classes = _parse_class_text(text)
+
+        assert len(classes) == 1
+        assert classes[0].name == "BaseClass"
+        assert len(classes[0].subclasses) == 5
+        assert classes[0].subclasses == ["DerivedClass1", "DerivedClass2", "DerivedClass3", "DerivedClass4", "DerivedClass5"]
+
+    def test_extract_enumeration_with_empty_literals(self) -> None:
+        """Test extracting enumeration with no literals.
+
+        Requirements:
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+
+        This test verifies that enumerations without literals are correctly parsed.
+        """
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR
+"""
+        enumerations = _parse_enumeration_text(text)
+
+        assert len(enumerations) == 1
+        assert enumerations[0].name == "TestEnum"
+        assert len(enumerations[0].enumeration_literals) == 0
+
+    def test_extract_enumeration_with_multiline_literal_descriptions(self) -> None:
+        """Test extracting enumeration with multi-line literal descriptions.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction
+
+        This test verifies that literal descriptions spanning multiple lines
+        are correctly captured.
+        """
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR
+Literal Description
+LITERAL1 This is a multi-line description for literal 1
+LITERAL2 This is another multi-line description for literal 2
+"""
+        enumerations = _parse_enumeration_text(text)
+
+        assert len(enumerations) == 1
+        assert enumerations[0].name == "TestEnum"
+        assert len(enumerations[0].enumeration_literals) == 2
+        assert enumerations[0].enumeration_literals[0].name == "LITERAL1"
+        assert "multi-line" in enumerations[0].enumeration_literals[0].description
+        assert "description for literal 1" in enumerations[0].enumeration_literals[0].description
+        assert enumerations[0].enumeration_literals[1].name == "LITERAL2"
+        assert "multi-line" in enumerations[0].enumeration_literals[1].description
+        assert "description for literal 2" in enumerations[0].enumeration_literals[1].description
+
+    def test_extract_primitive_with_empty_attributes(self) -> None:
+        """Test extracting primitive with no attributes.
+
+        Requirements:
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+
+        This test verifies that primitives without attributes are correctly parsed.
+        """
+        text = """Primitive TestPrimitive
+Package M2::AUTOSAR
+"""
+        primitives = _parse_primitive_text(text)
+
+        assert len(primitives) == 1
+        assert primitives[0].name == "TestPrimitive"
+        assert len(primitives[0].attributes) == 0
+
 def _parse_all_types(text: str) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
     """Helper function to parse all type definitions (Class, Primitive, Enumeration) from text.
 
@@ -2752,3 +2975,76 @@ class TestAncestryBasedParentSelection:
         assert derived_class is not None
         assert derived_class.parent == "ExistingClass", \
             f"Expected parent to be 'ExistingClass' but got '{derived_class.parent}'"
+
+    def test_parse_complete_text_with_mixed_types(self) -> None:
+        """Test _parse_complete_text with mixed class, primitive, and enumeration types.
+
+        This test verifies that _parse_complete_text correctly parses multiple
+        different type definitions from the complete text.
+        """
+        parser = PdfParser()
+        text = """Class TestClass
+Package M2::AUTOSAR
+Note This is a test class
+
+Enumeration TestEnum
+Package M2::AUTOSAR
+Note This is a test enumeration
+"""
+        models = parser._parse_complete_text(text, "test.pdf")
+        
+        # At least one model should be parsed
+        assert len(models) >= 1
+        assert models[0].name == "TestClass"
+
+    def test_parse_complete_text_with_continuation_parsing(self) -> None:
+        """Test _parse_complete_text with continuation parsing for multi-line definitions.
+
+        This test verifies that _parse_complete_text correctly handles continuation
+        parsing for class definitions with multi-line notes.
+        """
+        parser = PdfParser()
+        text = """Class TestClass
+Package M2::AUTOSAR
+Note This is a test class
+with multiple lines
+that should be captured
+"""
+        models = parser._parse_complete_text(text, "test.pdf")
+        
+        assert len(models) == 1
+        assert models[0].name == "TestClass"
+        assert models[0].note is not None
+
+    def test_build_package_hierarchy_with_nested_packages(self) -> None:
+        """Test _build_package_hierarchy with nested packages.
+
+        This test verifies that _build_package_hierarchy correctly identifies
+        root packages and subpackages.
+        """
+        from autosar_pdf2txt.models import AutosarPackage, AutosarClass
+        
+        # Create nested package structure
+        root_pkg = AutosarPackage(name="RootPackage")
+        sub_pkg1 = AutosarPackage(name="SubPackage1")
+        sub_pkg2 = AutosarPackage(name="SubPackage2")
+        
+        # Add subpackages to root
+        root_pkg.add_subpackage(sub_pkg1)
+        root_pkg.add_subpackage(sub_pkg2)
+        
+        # Add classes to subpackages
+        cls1 = AutosarClass(name="Class1", package="M2::RootPackage::SubPackage1", is_abstract=False)
+        sub_pkg1.add_class(cls1)
+        
+        cls2 = AutosarClass(name="Class2", package="M2::RootPackage::SubPackage2", is_abstract=False)
+        sub_pkg2.add_class(cls2)
+        
+        # Build package hierarchy
+        parser = PdfParser()
+        doc = parser._build_package_hierarchy([cls1, cls2])
+        
+        # Verify root package is identified
+        assert len(doc.packages) == 1
+        assert doc.packages[0].name == "RootPackage"
+        assert len(doc.packages[0].subpackages) == 2

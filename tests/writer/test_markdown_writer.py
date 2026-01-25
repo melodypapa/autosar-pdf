@@ -1541,3 +1541,79 @@ class TestMarkdownWriterFiles:
         lines = [line.strip() for line in children_section.split("\n") if line.strip().startswith("*")]
         expected_order = ["* Alpha", "* Bravo", "* Charlie", "* Delta", "* Zulu"]
         assert lines == expected_order, f"Expected {expected_order}, got {lines}"
+
+    def test_write_class_with_source_and_note(self, tmp_path: Path) -> None:
+        """Test writing a class with source and note sections.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        from autosar_pdf2txt.models.base import AutosarSource
+
+        pkg = AutosarPackage(name="TestPackage")
+        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        cls = AutosarClass(
+            name="TestClass",
+            package="M2::Test",
+            is_abstract=False,
+            source=source,
+            note="This is a test note for the class."
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "TestClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Source section
+        assert "## Source\n\n" in content
+        assert "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42" in content
+
+        # Verify Note section
+        assert "## Note\n\n" in content
+        assert "This is a test note for the class." in content
+
+    def test_write_enumeration_with_source_note_and_literals(self, tmp_path: Path) -> None:
+        """Test writing an enumeration with source, note, and literals.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        from autosar_pdf2txt.models.base import AutosarSource
+
+        pkg = AutosarPackage(name="TestPackage")
+        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        enum = AutosarEnumeration(
+            name="TestEnum",
+            package="M2::Test",
+            source=source,
+            note="This is a test note for the enumeration."
+        )
+        enum.enumeration_literals = [
+            AutosarEnumLiteral(name="LITERAL1", index=0, description="First literal"),
+            AutosarEnumLiteral(name="LITERAL2", index=1, description="Second literal"),
+        ]
+        pkg.add_enumeration(enum)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        enum_file = tmp_path / "TestPackage" / "TestEnum.md"
+        content = enum_file.read_text(encoding="utf-8")
+
+        # Verify Source section
+        assert "## Source\n\n" in content
+        assert "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42" in content
+
+        # Verify Note section
+        assert "## Note\n\n" in content
+        assert "This is a test note for the enumeration." in content
+
+        # Verify Enumeration Literals section
+        assert "## Enumeration Literals\n\n" in content
+        assert "* LITERAL1 (index=0)" in content
+        assert "  * First literal" in content
+        assert "* LITERAL2 (index=1)" in content
+        assert "  * Second literal" in content

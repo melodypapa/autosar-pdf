@@ -479,6 +479,23 @@ The source location shall be:
 
 **Description**: The system shall provide functionality to parse a PDF file and extract AUTOSAR package and class hierarchies from it.
 
+The system shall use a two-phase parsing approach:
+1. **Read Phase**: Extract all text from all pages of the PDF into a single buffer
+   - Use pdfplumber's extract_words() method with x_tolerance=1 to properly handle word spacing
+   - Reconstruct text from words while preserving line breaks based on vertical position
+   - Accumulate all pages' text into a single StringIO buffer
+2. **Parse Phase**: Parse the complete text buffer to extract AUTOSAR model objects
+   - Process all lines sequentially from the complete text buffer
+   - Maintain state management for multi-page definitions via current_models and model_parsers dictionaries
+   - Delegate to appropriate specialized parsers (class, enumeration, primitive) for each type definition
+   - Continue parsing for existing models across page boundaries
+
+This two-phase approach ensures:
+- Complete text is available for analysis before parsing begins
+- Simpler debugging with all text in a single buffer
+- Consistent handling of multi-page definitions through state management
+- Better separation of concerns between reading and parsing phases
+
 ---
 
 #### SWR_PARSER_00004

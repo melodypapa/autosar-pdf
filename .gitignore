@@ -50,6 +50,7 @@ coverage.xml
 .ruff_cache/
 .dmypy.json
 dmypy.json
+scripts/report/coverage.md 
 
 # Virtual environments
 venv/

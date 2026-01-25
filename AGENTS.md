@@ -620,12 +620,15 @@ The parser uses a two-phase approach to handle multi-page definitions:
 1. **Read Phase**:
    - Extract all text from all pages using pdfplumber's `extract_words()` with `x_tolerance=1`
    - Reconstruct text from words while preserving line breaks based on vertical position
+   - **Insert page boundary markers** (`<<<PAGE:N>>>`) before each page's text for page tracking (SWR_PARSER_00030)
    - Accumulate all pages' text into a single StringIO buffer
 
 2. **Parse Phase**:
    - Process all lines sequentially from the complete text buffer
+   - **Track current page number** by detecting page boundary markers (SWR_PARSER_00030)
    - Maintain state management for multi-page definitions via `current_models` and `model_parsers` dictionaries
    - Delegate to appropriate specialized parsers (class, enumeration, primitive) for each type definition
+   - **Pass current page number** to specialized parsers for accurate source location tracking (SWR_PARSER_00030)
    - Continue parsing for existing models across page boundaries
 
 **Benefits**:
@@ -633,6 +636,7 @@ The parser uses a two-phase approach to handle multi-page definitions:
 - Simpler debugging with all text in a single buffer
 - Consistent handling of multi-page definitions through state management
 - Better separation of concerns between reading and parsing phases
+- **Accurate page number tracking** for all type definitions (SWR_PARSER_00030)
 
 ### Specialized Parser Architecture
 

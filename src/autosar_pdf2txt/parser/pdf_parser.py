@@ -16,6 +16,7 @@ Requirements:
 """
 
 import logging
+import re
 import warnings
 from io import StringIO
 from pathlib import Path
@@ -226,7 +227,9 @@ class PdfParser:
             try:
                 with pdfplumber.open(pdf_path) as pdf:
                     # Phase 1: Extract all text from all pages into a single buffer
+                    # SWR_PARSER_00030: Track line-to-page mapping for accurate page number tracking
                     text_buffer = StringIO()
+                    line_to_page: List[int] = []  # Maps line index to page number
                     
                     for page_num, page in enumerate(pdf.pages, start=1):
                         # Use extract_words() with x_tolerance=1 to properly extract words with spaces
@@ -237,6 +240,7 @@ class PdfParser:
                             # Reconstruct text from words, preserving line breaks
                             # Group words by their vertical position (top coordinate)
                             current_y = None
+                            line_start = text_buffer.tell()
                             for word in words:
                                 text = word['text']
                                 top = word['top']
@@ -244,12 +248,15 @@ class PdfParser:
                                 # Check if we've moved to a new line
                                 if current_y is not None and abs(top - current_y) > 5:
                                     text_buffer.write("\n")
+                                    # Record the page number for this line
+                                    line_to_page.append(page_num)
 
                                 text_buffer.write(text + " ")
                                 current_y = top
 
                             # Add newline after each page
                             text_buffer.write("\n")
+                            line_to_page.append(page_num)
 
                     # Phase 2: Parse the complete text at once
                     complete_text = text_buffer.getvalue()
@@ -263,6 +270,7 @@ class PdfParser:
                         pdf_filename=pdf_filename,
                         current_models=current_models,
                         model_parsers=model_parsers,
+                        line_to_page=line_to_page,
                     )
 
             except Exception as e:
@@ -276,6 +284,7 @@ class PdfParser:
         pdf_filename: Optional[str] = None,
         current_models: Optional[Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]] = None,
         model_parsers: Optional[Dict[int, str]] = None,
+        line_to_page: Optional[List[int]] = None,
     ) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
         """Parse model definitions from complete PDF text.
 
@@ -294,12 +303,14 @@ class PdfParser:
             SWR_PARSER_00016: Enumeration Literal Section Termination
             SWR_MODEL_00027: AUTOSAR Source Location Representation
             SWR_PARSER_00022: PDF Source Location Extraction
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
 
         Args:
             text: The complete extracted text from the entire PDF.
             pdf_filename: Optional PDF filename for source tracking.
             current_models: Dictionary of current models being parsed (for multi-page support).
             model_parsers: Dictionary mapping model indices to parser types.
+            line_to_page: Optional list mapping line indices to page numbers.
 
         Returns:
             List of model objects parsed from the PDF.
@@ -308,6 +319,8 @@ class PdfParser:
             current_models = {}
         if model_parsers is None:
             model_parsers = {}
+        if line_to_page is None:
+            line_to_page = []
 
         # Extract AUTOSAR standard and release from text
         autosar_standard, standard_release = self._extract_autosar_metadata(text)
@@ -315,14 +328,23 @@ class PdfParser:
         models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = []
         lines = text.split("\n")
 
+        # SWR_PARSER_00030: Track current page number during parsing
+        # Use line_to_page mapping if available, otherwise default to page 1
+        current_page = 1
+
         i = 0
         new_model: Optional[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = None
         while i < len(lines):
             line = lines[i].strip()
 
+            # SWR_PARSER_00030: Skip empty lines
             if not line:
                 i += 1
                 continue
+
+            # SWR_PARSER_00030: Update current page from line_to_page mapping
+            if i < len(line_to_page):
+                current_page = line_to_page[i]
 
             # Try to match type definition patterns
             class_match = self._class_parser.CLASS_PATTERN.match(line)
@@ -331,20 +353,24 @@ class PdfParser:
 
             if class_match or primitive_match or enumeration_match:
                 # This is a new type definition
-                # Delegate to appropriate parser
+                # Reset parser state before parsing new type
+                # SWR_PARSER_00030: Ensure clean state for each new type definition
                 if class_match:
+                    self._class_parser._reset_state()
                     new_model = self._class_parser.parse_definition(
-                        lines, i, pdf_filename, None, autosar_standard, standard_release
+                        lines, i, pdf_filename, current_page, autosar_standard, standard_release
                     )
                     parser_type = "class"
                 elif primitive_match:
+                    self._primitive_parser._reset_state()
                     new_model = self._primitive_parser.parse_definition(
-                        lines, i, pdf_filename, None, autosar_standard, standard_release
+                        lines, i, pdf_filename, current_page, autosar_standard, standard_release
                     )
                     parser_type = "primitive"
                 else:  # enumeration_match
+                    self._enum_parser._reset_state()
                     new_model = self._enum_parser.parse_definition(
-                        lines, i, pdf_filename, None, autosar_standard, standard_release
+                        lines, i, pdf_filename, current_page, autosar_standard, standard_release
                     )
                     parser_type = "enumeration"
 
@@ -379,8 +405,7 @@ class PdfParser:
                             if model_index in current_models:
                                 del current_models[model_index]
                                 del model_parsers[model_index]
-                            # Advance past the line that caused completion
-                            i += 1
+                            # Don't increment i - continue_parsing already returned the correct line index
                             break
                     continue
 
@@ -412,6 +437,9 @@ class PdfParser:
                         i += 1
                     else:
                         # Model still being parsed, don't advance i
+                        # But increment i to avoid infinite loop
+                        # The parser will try again on the next line
+                        i += 1
                         break
             else:
                 i += 1

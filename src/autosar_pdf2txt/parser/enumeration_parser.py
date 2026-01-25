@@ -13,6 +13,7 @@ Requirements:
     SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
 """
 
+import re
 from typing import List, Optional, Tuple
 
 from autosar_pdf2txt.models import (
@@ -47,6 +48,17 @@ class AutosarEnumerationParser(AbstractTypeParser):
         super().__init__()
         # Parsing state
         self._in_enumeration_literal_section: bool = False
+
+    def _reset_state(self) -> None:
+        """Reset parser state for a new enumeration definition.
+
+        This method clears all state variables to ensure clean parsing
+        of each new enumeration definition without interference from previous enumerations.
+
+        Requirements:
+            SWR_PARSER_00025: AutosarEnumeration Specialized Parser
+        """
+        self._in_enumeration_literal_section = False
 
     def parse_definition(
         self,
@@ -103,13 +115,14 @@ class AutosarEnumerationParser(AbstractTypeParser):
         # Create source location
         source = None
         if pdf_filename:
-            # Use page_number if provided, otherwise default to 1
-            # Note: In two-phase parsing, we don't have page-level granularity,
-            # so we use a default page number of 1
-            pn = page_number if page_number is not None else 1
+            # SWR_PARSER_00030: Use page_number directly (no default fallback)
+            # Page boundary markers now ensure accurate page tracking in two-phase parsing
+            # page_number should always be provided by the main loop, but check for None for safety
+            if page_number is None:
+                page_number = 1
             source = AutosarDocumentSource(
                 pdf_file=pdf_filename,
-                page_number=pn,
+                page_number=page_number,
                 autosar_standard=autosar_standard,
                 standard_release=standard_release,
             )

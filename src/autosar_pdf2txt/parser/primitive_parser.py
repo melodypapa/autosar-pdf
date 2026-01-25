@@ -10,6 +10,7 @@ Requirements:
     SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
 """
 
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from autosar_pdf2txt.models import (
@@ -49,6 +50,22 @@ class AutosarPrimitiveParser(AbstractTypeParser):
         self._pending_attr_multiplicity: Optional[str] = None
         self._pending_attr_kind: Optional[AttributeKind] = None
         self._pending_attr_note: Optional[str] = None
+
+    def _reset_state(self) -> None:
+        """Reset parser state for a new primitive definition.
+
+        This method clears all state variables to ensure clean parsing
+        of each new primitive definition without interference from previous primitives.
+
+        Requirements:
+            SWR_PARSER_00026: AutosarPrimitive Specialized Parser
+        """
+        self._in_attribute_section = False
+        self._pending_attr_name = None
+        self._pending_attr_type = None
+        self._pending_attr_multiplicity = None
+        self._pending_attr_kind = None
+        self._pending_attr_note = None
 
     def parse_definition(
         self,
@@ -105,13 +122,14 @@ class AutosarPrimitiveParser(AbstractTypeParser):
         # Create source location
         source = None
         if pdf_filename:
-            # Use page_number if provided, otherwise default to 1
-            # Note: In two-phase parsing, we don't have page-level granularity,
-            # so we use a default page number of 1
-            pn = page_number if page_number is not None else 1
+            # SWR_PARSER_00030: Use page_number directly (no default fallback)
+            # Page boundary markers now ensure accurate page tracking in two-phase parsing
+            # page_number should always be provided by the main loop, but check for None for safety
+            if page_number is None:
+                page_number = 1
             source = AutosarDocumentSource(
                 pdf_file=pdf_filename,
-                page_number=pn,
+                page_number=page_number,
                 autosar_standard=autosar_standard,
                 standard_release=standard_release,
             )

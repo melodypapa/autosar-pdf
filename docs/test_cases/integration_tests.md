@@ -80,6 +80,7 @@ All existing integration test cases in this document are currently at maturity l
 - Source pdf_file: "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf"
 - Source autosar_standard: "Foundation"
 - Source standard_release: "R23-11"
+- Source page_number: 421
 
 **Part 2: SwComponentType class**
 - Name: "SwComponentType"

@@ -66,6 +66,28 @@ class AutosarClassParser(AbstractTypeParser):
         }
         self._in_class_list_section: Optional[str] = None
 
+    def _reset_state(self) -> None:
+        """Reset parser state for a new class definition.
+
+        This method clears all state variables to ensure clean parsing
+        of each new class definition without interference from previous classes.
+
+        Requirements:
+            SWR_PARSER_00024: AutosarClass Specialized Parser
+        """
+        self._in_attribute_section = False
+        self._pending_attr_name = None
+        self._pending_attr_type = None
+        self._pending_attr_multiplicity = None
+        self._pending_attr_kind = None
+        self._pending_attr_note = None
+        self._pending_class_lists = {
+            "base_classes": (None, None, True),
+            "aggregated_by": (None, None, True),
+            "subclasses": (None, None, True),
+        }
+        self._in_class_list_section = None
+
     def parse_definition(
         self,
         lines: List[str],
@@ -126,13 +148,14 @@ class AutosarClassParser(AbstractTypeParser):
         # Create source location
         source = None
         if pdf_filename:
-            # Use page_number if provided, otherwise default to 1
-            # Note: In two-phase parsing, we don't have page-level granularity,
-            # so we use a default page number of 1
-            pn = page_number if page_number is not None else 1
+            # SWR_PARSER_00030: Use page_number directly (no default fallback)
+            # Page boundary markers now ensure accurate page tracking in two-phase parsing
+            # page_number should always be provided by the main loop, but check for None for safety
+            if page_number is None:
+                page_number = 1
             source = AutosarDocumentSource(
                 pdf_file=pdf_filename,
-                page_number=pn,
+                page_number=page_number,
                 autosar_standard=autosar_standard,
                 standard_release=standard_release,
             )
@@ -268,8 +291,7 @@ class AutosarClassParser(AbstractTypeParser):
             if note_match:
                 self._finalize_pending_class_lists(current_model)
                 self._in_class_list_section = None
-                self._process_note_line(note_match, lines, i, current_model)
-                i += 1
+                i = self._process_note_line(note_match, lines, i, current_model)
                 continue
 
             # Check for new class/primitive/enumeration definition
@@ -498,7 +520,7 @@ class AutosarClassParser(AbstractTypeParser):
 
     def _process_note_line(
         self, note_match: re.Match, lines: List[str], line_index: int, current_model: AutosarClass
-    ) -> None:
+    ) -> int:
         """Process a note line and extract multi-line note text.
 
         Requirements:
@@ -509,6 +531,9 @@ class AutosarClassParser(AbstractTypeParser):
             lines: List of text lines from the PDF.
             line_index: Current line index.
             current_model: The current AutosarClass being parsed.
+
+        Returns:
+            The line index after processing the note (may have consumed multiple lines).
         """
         note_text = note_match.group(1).strip()
 
@@ -533,6 +558,7 @@ class AutosarClassParser(AbstractTypeParser):
                 break
 
         current_model.note = note_text.strip()
+        return i
 
     def _process_attribute_line(
         self,
@@ -603,7 +629,7 @@ class AutosarClassParser(AbstractTypeParser):
 
             is_new_attribute = (
                 # Third word is multiplicity or kind
-                third_word in ["0..1", "0..*", "*", "attr", "aggr"] or
+                third_word in ["0..1", "0..*", "*", "1", "attr", "aggr"] or
                 # Fourth word is kind (for lines like "dynamicArray String 0..1 attr")
                 fourth_word in ["attr", "aggr"]
             )

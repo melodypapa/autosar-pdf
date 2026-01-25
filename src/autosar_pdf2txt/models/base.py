@@ -11,7 +11,7 @@ from typing import Optional
 
 
 @dataclass(frozen=True)
-class AutosarSource:
+class AutosarDocumentSource:
     """Represents a source location for an AUTOSAR type.
 
     Requirements:
@@ -27,12 +27,12 @@ class AutosarSource:
         standard_release: Optional AUTOSAR standard release (e.g., "R21-11").
 
     Examples:
-        >>> source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        >>> source = AutosarDocumentSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
         >>> source.pdf_file
         'AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf'
         >>> source.page_number
         42
-        >>> source_with_standard = AutosarSource(
+        >>> source_with_standard = AutosarDocumentSource(
         ...     "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
         ...     42,
         ...     autosar_standard="TPS_BSWModuleDescriptionTemplate",
@@ -87,14 +87,14 @@ class AbstractAutosarBase(ABC):
     name: str
     package: str
     note: Optional[str]
-    source: Optional[AutosarSource]
+    source: Optional[AutosarDocumentSource]
 
     def __init__(
         self,
         name: str,
         package: str,
         note: Optional[str] = None,
-        source: Optional[AutosarSource] = None,
+        source: Optional[AutosarDocumentSource] = None,
     ) -> None:
         """Initialize the abstract base class.
 

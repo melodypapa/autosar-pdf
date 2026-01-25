@@ -85,6 +85,9 @@ class TestPdfIntegration:
             f"Expected autosar_standard 'Foundation', got '{autosar_class.source.autosar_standard}'"
         assert autosar_class.source.standard_release == "R23-11", \
             f"Expected standard_release 'R23-11', got '{autosar_class.source.standard_release}'"
+        # SWR_PARSER_00030: Verify page number is tracked correctly
+        assert autosar_class.source.page_number == 421, \
+            f"Expected page_number 421, got {autosar_class.source.page_number}"
 
         # Print AUTOSAR class information for verification
         print("\n=== AUTOSAR class verified ===")

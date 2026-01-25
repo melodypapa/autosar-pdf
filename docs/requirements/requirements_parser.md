@@ -815,3 +815,63 @@ Error: "Class 'ClassB' is listed as a subclass of 'ClassA' but is an ancestor (i
 - Use the class registry for O(1) class lookup by name
 - Raise `ValueError` with descriptive messages for each type of contradiction
 - Validate all classes to ensure complete consistency across the model
+
+---
+
+### SWR_PARSER_00030
+**Title**: Page Number Tracking in Two-Phase Parsing
+
+**Maturity**: accept
+
+**Description**: The two-phase parsing architecture shall preserve page number information for all type definitions (classes, enumerations, primitives) to enable accurate source location tracking.
+
+The system shall:
+1. **Read Phase**: Insert special page boundary markers into the text buffer before each page's content
+   - Use marker format: `<<<PAGE:N>>>` where N is the 1-indexed page number
+   - Insert marker before extracting text from each page
+   - Ensure markers are unique and don't conflict with PDF content
+
+2. **Parse Phase**: Track current page number while processing the text buffer
+   - Initialize `current_page` to 1 (default)
+   - Detect page boundary markers and update `current_page` accordingly
+   - Skip page marker lines during type definition parsing
+   - Pass `current_page` to specialized parsers for all type definitions
+
+3. **Specialized Parsers**: Use the actual page number passed from parse phase
+   - Remove default `page_number=1` fallback
+   - Use the `page_number` parameter directly when creating `AutosarDocumentSource`
+   - Ensure all types get their correct page number from the PDF
+
+**Rationale**:
+- The two-phase parsing approach reads all PDF pages into a single text buffer
+- Without page boundary tracking, all types would be assigned `page_number=1`
+- Accurate page numbers enable users to locate type definitions in the original PDF
+- Page boundary markers provide a simple way to track page transitions without complex state management
+
+**Implementation**:
+- In `_extract_with_pdfplumber()`: Insert `text_buffer.write(f"<<<PAGE:{page_num}>>>\n")` before each page's text
+- In `_parse_complete_text()`: Add `current_page = 1` variable and check for `<<<PAGE:N>>>` pattern
+- In specialized parsers: Remove `pn = page_number if page_number is not None else 1` and use `page_number` directly
+
+**Example**:
+```
+Read Phase Output:
+<<<PAGE:1>>>
+Package M2::AUTOSAR
+Class ARObject
+<<<PAGE:2>>>
+Class Identifiable
+Base ARObject
+
+Parse Phase Processing:
+- Line "<<<PAGE:1>>>": Set current_page = 1
+- Line "Package M2::AUTOSAR": Parse with current_page = 1
+- Line "Class ARObject": Parse with current_page = 1
+- Line "<<<PAGE:2>>>": Set current_page = 2
+- Line "Class Identifiable": Parse with current_page = 2
+- Line "Base ARObject": Parse with current_page = 2
+
+Result:
+- ARObject.source.page_number = 1
+- Identifiable.source.page_number = 2
+```

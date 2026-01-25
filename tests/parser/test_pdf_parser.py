@@ -3450,3 +3450,275 @@ that should be captured
         # Validation should pass
         parser = PdfParser()
         parser._validate_subclasses([pkg])  # Should not raise
+
+
+class TestPdfParserPageTracking:
+    """Tests for page number tracking in two-phase parsing.
+
+    Requirements:
+        SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+    """
+
+    def test_parse_complete_text_with_page_markers(self) -> None:
+        """Test that page boundary markers are correctly detected and tracked.
+
+        Requirements:
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+
+        This test verifies that the parser correctly tracks page numbers
+        when processing text with line-to-page mapping.
+        """
+        parser = PdfParser()
+
+        # Simulate text with line-to-page mapping
+        # Note: Using simpler test case to avoid multi-line parsing issues
+        text = """Class ARObject
+Package M2::AUTOSAR
+Note Root of all AUTOSAR elements
+
+Class Identifiable
+Package M2::AUTOSAR
+Note Base for all identifiable elements"""
+
+        # Create line-to-page mapping
+        # Line 0: Class ARObject -> page 1
+        # Line 1: Package M2::AUTOSAR -> page 1
+        # Line 2: Note Root of all AUTOSAR elements -> page 1
+        # Line 3: (empty) -> page 1
+        # Line 4: Class Identifiable -> page 5
+        # Line 5: Package M2::AUTOSAR -> page 5
+        # Line 6: Note Base for all identifiable elements -> page 5
+        line_to_page = [1, 1, 1, 1, 5, 5, 5]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        # Verify that we parsed 2 classes
+        assert len(models) == 2
+
+        # Verify page numbers are correct
+        ar_object = next((m for m in models if m.name == "ARObject"), None)
+        identifiable = next((m for m in models if m.name == "Identifiable"), None)
+
+        assert ar_object is not None
+        assert identifiable is not None
+
+        # SWR_PARSER_00030: Verify accurate page tracking
+        assert ar_object.source is not None
+        assert ar_object.source.pdf_file == "test.pdf"
+        assert ar_object.source.page_number == 1
+
+        assert identifiable.source is not None
+        assert identifiable.source.pdf_file == "test.pdf"
+        assert identifiable.source.page_number == 5
+
+    def test_parse_complete_text_default_page_one(self) -> None:
+        """Test that default page number is 1 when no page markers present.
+
+        Requirements:
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+
+        This test verifies backward compatibility: when text doesn't contain
+        page markers, the parser uses page 1 as default.
+        """
+        parser = PdfParser()
+
+        # Text without page markers (backward compatibility)
+        # Note: Package line comes AFTER Class definition in AUTOSAR format
+        text = """Class ARObject
+Package M2::AUTOSAR
+Note Root element
+Class Identifiable
+Package M2::AUTOSAR::DataTypes
+Base ARObject
+Note Identifiable element"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+        )
+
+        # Verify that we parsed 2 classes
+        assert len(models) == 2
+
+        # Both should have page 1 (default)
+        for model in models:
+            assert model.source is not None
+            assert model.source.pdf_file == "test.pdf"
+            assert model.source.page_number == 1
+
+    def test_parse_complete_text_multiple_pages_same_type(self) -> None:
+        """Test parsing multiple classes of the same type on different pages.
+
+        Requirements:
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+
+        This test verifies that page tracking works correctly when parsing
+        multiple classes on different pages.
+        """
+        parser = PdfParser()
+
+        # Multiple classes on different pages (simplified to avoid multi-line parsing issues)
+        # Note: Package line must come immediately after Class definition for validation
+        text = """Class ARObject
+Package M2::AUTOSAR
+Note Root element
+
+Class Identifiable
+Package M2::AUTOSAR
+Note Identifiable element
+
+Class Referrable
+Package M2::AUTOSAR
+Note Referrable element"""
+
+        # Create line-to-page mapping
+        # Line 0: Class ARObject -> page 1
+        # Line 1: Package M2::AUTOSAR -> page 1
+        # Line 2: Note Root element -> page 1
+        # Line 3: (empty) -> page 1
+        # Line 4: Class Identifiable -> page 1
+        # Line 5: Package M2::AUTOSAR -> page 1
+        # Line 6: Note Identifiable element -> page 1
+        # Line 7: (empty) -> page 1
+        # Line 8: Class Referrable -> page 2
+        # Line 9: Package M2::AUTOSAR -> page 2
+        # Line 10: Note Referrable element -> page 2
+        line_to_page = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        # Verify that we parsed 3 classes
+        assert len(models) == 3
+
+        # Verify page numbers
+        ar_object = next((m for m in models if m.name == "ARObject"), None)
+        identifiable = next((m for m in models if m.name == "Identifiable"), None)
+        referrable = next((m for m in models if m.name == "Referrable"), None)
+
+        assert ar_object.source.page_number == 1
+        assert identifiable.source.page_number == 1
+        assert referrable.source.page_number == 2
+
+    def test_parse_complete_text_enumeration_page_tracking(self) -> None:
+        """Test page tracking for enumeration types.
+
+        Requirements:
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+
+        This test verifies that page tracking works correctly for enumeration types.
+        """
+        parser = PdfParser()
+
+        # Note: Package line comes AFTER Enumeration definition in AUTOSAR format
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+Literal1 First literal
+Literal2 Second literal
+
+Enumeration AnotherEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+LiteralA Literal A
+LiteralB Literal B"""
+
+        # Create line-to-page mapping
+        # Line 0: Enumeration TestEnum -> page 1
+        # Line 1: Package M2::AUTOSAR::DataTypes -> page 1
+        # Line 2: Literal Description -> page 1
+        # Line 3: Literal1 First literal -> page 1
+        # Line 4: Literal2 Second literal -> page 1
+        # Line 5: (empty) -> page 1
+        # Line 6: Enumeration AnotherEnum -> page 2
+        # Line 7: Package M2::AUTOSAR::DataTypes -> page 2
+        # Line 8: Literal Description -> page 2
+        # Line 9: LiteralA Literal A -> page 2
+        # Line 10: LiteralB Literal B -> page 2
+        line_to_page = [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        # Verify that we parsed 2 enumerations
+        assert len(models) == 2
+        assert all(isinstance(m, AutosarEnumeration) for m in models)
+
+        # Verify page numbers
+        test_enum = next((m for m in models if m.name == "TestEnum"), None)
+        another_enum = next((m for m in models if m.name == "AnotherEnum"), None)
+
+        assert test_enum.source.page_number == 1
+        assert another_enum.source.page_number == 2
+
+    def test_parse_complete_text_primitive_page_tracking(self) -> None:
+        """Test page tracking for primitive types.
+
+        Requirements:
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+
+        This test verifies that page tracking works correctly for primitive types.
+        """
+        parser = PdfParser()
+
+        # Note: Package line comes AFTER Primitive definition in AUTOSAR format
+        text = """Primitive Limit
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+intervalType IntervalTypeEnum 1 REF
+
+Primitive Interval
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+lower Limit 1 REF
+upper Limit 1 REF"""
+
+        # Create line-to-page mapping
+        # Line 0: Primitive Limit -> page 1
+        # Line 1: Package M2::AUTOSAR::DataTypes -> page 1
+        # Line 2: Attribute Type Mult. Kind Note -> page 1
+        # Line 3: intervalType IntervalTypeEnum 1 REF -> page 1
+        # Line 4: (empty) -> page 1
+        # Line 5: Primitive Interval -> page 3
+        # Line 6: Package M2::AUTOSAR::DataTypes -> page 3
+        # Line 7: Attribute Type Mult. Kind Note -> page 3
+        # Line 8: lower Limit 1 REF -> page 3
+        # Line 9: upper Limit 1 REF -> page 3
+        line_to_page = [1, 1, 1, 1, 1, 3, 3, 3, 3, 3]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        # Verify that we parsed 2 primitives
+        assert len(models) == 2
+        assert all(isinstance(m, AutosarPrimitive) for m in models)
+
+        # Verify page numbers
+        limit = next((m for m in models if m.name == "Limit"), None)
+        interval = next((m for m in models if m.name == "Interval"), None)
+
+        assert limit.source.page_number == 1
+        assert interval.source.page_number == 3

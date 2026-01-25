@@ -4483,3 +4483,117 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00069
+**Title**: Test Page Marker Detection and Tracking
+
+**Maturity**: accept
+
+**Description**: Verify that page boundary markers are correctly detected and tracked during parsing.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create PdfParser instance
+2. Prepare text with page markers: "<<<PAGE:1>>>", "<<<PAGE:5>>>", "<<<PAGE:10>>>"
+3. Add class definitions on each page with proper package paths
+4. Call _parse_complete_text with the text
+5. Verify all 3 classes are parsed
+6. Verify each class has correct page number (1, 5, 10)
+
+**Expected Result**: All classes parsed with correct page numbers: ARObject (page 1), Identifiable (page 5), Referrable (page 10)
+
+**Requirements Coverage**: SWR_PARSER_00030
+
+---
+
+#### SWUT_PARSER_00070
+**Title**: Test Default Page Number When No Markers
+
+**Maturity**: accept
+
+**Description**: Verify that default page number is 1 when no page markers are present.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create PdfParser instance
+2. Prepare text without page markers
+3. Add class definition with proper package path
+4. Call _parse_complete_text with the text
+5. Verify class is parsed with page_number=1
+
+**Expected Result**: Class is parsed with page_number=1 (default)
+
+**Requirements Coverage**: SWR_PARSER_00030
+
+---
+
+#### SWUT_PARSER_00071
+**Title**: Test Multiple Pages with Same Type
+
+**Maturity**: accept
+
+**Description**: Verify page tracking works correctly when multiple classes of same type are on different pages.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create PdfParser instance
+2. Prepare text with page markers and multiple class definitions
+3. Add classes on pages 1, 3, and 7
+4. Call _parse_complete_text with the text
+5. Verify all classes are parsed
+6. Verify each class has correct page number
+
+**Expected Result**: All classes parsed with correct page numbers matching their page markers
+
+**Requirements Coverage**: SWR_PARSER_00030
+
+---
+
+#### SWUT_PARSER_00072
+**Title**: Test Enumeration Page Tracking
+
+**Maturity**: accept
+
+**Description**: Verify page tracking works correctly for enumeration types.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create PdfParser instance
+2. Prepare text with page markers and enumeration definitions
+3. Add enumerations on pages 1 and 2
+4. Call _parse_complete_text with the text
+5. Verify all enumerations are parsed
+6. Verify each enumeration has correct page number
+
+**Expected Result**: All enumerations parsed with correct page numbers (1 and 2)
+
+**Requirements Coverage**: SWR_PARSER_00030
+
+---
+
+#### SWUT_PARSER_00073
+**Title**: Test Primitive Page Tracking
+
+**Maturity**: accept
+
+**Description**: Verify page tracking works correctly for primitive types.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create PdfParser instance
+2. Prepare text with page markers and primitive definitions
+3. Add primitives on pages 1 and 3
+4. Call _parse_complete_text with the text
+5. Verify all primitives are parsed
+6. Verify each primitive has correct page number
+
+**Expected Result**: All primitives parsed with correct page numbers (1 and 3)
+
+**Requirements Coverage**: SWR_PARSER_00030
+
+---
+

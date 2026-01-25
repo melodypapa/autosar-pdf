@@ -486,6 +486,7 @@ class PdfParser:
         Requirements:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
             SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
+            SWR_PARSER_00029: Subclasses Contradiction Validation
 
         Args:
             packages: List of packages to process.
@@ -509,6 +510,9 @@ class PdfParser:
 
         # Populate children lists
         self._populate_children_lists(packages)
+
+        # Validate subclasses contradictions (SWR_PARSER_00029)
+        self._validate_subclasses(packages)
 
         return root_classes
 
@@ -688,3 +692,81 @@ class PdfParser:
             if cls is not None:
                 return cls
         return None
+
+    def _validate_subclasses(self, packages: List[AutosarPackage]) -> None:
+        """Validate that subclasses attribute does not contain contradictions.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This method validates that the `subclasses` attribute of each class
+        does not contain any contradictions with the inheritance hierarchy
+        defined by the `bases` and `parent` attributes.
+
+        Validation Rules:
+        - A subclass MUST have the parent class in its `bases` list
+        - A subclass CANNOT be in the parent class's `bases` list (circular relationship)
+        - A subclass CANNOT be in the parent class's parent's `bases` list (would be an ancestor)
+        - A subclass CANNOT be the parent class itself
+
+        Note: Missing subclasses are logged as warnings (not errors) to handle
+        incomplete PDF specifications gracefully, similar to how missing base
+        classes are handled in parent resolution.
+
+        Args:
+            packages: List of all packages to validate.
+        """
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass) and typ.subclasses:
+                    for subclass_name in typ.subclasses:
+                        # Rule 1: Subclass must exist in the model
+                        subclass = self._find_class_in_all_packages(subclass_name, packages)
+                        if subclass is None:
+                            logger.warning(
+                                "Class '%s' is listed as a subclass of '%s' but does not exist in the model",
+                                subclass_name,
+                                typ.name,
+                            )
+                            continue
+
+                        # Rule 2: Subclass must have this class in its bases list
+                        if typ.name not in subclass.bases:
+                            logger.warning(
+                                "Class '%s' is listed as a subclass of '%s' but does not inherit from it (bases: %s)",
+                                subclass_name,
+                                typ.name,
+                                subclass.bases,
+                            )
+                            continue
+
+                        # Rule 3: Subclass cannot be in this class's bases list (circular)
+                        if subclass_name in typ.bases:
+                            logger.warning(
+                                "Circular inheritance detected: '%s' is both a subclass and a base of '%s'",
+                                subclass_name,
+                                typ.name,
+                            )
+                            continue
+
+                        # Rule 4: Subclass cannot be in this class's parent's bases list (ancestor)
+                        if typ.parent:
+                            parent_class = self._find_class_in_all_packages(typ.parent, packages)
+                            if parent_class and subclass_name in parent_class.bases:
+                                logger.warning(
+                                    "Class '%s' is listed as a subclass of '%s' but is an ancestor (in bases of parent '%s')",
+                                    subclass_name,
+                                    typ.name,
+                                    typ.parent,
+                                )
+                                continue
+
+                        # Rule 5: Subclass cannot be the parent class itself
+                        if typ.parent and subclass_name == typ.parent:
+                            logger.warning(
+                                "Class '%s' is listed as a subclass of '%s' but is the parent of '%s'",
+                                subclass_name,
+                                typ.name,
+                                typ.name,
+                            )
+                            continue

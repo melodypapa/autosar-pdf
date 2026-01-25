@@ -4313,6 +4313,118 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00064
+**Title**: Test Subclasses Validation Valid Relationship
+
+**Maturity**: accept
+
+**Description**: Verify that validation passes when subclass correctly inherits from parent class.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create AutosarPackage with two classes: ClassA and ClassB
+2. Set ClassB.bases = ["ClassA"]
+3. Set ClassB.parent = "ClassA"
+4. Set ClassA.subclasses = ["ClassB"]
+5. Call _validate_subclasses([package])
+6. Verify no warning is logged
+
+**Expected Result**: Validation passes without warnings
+
+**Requirements Coverage**: SWR_PARSER_00029
+
+---
+
+#### SWUT_PARSER_00065
+**Title**: Test Subclasses Validation Missing Subclass
+
+**Maturity**: accept
+
+**Description**: Verify that validation logs warning when listed subclass doesn't exist in model.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create AutosarPackage with ClassA
+2. Set ClassA.subclasses = ["NonExistentClass"]
+3. Call _validate_subclasses([package])
+4. Verify warning is logged about missing subclass
+
+**Expected Result**: Warning is logged: "Class 'NonExistentClass' is listed as a subclass of 'ClassA' but does not exist in the model"
+
+**Requirements Coverage**: SWR_PARSER_00029
+
+---
+
+#### SWUT_PARSER_00066
+**Title**: Test Subclasses Validation Not Inheriting
+
+**Maturity**: accept
+
+**Description**: Verify that validation logs warning when subclass doesn't have parent in its bases list.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create AutosarPackage with ClassA and ClassB
+2. Set ClassB.bases = ["ClassC"] (not ClassA)
+3. Set ClassA.subclasses = ["ClassB"]
+4. Call _validate_subclasses([package])
+5. Verify warning is logged about subclass not inheriting
+
+**Expected Result**: Warning is logged: "Class 'ClassB' is listed as a subclass of 'ClassA' but does not inherit from it"
+
+**Requirements Coverage**: SWR_PARSER_00029
+
+---
+
+#### SWUT_PARSER_00067
+**Title**: Test Subclasses Validation Circular Relationship
+
+**Maturity**: accept
+
+**Description**: Verify that validation logs warning when circular inheritance is detected.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create AutosarPackage with ClassA and ClassB
+2. Set ClassA.bases = ["ClassB"]
+3. Set ClassB.bases = ["ClassA"]
+4. Set ClassA.subclasses = ["ClassB"]
+5. Call _validate_subclasses([package])
+6. Verify warning is logged about circular inheritance
+
+**Expected Result**: Warning is logged: "Circular inheritance detected: 'ClassB' is both a subclass and a base of 'ClassA'"
+
+**Requirements Coverage**: SWR_PARSER_00029
+
+---
+
+#### SWUT_PARSER_00068
+**Title**: Test Subclasses Validation Ancestor as Subclass
+
+**Maturity**: accept
+
+**Description**: Verify that validation logs warning when ancestor is listed as subclass.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create AutosarPackage with ClassA, ClassB, and ClassC
+2. Set ClassC.bases = ["ClassA"], ClassC.parent = "ClassA"
+3. Set ClassB.bases = ["ClassC"], ClassB.parent = "ClassC"
+4. Set ClassA.subclasses = ["ClassC"] (invalid - ClassC is ancestor of ClassA via ClassB)
+5. Call _validate_subclasses([package])
+6. Verify warning is logged about ancestor as subclass
+
+**Expected Result**: Warning is logged: "Class 'ClassC' is listed as a subclass of 'ClassA' but is an ancestor (in bases of parent 'ClassC')"
+
+**Requirements Coverage**: SWR_PARSER_00029
+
+---
+
 ### 7. Extract Tables CLI Tests
 
 #### SWUT_CLI_00013
@@ -4808,4 +4920,105 @@ All existing test cases in this document are currently at maturity level **accep
 **Expected Result**: PDFMiner warnings are suppressed
 
 **Requirements Coverage**: SWR_CLI_00013
+
+---
+
+#### SWUT_CLI_00037
+**Title**: Test CLI Log File Argument Creates Handler
+
+**Maturity**: accept
+
+**Description**: Verify that CLI creates a file handler when --log-file is specified.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI: "test.pdf --log-file test.log"
+2. Verify logging.FileHandler is called with the specified log file path
+3. Verify the file handler is added to the root logger
+
+**Expected Result**: File handler is created and added to root logger
+
+**Requirements Coverage**: SWR_CLI_00014
+
+---
+
+#### SWUT_CLI_00038
+**Title**: Test CLI Log File Creates Parent Directories
+
+**Maturity**: accept
+
+**Description**: Verify that CLI creates parent directories for log file if they don't exist.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI: "test.pdf --log-file logs/test.log"
+2. Verify Path.parent.mkdir is called with parents=True and exist_ok=True
+
+**Expected Result**: Parent directories are created automatically
+
+**Requirements Coverage**: SWR_CLI_00014
+
+---
+
+#### SWUT_CLI_00039
+**Title**: Test CLI Log File with Verbose Mode
+
+**Maturity**: accept
+
+**Description**: Verify that CLI combines --log-file with -v flag correctly.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI: "test.pdf --log-file test.log -v"
+2. Verify both console handler and file handler are added to root logger
+3. Verify both handlers are configured with DEBUG level
+
+**Expected Result**: Both console and file output are enabled with DEBUG level
+
+**Requirements Coverage**: SWR_CLI_00005, SWR_CLI_00014
+
+---
+
+#### SWUT_CLI_00040
+**Title**: Test CLI Log File Creation Error Continues with Console Logging
+
+**Maturity**: accept
+
+**Description**: Verify that CLI continues with console-only logging when log file creation fails.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI: "test.pdf --log-file /invalid/path/test.log" (simulate permission error)
+2. Verify error message is logged about failed log file creation
+3. Verify CLI continues to execute and returns success
+4. Verify console handler is still configured
+
+**Expected Result**: CLI continues with console-only logging and logs error about file creation failure
+
+**Requirements Coverage**: SWR_CLI_00014
+
+---
+
+#### SWUT_CLI_00041
+**Title**: Test CLI Log File Format Includes Timestamps
+
+**Maturity**: accept
+
+**Description**: Verify that CLI log file format includes timestamps.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run CLI: "test.pdf --log-file test.log"
+2. Verify logging.Formatter is called with timestamp format
+3. Verify format string includes %(asctime)s or %(msecs) for timestamp
+4. Verify date format is set to "YYYY-MM-DD HH:MM:SS"
+
+**Expected Result**: Log file format includes timestamps with milliseconds
+
+**Requirements Coverage**: SWR_CLI_00014
 

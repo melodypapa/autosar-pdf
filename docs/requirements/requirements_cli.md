@@ -181,3 +181,50 @@ The CLI shall support the following features:
 - Catch and report exceptions with user-friendly error messages
 - Return appropriate exit codes (0 for success, 1 for error)
 - Display detailed error tracebacks when verbose mode is enabled
+
+---
+
+### SWR_CLI_00014
+**Title**: CLI Logger File Specification
+
+**Maturity**: draft
+
+**Description**: The CLI shall support a `--log-file` option to specify a file path for writing log messages. When this option is provided, all log messages shall be written to the specified log file in addition to the standard output (stderr).
+
+The CLI shall:
+- Accept a file path as the argument to `--log-file`
+- Create the log file if it does not exist
+- Create parent directories if they do not exist
+- Write all log messages to the specified log file with the same format and log level as console output
+- Continue to output log messages to stderr (not redirect, but duplicate to the log file)
+- Support the `--log-file` option independently of the `-v` / `--verbose` flag
+- Apply the log level determined by the `-v` / `--verbose` flag to both console and file output
+- Include timestamps in the log file for each log message to facilitate debugging and analysis
+
+**Log File Format**:
+- Each log entry shall include: timestamp, log level, and message
+- Timestamp format: `YYYY-MM-DD HH:MM:SS,mmm` (milliseconds included)
+- Example: `2026-01-25 14:30:45,123 INFO: Parsing 5 PDF file(s)...`
+
+**Usage Example**:
+```bash
+# Write logs to a file while also displaying on console
+autosar-extract input.pdf -o output.md --log-file extraction.log
+
+# Combine with verbose mode for detailed logging to file
+autosar-extract input.pdf -o output.md --log-file extraction.log -v
+
+# Write logs to a file in a specific directory (directory will be created if needed)
+autosar-extract input.pdf -o output.md --log-file logs/extraction.log
+```
+
+**Error Handling**:
+- If the specified log file path is invalid or cannot be created, log an error message to stderr and continue with console-only logging
+- If the log file cannot be written to during execution, log an error message to stderr and continue with console-only logging
+- Do not fail the entire operation if log file writing fails
+
+**Rationale**:
+- Log files provide a persistent record of processing operations for debugging and auditing
+- Timestamps enable analysis of processing time and identification of performance issues
+- Writing to both console and file ensures users see progress in real-time while maintaining a permanent record
+- Independent support for `--log-file` and `-v` allows flexible logging configuration

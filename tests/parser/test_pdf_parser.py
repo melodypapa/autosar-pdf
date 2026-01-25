@@ -3023,28 +3023,411 @@ that should be captured
         root packages and subpackages.
         """
         from autosar_pdf2txt.models import AutosarPackage, AutosarClass
-        
+
         # Create nested package structure
         root_pkg = AutosarPackage(name="RootPackage")
         sub_pkg1 = AutosarPackage(name="SubPackage1")
         sub_pkg2 = AutosarPackage(name="SubPackage2")
-        
+
         # Add subpackages to root
         root_pkg.add_subpackage(sub_pkg1)
         root_pkg.add_subpackage(sub_pkg2)
-        
+
         # Add classes to subpackages
         cls1 = AutosarClass(name="Class1", package="M2::RootPackage::SubPackage1", is_abstract=False)
         sub_pkg1.add_class(cls1)
-        
+
         cls2 = AutosarClass(name="Class2", package="M2::RootPackage::SubPackage2", is_abstract=False)
         sub_pkg2.add_class(cls2)
-        
+
         # Build package hierarchy
         parser = PdfParser()
         doc = parser._build_package_hierarchy([cls1, cls2])
-        
+
         # Verify root package is identified
         assert len(doc.packages) == 1
         assert doc.packages[0].name == "RootPackage"
         assert len(doc.packages[0].subpackages) == 2
+
+    def test_validate_subclasses_valid_relationship(self) -> None:
+        """Test _validate_subclasses with valid subclass relationship.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that valid subclass relationships pass validation.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create classes with valid subclass relationship
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_b = AutosarClass(name="ClassB", package="M2::TestPackage", is_abstract=False)
+
+        # ClassB inherits from ClassA
+        class_b.bases = ["ClassA"]
+
+        # ClassA lists ClassB as subclass
+        class_a.subclasses = ["ClassB"]
+
+        # Add classes to package
+        pkg.add_class(class_a)
+        pkg.add_class(class_b)
+
+        # Validation should pass without warnings
+        parser = PdfParser()
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            parser._validate_subclasses([pkg])
+            mock_logger.warning.assert_not_called()
+
+    def test_validate_subclasses_missing_subclass(self) -> None:
+        """Test _validate_subclasses with non-existent subclass.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation logs a warning when a listed
+        subclass does not exist in the model.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create class with non-existent subclass
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_a.subclasses = ["NonExistentClass"]
+
+        # Add class to package
+        pkg.add_class(class_a)
+
+        # Validation should log warning
+        parser = PdfParser()
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            parser._validate_subclasses([pkg])
+            mock_logger.warning.assert_called_once()
+            # Check the formatted message
+            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            assert "NonExistentClass" in formatted_msg
+            assert "ClassA" in formatted_msg
+            assert "does not exist" in formatted_msg
+
+    def test_validate_subclasses_not_inheriting(self) -> None:
+        """Test _validate_subclasses with subclass that doesn't inherit.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation logs a warning when a listed
+        subclass does not have the parent class in its bases list.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create classes
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_b = AutosarClass(name="ClassB", package="M2::TestPackage", is_abstract=False)
+
+        # ClassB does NOT inherit from ClassA
+        class_b.bases = ["ClassC"]
+
+        # ClassA lists ClassB as subclass (invalid)
+        class_a.subclasses = ["ClassB"]
+
+        # Add classes to package
+        pkg.add_class(class_a)
+        pkg.add_class(class_b)
+
+        # Validation should log warning
+        parser = PdfParser()
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            parser._validate_subclasses([pkg])
+            mock_logger.warning.assert_called_once()
+            # Check the formatted message
+            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            assert "ClassB" in formatted_msg
+            assert "ClassA" in formatted_msg
+            assert "does not inherit" in formatted_msg
+
+    def test_validate_subclasses_circular_relationship(self) -> None:
+        """Test _validate_subclasses with circular inheritance.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation logs a warning when a subclass
+        is also in the parent class's bases list (circular relationship).
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create classes with circular relationship
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_b = AutosarClass(name="ClassB", package="M2::TestPackage", is_abstract=False)
+
+        # ClassA has ClassB in its bases
+        class_a.bases = ["ClassB"]
+
+        # ClassB inherits from ClassA
+        class_b.bases = ["ClassA"]
+
+        # ClassA lists ClassB as subclass (circular!)
+        class_a.subclasses = ["ClassB"]
+
+        # Add classes to package
+        pkg.add_class(class_a)
+        pkg.add_class(class_b)
+
+        # Validation should log warning
+        parser = PdfParser()
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            parser._validate_subclasses([pkg])
+            mock_logger.warning.assert_called_once()
+            # Check the formatted message
+            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            assert "ClassB" in formatted_msg
+            assert "ClassA" in formatted_msg
+            assert "Circular inheritance" in formatted_msg
+
+    def test_validate_subclasses_ancestor_as_subclass(self) -> None:
+        """Test _validate_subclasses with ancestor listed as subclass.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation logs a warning when a subclass
+        is actually an ancestor (in the parent's parent's bases list).
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create classes: ClassC -> ClassB -> ClassA hierarchy
+        # ClassA's parent is ClassB, ClassB's parent is ClassC
+        # So ClassC is an ancestor of ClassA
+        class_c = AutosarClass(name="ClassC", package="M2::TestPackage", is_abstract=False)
+        class_b = AutosarClass(name="ClassB", package="M2::TestPackage", is_abstract=False)
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+
+        # ClassB inherits from ClassC
+        class_b.bases = ["ClassC"]
+        class_b.parent = "ClassC"
+
+        # ClassA inherits from ClassB
+        class_a.bases = ["ClassB"]
+        class_a.parent = "ClassB"
+
+        # For ClassC to be listed as a subclass of ClassA, we need ClassC to have ClassA in its bases
+        # But ClassC is actually an ancestor of ClassA, so this should fail
+        class_c.bases = ["ClassA"]  # This makes ClassC look like it inherits from ClassA
+
+        # ClassA lists ClassC as subclass (invalid - ClassC is ancestor)
+        class_a.subclasses = ["ClassC"]
+
+        # Add classes to package
+        pkg.add_class(class_a)
+        pkg.add_class(class_b)
+        pkg.add_class(class_c)
+
+        # Validation should log warning because ClassC is in ClassA's parent's (ClassB's) bases list
+        parser = PdfParser()
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            parser._validate_subclasses([pkg])
+            mock_logger.warning.assert_called_once()
+            # Check the formatted message
+            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            assert "ClassC" in formatted_msg
+            assert "ClassA" in formatted_msg
+            assert "ancestor" in formatted_msg
+
+    def test_validate_subclasses_parent_as_subclass(self) -> None:
+        """Test _validate_subclasses with parent listed as subclass.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation logs a warning when a subclass
+        is actually the parent class itself. Note: This is detected as a
+        circular inheritance relationship since the parent has the child in its bases.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create classes
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_b = AutosarClass(name="ClassB", package="M2::TestPackage", is_abstract=False)
+
+        # ClassA inherits from ClassB
+        class_a.bases = ["ClassB"]
+        class_a.parent = "ClassB"
+
+        # For ClassB to be listed as a subclass of ClassA, ClassB must have ClassA in its bases
+        # But ClassB is actually the parent of ClassA, so this creates a circular relationship
+        class_b.bases = ["ClassA"]  # This makes ClassB look like it inherits from ClassA
+
+        # ClassA lists ClassB as subclass (invalid - ClassB is parent)
+        class_a.subclasses = ["ClassB"]
+
+        # Add classes to package
+        pkg.add_class(class_a)
+        pkg.add_class(class_b)
+
+        # Validation should log warning for circular inheritance
+        parser = PdfParser()
+        with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
+            parser._validate_subclasses([pkg])
+            mock_logger.warning.assert_called_once()
+            # Check the formatted message
+            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            assert "ClassB" in formatted_msg
+            assert "ClassA" in formatted_msg
+            assert "Circular inheritance" in formatted_msg
+
+    def test_validate_subclasses_multiple_subclasses(self) -> None:
+        """Test _validate_subclasses with multiple valid subclasses.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation passes when a class has multiple
+        valid subclasses.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create classes with multiple subclasses
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_b = AutosarClass(name="ClassB", package="M2::TestPackage", is_abstract=False)
+        class_c = AutosarClass(name="ClassC", package="M2::TestPackage", is_abstract=False)
+        class_d = AutosarClass(name="ClassD", package="M2::TestPackage", is_abstract=False)
+
+        # All subclasses inherit from ClassA
+        class_b.bases = ["ClassA"]
+        class_c.bases = ["ClassA"]
+        class_d.bases = ["ClassA"]
+
+        # ClassA lists all three as subclasses
+        class_a.subclasses = ["ClassB", "ClassC", "ClassD"]
+
+        # Add classes to package
+        pkg.add_class(class_a)
+        pkg.add_class(class_b)
+        pkg.add_class(class_c)
+        pkg.add_class(class_d)
+
+        # Validation should pass
+        parser = PdfParser()
+        parser._validate_subclasses([pkg])  # Should not raise
+
+    def test_validate_subclasses_empty_subclasses(self) -> None:
+        """Test _validate_subclasses with empty subclasses list.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation passes when a class has no subclasses.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create class with no subclasses
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        class_a.subclasses = []
+
+        # Add class to package
+        pkg.add_class(class_a)
+
+        # Validation should pass
+        parser = PdfParser()
+        parser._validate_subclasses([pkg])  # Should not raise
+
+    def test_validate_subclasses_none_subclasses(self) -> None:
+        """Test _validate_subclasses with None subclasses.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation passes when a class has None subclasses.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create class with None subclasses
+        class_a = AutosarClass(name="ClassA", package="M2::TestPackage", is_abstract=False)
+        # subclasses is None by default
+
+        # Add class to package
+        pkg.add_class(class_a)
+
+        # Validation should pass
+        parser = PdfParser()
+        parser._validate_subclasses([pkg])  # Should not raise
+
+    def test_validate_subclasses_complex_hierarchy(self) -> None:
+        """Test _validate_subclasses with complex inheritance hierarchy.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies that validation works correctly with a complex
+        inheritance hierarchy.
+        """
+        from autosar_pdf2txt.models import AutosarPackage
+
+        # Create package
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create complex hierarchy:
+        # ARObject -> Identifiable -> Referrable -> SwComponentType
+        #                                    -> Trigger
+        #                     -> Prototype
+        #                     -> SwDataDefProps
+        class_arobject = AutosarClass(name="ARObject", package="M2::TestPackage", is_abstract=False)
+        class_identifiable = AutosarClass(name="Identifiable", package="M2::TestPackage", is_abstract=False)
+        class_referrable = AutosarClass(name="Referrable", package="M2::TestPackage", is_abstract=False)
+        class_swcomponenttype = AutosarClass(name="SwComponentType", package="M2::TestPackage", is_abstract=False)
+        class_trigger = AutosarClass(name="Trigger", package="M2::TestPackage", is_abstract=False)
+        class_prototype = AutosarClass(name="Prototype", package="M2::TestPackage", is_abstract=False)
+        class_swdatadefprops = AutosarClass(name="SwDataDefProps", package="M2::TestPackage", is_abstract=False)
+
+        # Build hierarchy
+        class_identifiable.bases = ["ARObject"]
+        class_referrable.bases = ["Identifiable"]
+        class_swcomponenttype.bases = ["Referrable"]
+        class_trigger.bases = ["Referrable"]
+        class_prototype.bases = ["Identifiable"]
+        class_swdatadefprops.bases = ["Identifiable"]
+
+        # Set subclasses for Identifiable
+        class_identifiable.subclasses = ["Referrable", "Prototype", "SwDataDefProps"]
+
+        # Set subclasses for Referrable
+        class_referrable.subclasses = ["SwComponentType", "Trigger"]
+
+        # Add all classes to package
+        pkg.add_class(class_arobject)
+        pkg.add_class(class_identifiable)
+        pkg.add_class(class_referrable)
+        pkg.add_class(class_swcomponenttype)
+        pkg.add_class(class_trigger)
+        pkg.add_class(class_prototype)
+        pkg.add_class(class_swdatadefprops)
+
+        # Validation should pass
+        parser = PdfParser()
+        parser._validate_subclasses([pkg])  # Should not raise

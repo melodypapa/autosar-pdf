@@ -610,16 +610,23 @@ class TestPdfParser:
         ])
         packages = doc.packages
 
-        # Try to manually add duplicate class (should trigger ValueError)
+        # Try to manually add duplicate class (should log warning and skip)
+        from unittest.mock import patch, MagicMock
+
         duplicate_class = AutosarClass(name="ExistingClass", package="M2::Test",
     is_abstract=False,
             bases=["Base2"]
         )
 
-        try:
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
             packages[0].add_class(duplicate_class)
-        except ValueError:
-            pass  # Expected
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
+            assert "Type '%s' already exists in package '%s'" in call_args[0]
+            assert mock_logger.warning.call_args[0][1] == "ExistingClass"
 
         # Now test with duplicate class definitions
         class_defs = [
@@ -637,9 +644,21 @@ class TestPdfParser:
             ),
         ]
 
-        # Should raise ValueError for duplicate classes
-        with pytest.raises(ValueError, match="already exists"):
-            parser._build_package_hierarchy(class_defs)
+        # Should log warning and skip duplicate, not raise error
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+            doc = parser._build_package_hierarchy(class_defs)
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
+            assert "Type '%s' already exists in package '%s'" in call_args[0]
+            assert mock_logger.warning.call_args[0][1] == "DuplicateClass"
+
+        # Verify only one class was added (the first one)
+        assert len(doc.packages[0].types) == 1
+        assert doc.packages[0].types[0].name == "DuplicateClass"
+        assert doc.packages[0].types[0].bases == ["Base1"]
 
     def test_parse_pdf_with_nonexistent_file(self) -> None:
         """Test parsing a non-existent PDF file.

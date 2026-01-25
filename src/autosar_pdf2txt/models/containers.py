@@ -68,12 +68,22 @@ class AutosarPackage:
         Args:
             typ: The AutosarClass, AutosarEnumeration, or AutosarPrimitive to add.
 
-        Raises:
-            ValueError: If a type with the same name already exists.
+        Note:
+            If a type with the same name already exists, a warning is logged and
+            the duplicate is skipped. This allows parsing multiple PDFs that may
+            define the same class name (common in AUTOSAR specifications).
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         for existing_type in self.types:
             if existing_type.name == typ.name:
-                raise ValueError(f"Type '{typ.name}' already exists")
+                logger.warning(
+                    "Type '%s' already exists in package '%s', skipping duplicate definition",
+                    typ.name,
+                    self.name,
+                )
+                return
         self.types.append(typ)
 
     def add_class(self, cls: AutosarClass) -> None:

@@ -497,17 +497,16 @@ class PdfParser:
             List of root classes (classes without parents).
         """
         # Build ancestry cache for efficient parent lookup
-        ancestry_cache = self._build_ancestry_cache(packages)
-
-        # Track warned base classes for deduplication
-        warned_bases: set[str] = set()
+        warned_ancestry_bases: set[str] = set()
+        warned_parent_bases: set[str] = set()
+        ancestry_cache = self._build_ancestry_cache(packages, warned_ancestry_bases)
 
         # Set parent references for all classes
         root_classes: List[AutosarClass] = []
         for pkg in packages:
             for typ in pkg.types:
                 if isinstance(typ, AutosarClass):
-                    self._set_parent_references(typ, ancestry_cache, packages, warned_bases)
+                    self._set_parent_references(typ, ancestry_cache, packages, warned_parent_bases)
                     if typ.parent is None:
                         root_classes.append(typ)
 
@@ -516,14 +515,16 @@ class PdfParser:
 
         return root_classes
 
-    def _build_ancestry_cache(self, packages: List[AutosarPackage]) -> Dict[str, Set[str]]:
+    def _build_ancestry_cache(self, packages: List[AutosarPackage], warned_bases: set[str]) -> Dict[str, Set[str]]:
         """Build a cache of ancestry relationships for efficient parent lookup.
 
         Requirements:
             SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
+            SWR_PARSER_00020: Missing Base Class Logging with Deduplication
 
         Args:
             packages: List of packages to process.
+            warned_bases: Set of base classes that have already been warned about.
 
         Returns:
             Dictionary mapping class names to sets of all ancestor class names.
@@ -546,7 +547,26 @@ class PdfParser:
             
             for base_name in direct_bases.get(class_name, []):
                 if base_name != "ARObject":  # Filter out ARObject (implicit root)
+                    # Check if base class exists in the model
+                    base_exists = False
+                    for pkg in packages:
+                        for typ in pkg.types:
+                            if isinstance(typ, AutosarClass) and typ.name == base_name:
+                                base_exists = True
+                                break
+                        if base_exists:
+                            break
+                    
                     ancestors.add(base_name)
+                    
+                    # If base class doesn't exist, log warning if not already warned
+                    if not base_exists and base_name not in warned_bases:
+                        logger.warning(
+                            "Class '%s' referenced in base classes could not be located in the model during ancestry traversal. Ancestry analysis may be incomplete.",
+                            base_name,
+                        )
+                        warned_bases.add(base_name)
+                    
                     # Recursively collect ancestors of this base
                     ancestors.update(collect_ancestors(base_name, visited))
             

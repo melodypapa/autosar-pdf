@@ -16,7 +16,7 @@ from autosar_pdf2txt.models import AutosarClass, AutosarDoc
 
 # Import helper functions from conftest
 from tests.integration.conftest import (
-    find_first_class,
+    find_class_by_name,
 )
 
 
@@ -28,7 +28,7 @@ class TestPdfIntegration:
     """
 
     def test_parse_real_autosar_pdf_and_verify_autosar_and_sw_component_type(
-        self, bsw_template_pdf: AutosarDoc, generic_structure_sw_component_type: AutosarClass
+        self, generic_structure_template_pdf: AutosarDoc, generic_structure_sw_component_type: AutosarClass
     ) -> None:
         """Test parsing real AUTOSAR PDF files and verify AUTOSAR and SwComponentType classes.
 
@@ -45,20 +45,20 @@ class TestPdfIntegration:
             SWR_MODEL_00023: AUTOSAR Document Model
 
         Args:
-            bsw_template_pdf: Cached parsed BSW Module Template PDF data (AutosarDoc).
+            generic_structure_template_pdf: Cached parsed GenericStructureTemplate PDF data (AutosarDoc).
             generic_structure_sw_component_type: Cached SwComponentType class from GenericStructureTemplate PDF.
         """
-        # ========== Verify AUTOSAR class from BSW Module Template PDF ==========
-        packages = bsw_template_pdf.packages
+        # ========== Verify AUTOSAR class from GenericStructureTemplate PDF ==========
+        packages = generic_structure_template_pdf.packages
 
         # Verify we got some packages
         assert len(packages) > 0, "Should extract at least one package from PDF"
 
-        # Find the first class with actual data (using cached helper)
-        first_package, autosar_class = find_first_class(packages)
+        # Find the AUTOSAR class explicitly
+        first_package, autosar_class = find_class_by_name(packages, "AUTOSAR")
 
-        assert autosar_class is not None, "Should find at least one class in the PDF"
-        assert first_package is not None, "Should find the package containing the class"
+        assert autosar_class is not None, "Should find AUTOSAR class in the PDF"
+        assert first_package is not None, "Should find the package containing the AUTOSAR class"
 
         # Verify the AUTOSAR class details
         assert autosar_class.name == "AUTOSAR", f"Expected class name 'AUTOSAR', got '{autosar_class.name}'"
@@ -161,6 +161,97 @@ class TestPdfIntegration:
         print(f"  Attributes ({len(sw_component_type.attributes)}):")
         for attr_name, attr in sw_component_type.attributes.items():
             print(f"    - {attr_name}: {attr.type} (ref: {attr.is_ref}, kind: {attr.kind.value})")
+
+    def test_parse_real_autosar_pdf_and_verify_arelement_and_subclasses(
+        self, generic_structure_arelement: AutosarClass
+    ) -> None:
+        """Test parsing real AUTOSAR PDF files and verify ARElement class and its subclasses.
+
+        SWIT_00001 Part 3: Verify ARElement class and its subclasses from GenericStructureTemplate PDF
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_MODEL_00001: AUTOSAR Class Representation
+            SWR_MODEL_00023: AUTOSAR Document Model
+
+        Args:
+            generic_structure_arelement: Cached ARElement class from GenericStructureTemplate PDF.
+        """
+        # ========== Verify ARElement class from GenericStructureTemplate PDF ==========
+        arelement = generic_structure_arelement
+
+        # Verify class name
+        assert arelement.name == "ARElement", \
+            f"Expected class name 'ARElement', got '{arelement.name}'"
+
+        # Verify the class is abstract
+        assert arelement.is_abstract is True, "ARElement class should be abstract"
+
+        # Verify the subclasses list contains all expected subclasses (121 total)
+        expected_subclasses = [
+            "AclObjectSet", "AclOperation", "AclPermission", "AclRole", "AliasNameSet",
+            "ApplicabilityInfoSet", "ApplicationPartition", "AutosarDataType", "BaseType",
+            "BlueprintMappingSet", "BswEntryRelationshipSet", "BswModuleDescription",
+            "BswModuleEntry", "BuildActionManifest", "CalibrationParameterValueSet",
+            "ClientIdDefinitionSet", "ClientServerInterfaceToBswModuleEntryBlueprintMapping",
+            "Collection", "CompuMethod", "ConsistencyNeedsBlueprintSet", "ConstantSpecification",
+            "ConstantSpecificationMappingSet", "CpSoftwareCluster", "CpSoftwareClusterBinaryManifestDescriptor",
+            "CpSoftwareClusterMappingSet", "CpSoftwareClusterResourcePool", "CryptoEllipticCurveProps",
+            "CryptoServiceCertificate", "CryptoServiceKey", "CryptoServicePrimitive",
+            "CryptoServiceQueue", "CryptoSignatureScheme", "DataConstr", "DataExchangePoint",
+            "DataTransformationSet", "DataTypeMappingSet", "DdsCpConfig", "DiagnosticCommonElement",
+            "DiagnosticConnection", "DiagnosticContributionSet", "DltContext", "DltEcu",
+            "Documentation", "E2EProfileCompatibilityProps", "EcucDefinitionCollection",
+            "EcucDestinationUriDefSet", "EcucModuleConfigurationValues", "EcucModuleDef",
+            "EcucValueCollection", "EndToEndProtectionSet", "EthIpProps", "EthTcpIpIcmpProps",
+            "EthTcpIpProps", "EvaluatedVariantSet", "FMFeature", "FMFeatureMap", "FMFeatureModel",
+            "FMFeatureSelectionSet", "FirewallRule", "FlatMap", "GeneralPurposeConnection",
+            "HwCategory", "HwElement", "HwType", "IEEE1722TpConnection", "IPSecConfigProps",
+            "IPv6ExtHeaderFilterSet", "IdsCommonElement", "IdsDesign", "Implementation",
+            "ImpositionTimeDefinitionGroup", "InterpolationRoutineMappingSet",
+            "J1939ControllerApplication", "KeywordSet", "LifeCycleInfoSet",
+            "LifeCycleStateDefinitionGroup", "LogAndTraceMessageCollectionSet",
+            "MacSecGlobalKayProps", "MacSecParticipantSet", "McFunction", "McGroup",
+            "ModeDeclarationGroup", "ModeDeclarationMappingSet", "OsTaskProxy", "PhysicalDimension",
+            "PhysicalDimensionMappingSet", "PortInterface", "PortInterfaceMappingSet",
+            "PortPrototypeBlueprint", "PostBuildVariantCriterion", "PostBuildVariantCriterionValueSet",
+            "PredefinedVariant", "RapidPrototypingScenario", "SdgDef", "SignalServiceTranslationPropsSet",
+            "SomeipSdClientEventGroup", "SomeipSdClientServiceInstanceConfig",
+            "SomeipSdServerEventGroupTimingConfig", "SomeipSdServerServiceInstanceConfig",
+            "SwAddrMethod", "SwAxisType", "SwComponentMappingConstraints", "SwComponentType",
+            "SwRecordLayout", "SwSystemconst", "SwSystemconstantValueSet", "SwcBswMapping",
+            "System", "SystemSignal", "SystemSignalGroup", "TDCpSoftwareClusterMappingSet",
+            "TcpOptionFilterSet", "TimingConfig", "TimingExtension", "TlsConnectionGroup",
+            "TlvDataIdDefinitionSet", "TransformationPropsSet", "Unit", "UnitGroup",
+            "UploadablePackageElement", "ViewMapSet"
+        ]
+
+        # Verify expected count of subclasses
+        expected_count = 121
+        assert len(arelement.subclasses) == expected_count, \
+            f"Expected {expected_count} subclasses, got {len(arelement.subclasses)}"
+
+        # Verify all expected subclasses are present
+        actual_subclasses = arelement.subclasses
+        for expected_subclass in expected_subclasses:
+            assert expected_subclass in actual_subclasses, \
+                f"Expected subclass '{expected_subclass}' not found in ARElement.subclasses"
+
+        # Verify no unexpected subclasses were extracted
+        unexpected_subclasses = set(actual_subclasses) - set(expected_subclasses)
+        assert not unexpected_subclasses, \
+            f"Found unexpected subclasses: {sorted(unexpected_subclasses)}"
+
+        # Print ARElement class information for verification
+        print("\n=== ARElement class verified ===")
+        print(f"  Name: {arelement.name}")
+        print(f"  Abstract: {arelement.is_abstract}")
+        print(f"  Subclasses ({len(arelement.subclasses)}):")
+        print("    All expected subclasses present: YES")
+        print("    No unexpected subclasses: YES")
+        print(f"  Sample subclasses: {sorted(arelement.subclasses)[:10]}...")
 
     def test_parse_timing_extensions_pdf_and_verify_class_list(
         self, timing_extensions_pdf: AutosarDoc

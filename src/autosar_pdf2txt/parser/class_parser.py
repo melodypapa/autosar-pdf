@@ -42,6 +42,8 @@ class AutosarClassParser(AbstractTypeParser):
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
     """
 
+    
+
     def __init__(self) -> None:
         """Initialize the AutosarClass parser.
 
@@ -57,10 +59,10 @@ class AutosarClassParser(AbstractTypeParser):
         self._pending_attr_kind: Optional[AttributeKind] = None
         self._pending_attr_note: Optional[str] = None
         # Class list state (Base, Subclasses, Aggregated by)
-        self._pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str]]] = {
-            "base_classes": (None, None),
-            "aggregated_by": (None, None),
-            "subclasses": (None, None),
+        self._pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str], bool]] = {
+            "base_classes": (None, None, True),
+            "aggregated_by": (None, None, True),
+            "subclasses": (None, None, True),
         }
         self._in_class_list_section: Optional[str] = None
 
@@ -227,10 +229,26 @@ class AutosarClassParser(AbstractTypeParser):
             if class_list_match:
                 section_name, match = class_list_match
                 self._finalize_pending_class_lists(current_model)
-                self._pending_class_lists[section_name] = self._parse_class_list_line(section_name, match)
+                items, last_item, last_item_complete = self._parse_class_list_line(section_name, match)
+                self._pending_class_lists[section_name] = (items, last_item, last_item_complete)
                 self._in_class_list_section = section_name
                 i += 1
                 continue
+
+            # Process class list continuation AFTER class list patterns but BEFORE other sections
+            # This ensures that multi-line class lists are processed before sections like note/new class
+            if self._in_class_list_section and current_model:
+                line_stripped = line.strip()
+                if line_stripped and ("," in line_stripped or any(fragment in line_stripped for fragment in self.CONTINUATION_FRAGMENTS)):
+                    (items, last_item), last_item_complete = self._handle_class_list_continuation(
+                        line_stripped,
+                        self._pending_class_lists[self._in_class_list_section][0],
+                        self._pending_class_lists[self._in_class_list_section][1],
+                        self._pending_class_lists[self._in_class_list_section][2] if len(self._pending_class_lists[self._in_class_list_section]) > 2 else True,
+                    )
+                    self._pending_class_lists[self._in_class_list_section] = (items, last_item, last_item_complete)
+                    i += 1
+                    continue
 
             # Check for note
             note_match = self.NOTE_PATTERN.match(line)
@@ -245,10 +263,41 @@ class AutosarClassParser(AbstractTypeParser):
             if (self.CLASS_PATTERN.match(line) or
                 self.PRIMITIVE_PATTERN.match(line) or
                 self.ENUMERATION_PATTERN.match(line)):
-                # New type definition - finalize and return
-                self._finalize_pending_class_lists(current_model)
-                self._finalize_pending_attribute(current_model)
-                return i, True
+                # Check if this is a valid new type definition
+                # A valid class definition must be followed by a Package line
+                # If not, it's likely a continuation header (e.g., multi-page table)
+                is_valid_new_definition = False
+                if self.CLASS_PATTERN.match(line):
+                    # Check for Package line within 3 lines
+                    for j in range(i + 1, min(i + 4, len(lines))):
+                        next_line = lines[j].strip()
+                        if next_line.startswith("Package "):
+                            is_valid_new_definition = True
+                            break
+                        if next_line and not next_line.startswith("Note "):
+                            # Found a non-package, non-note line - invalid
+                            break
+                elif self.PRIMITIVE_PATTERN.match(line) or self.ENUMERATION_PATTERN.match(line):
+                    # For primitives and enumerations, also check for Package line
+                    for j in range(i + 1, min(i + 4, len(lines))):
+                        next_line = lines[j].strip()
+                        if next_line.startswith("Package "):
+                            is_valid_new_definition = True
+                            break
+                        if next_line and not next_line.startswith("Note "):
+                            # Found a non-package, non-note line - invalid
+                            break
+
+                if is_valid_new_definition:
+                    # New type definition - finalize and return
+                    self._finalize_pending_class_lists(current_model)
+                    self._finalize_pending_attribute(current_model)
+                    return i, True
+                else:
+                    # Not a valid new definition - continue parsing current model
+                    # This handles multi-page tables where the class name is repeated
+                    i += 1
+                    continue
 
             # Check for table or enumeration (end of class)
             if line.startswith("Table ") or line.startswith("Enumeration "):
@@ -276,23 +325,21 @@ class AutosarClassParser(AbstractTypeParser):
                 i += 1
                 continue
 
-            # Process class list continuation
-            if self._in_class_list_section and current_model:
-                if "," in line or any(fragment in line for fragment in self.CONTINUATION_FRAGMENTS):
-                    self._pending_class_lists[self._in_class_list_section] = self._handle_class_list_continuation(
-                        line,
-                        self._pending_class_lists[self._in_class_list_section][0],
-                        self._pending_class_lists[self._in_class_list_section][1],
-                    )
-                    i += 1
-                    continue
-
             i += 1
 
         # End of lines - finalize and return
         self._finalize_pending_class_lists(current_model)
         self._finalize_pending_attribute(current_model)
-        return i, True
+        
+        # Only mark as complete if we're not in the attribute section
+        # If we're in the attribute section, we might have more attributes on the next page
+        # This handles multi-page class definitions where attributes span multiple pages
+        if self._in_attribute_section:
+            # Still in attribute section - continue parsing on next page
+            return i, False
+        else:
+            # Not in attribute section - mark as complete
+            return i, True
 
     def _try_match_class_list_pattern(self, line: str) -> Optional[Tuple[str, re.Match]]:
         """Try to match class list patterns (Base, Subclasses, Aggregated by).
@@ -320,7 +367,7 @@ class AutosarClassParser(AbstractTypeParser):
 
         return None
 
-    def _parse_class_list_line(self, section_name: str, match: re.Match) -> Tuple[Optional[List[str]], Optional[str]]:
+    def _parse_class_list_line(self, section_name: str, match: re.Match) -> Tuple[Optional[List[str]], Optional[str], bool]:
         """Parse a class list line (Base, Subclasses, Aggregated by).
 
         Requirements:
@@ -331,16 +378,21 @@ class AutosarClassParser(AbstractTypeParser):
             match: The regex match object.
 
         Returns:
-            Tuple of (list_items, last_item).
+            Tuple of (list_items, last_item, last_item_complete).
+            last_item_complete is True if the last item ended with a comma (complete),
+            False if it didn't end with a comma (incomplete, continuation expected).
         """
         items_str = match.group(1)
-        items = [item.strip() for item in items_str.split(",")]
+        # Filter out empty strings that can occur when lines end with commas
+        items = [item.strip() for item in items_str.split(",") if item.strip()]
         last_item = items[-1] if items else None
-        return items, last_item
+        # Check if the original string ended with a comma (indicates complete item)
+        last_item_complete = items_str.rstrip().endswith(",")
+        return items, last_item, last_item_complete
 
     def _handle_class_list_continuation(
-        self, line: str, current_items: Optional[List[str]], last_item: Optional[str]
-    ) -> Tuple[Optional[List[str]], Optional[str]]:
+        self, line: str, current_items: Optional[List[str]], last_item: Optional[str], last_item_complete: bool = True
+    ) -> Tuple[Tuple[Optional[List[str]], Optional[str]], bool]:
         """Handle continuation of class list (multi-line Base, Subclasses, Aggregated by).
 
         Requirements:
@@ -350,9 +402,11 @@ class AutosarClassParser(AbstractTypeParser):
             line: The continuation line.
             current_items: Current list of items.
             last_item: The last item from previous line.
+            last_item_complete: True if the last item ended with a comma (complete),
+                               False if it didn't end with a comma (incomplete).
 
         Returns:
-            Tuple of (updated_items, updated_last_item).
+            Tuple of ((updated_items, updated_last_item), last_item_complete).
         """
         if current_items is None:
             current_items = []
@@ -360,14 +414,41 @@ class AutosarClassParser(AbstractTypeParser):
         parts = [part.strip() for part in line.split(",") if part.strip()]
 
         if not parts:
-            return current_items, last_item
+            return (current_items, last_item), last_item_complete
 
         # Check if the first part should be appended to the last item
-        if last_item and parts:
+        # Only concatenate if the last item was incomplete (didn't end with comma)
+        # However, if the line starts with a comma, it's a new item (comma at start means previous item was complete)
+        # Also, if the first part is a complete class name (not a fragment),
+        # it's likely a new item (comma missing due to PDF text extraction error)
+        if last_item is not None and parts and not last_item_complete:
             first_part = parts[0]
 
-            # Combine if first part starts with lowercase or is a known continuation fragment
-            if first_part and (first_part[0].islower() or first_part in self.CONTINUATION_FRAGMENTS):
+            # Check if line starts with a comma - if so, it's a new item
+            line_starts_with_comma = line.lstrip().startswith(",")
+
+            # Heuristic: if first part is a complete class name (not a fragment),
+            # it's likely a new item (comma missing due to PDF text extraction error)
+            # A complete class name typically has a recognizable pattern
+            common_class_patterns = {
+                "Timing", "Tcp", "Tls", "Tlv", "Transformation", "Unit", "Uploadable",
+                "Value", "Variant", "View", "System", "Someip"
+            }
+
+            should_concatenate = True
+            if first_part:
+                # If line starts with comma, it's a new item
+                if line_starts_with_comma:
+                    should_concatenate = False
+                else:
+                    # Check if first part is a complete class name
+                    # (starts with a common pattern and has reasonable length)
+                    for pattern in common_class_patterns:
+                        if first_part == pattern or first_part.startswith(pattern + "Config") or first_part.startswith(pattern + "Extension"):
+                            should_concatenate = False
+                            break
+
+            if should_concatenate:
                 combined_name = last_item + first_part
                 current_items[-1] = combined_name
                 parts = parts[1:]
@@ -378,7 +459,9 @@ class AutosarClassParser(AbstractTypeParser):
                 current_items.append(part)
 
         new_last_item = current_items[-1] if current_items else None
-        return current_items, new_last_item
+        # Check if the current line ended with a comma
+        new_last_item_complete = line.rstrip().endswith(",")
+        return (current_items, new_last_item), new_last_item_complete
 
     def _finalize_pending_class_lists(self, current_model: AutosarClass) -> None:
         """Finalize pending class lists and add to model.
@@ -389,7 +472,7 @@ class AutosarClassParser(AbstractTypeParser):
         Args:
             current_model: The current AutosarClass being parsed.
         """
-        for section_name, (items, _) in self._pending_class_lists.items():
+        for section_name, (items, _, _) in self._pending_class_lists.items():
             if items:
                 if section_name == "base_classes":
                     current_model.bases.extend(items)
@@ -398,7 +481,7 @@ class AutosarClassParser(AbstractTypeParser):
                 elif section_name == "aggregated_by":
                     current_model.aggregated_by.extend(items)
             # Reset
-            self._pending_class_lists[section_name] = (None, None)
+            self._pending_class_lists[section_name] = (None, None, True)
 
     def _process_note_line(
         self, note_match: re.Match, lines: List[str], line_index: int, current_model: AutosarClass

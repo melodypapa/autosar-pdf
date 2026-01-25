@@ -966,6 +966,10 @@ The system shall:
    - Look like comma-separated class names (contain commas or start with continuation of previous line)
 4. Concatenate continuation lines with the attribute list
 5. Handle word splitting across lines (e.g., "Packageable" at end of line + "Element" at start of next line = "PackageableElement")
+   - The delimiter for class lists is a comma (,)
+   - When a continuation line starts with a word that should be concatenated with the last item from the previous line (e.g., "NeedsBlueprintSet" after "Consistency"), concatenate them to form the complete class name
+   - Detect continuation when the first word on the continuation line: starts with lowercase, is a known continuation fragment, contains a known AUTOSAR suffix (e.g., "Set", "Props", "Pool", "Info", "Element"), or is very short (<=3 characters)
+   - Also detect continuation when the last item from the previous line is very short (<=3 characters) or ends with a known prefix
 6. Stop continuation when encountering another known pattern (Note, Attribute, Class, Primitive, Enumeration, Package, or another attribute header)
 
 **Example 1: Multi-Line Base Classes (from AUTOSAR_CP_TPS_SystemTemplate.pdf)**:

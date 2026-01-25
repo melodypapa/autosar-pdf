@@ -16,7 +16,6 @@ Requirements:
 """
 
 import logging
-import re
 import warnings
 from io import StringIO
 from pathlib import Path
@@ -240,7 +239,6 @@ class PdfParser:
                             # Reconstruct text from words, preserving line breaks
                             # Group words by their vertical position (top coordinate)
                             current_y = None
-                            line_start = text_buffer.tell()
                             for word in words:
                                 text = word['text']
                                 top = word['top']

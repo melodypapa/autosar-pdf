@@ -10,7 +10,6 @@ Requirements:
     SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
 """
 
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from autosar_pdf2txt.models import (

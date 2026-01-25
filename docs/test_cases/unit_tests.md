@@ -2928,6 +2928,64 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_WRITER_00052
+**Title**: Test Source Section with AUTOSAR Standard and Release Information
+
+**Maturity**: accept
+
+**Description**: Verify that the Source section includes AUTOSAR standard and release information when available.
+
+**Precondition**: A MarkdownWriter instance and a class with source information including AUTOSAR standard and release
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with source that has:
+   - pdf_file: "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+   - page_number: 42
+   - autosar_standard: "TPS_BSWModuleDescriptionTemplate"
+   - standard_release: "R21-11"
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Extract the Source section
+6. Verify the source section includes:
+   - PDF filename and page number
+   - "AUTOSAR Standard: TPS_BSWModuleDescriptionTemplate"
+   - "Standard Release: R21-11"
+
+**Expected Result**: Source section includes AUTOSAR standard and release information
+
+**Requirements Coverage**: SWR_WRITER_00008
+
+---
+
+#### SWUT_WRITER_00053
+**Title**: Test Source Section Without AUTOSAR Standard and Release Information
+
+**Maturity**: accept
+
+**Description**: Verify that the Source section works correctly when AUTOSAR standard and release are None (backward compatibility).
+
+**Precondition**: A MarkdownWriter instance and a class with source information without AUTOSAR standard and release
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with source that has:
+   - pdf_file: "AUTOSAR_CP_TPS_ECUConfiguration.pdf"
+   - page_number: 15
+   - autosar_standard: None
+   - standard_release: None
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Extract the Source section
+6. Verify the source section includes only PDF filename and page number
+7. Verify no AUTOSAR standard or release lines are present
+
+**Expected Result**: Source section displays correctly without AUTOSAR standard and release fields
+
+**Requirements Coverage**: SWR_WRITER_00008
+
+---
+
 ### 3. CLI Tests
 
 #### SWUT_CLI_00001
@@ -4425,6 +4483,122 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00032
+**Title**: Test Extracting AUTOSAR Standard from PDF Content
+
+**Maturity**: draft
+
+**Description**: Verify that the parser correctly extracts the AUTOSAR standard identifier from PDF document content.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing "Part of AUTOSAR Standard: Foundation"
+3. Verify that the extracted autosar_standard is set to "Foundation"
+4. Parse text containing "Part of AUTOSAR Standard: Classic Platform"
+5. Verify that the extracted autosar_standard is set to "Classic Platform"
+6. Parse text containing "Part of AUTOSAR Standard: Adaptive Platform"
+7. Verify that the extracted autosar_standard is set to "Adaptive Platform"
+
+**Expected Result**: AUTOSAR standard is correctly extracted from document content
+
+**Requirements Coverage**: SWR_PARSER_00022
+
+---
+
+#### SWUT_PARSER_00033
+**Title**: Test Extracting AUTOSAR Standard Release from PDF Content
+
+**Maturity**: draft
+
+**Description**: Verify that the parser correctly extracts the AUTOSAR standard release from PDF document content.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing "Part of Standard Release: R23-11"
+3. Verify that the extracted standard_release is set to "R23-11"
+4. Parse text containing "Part of Standard Release: R22-11"
+5. Verify that the extracted standard_release is set to "R22-11"
+6. Parse text containing "Part of Standard Release: R24-03"
+7. Verify that the extracted standard_release is set to "R24-03"
+
+**Expected Result**: AUTOSAR standard release is correctly extracted from document content
+
+**Requirements Coverage**: SWR_PARSER_00022
+
+---
+
+#### SWUT_PARSER_00034
+**Title**: Test Extracting AUTOSAR Standard and Release Together
+
+**Maturity**: draft
+
+**Description**: Verify that the parser correctly extracts both AUTOSAR standard and release when both are present in the PDF content.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing both "Part of AUTOSAR Standard: Foundation" and "Part of Standard Release: R23-11"
+3. Verify that the extracted autosar_standard is set to "Foundation"
+4. Verify that the extracted standard_release is set to "R23-11"
+5. Verify that the AutosarSource object is created with both fields populated
+
+**Expected Result**: Both AUTOSAR standard and release are correctly extracted and attached to source location
+
+**Requirements Coverage**: SWR_PARSER_00022
+
+---
+
+#### SWUT_PARSER_00035
+**Title**: Test Missing AUTOSAR Standard and Release in PDF Content
+
+**Maturity**: draft
+
+**Description**: Verify that the parser handles PDFs that don't contain AUTOSAR standard and release metadata gracefully.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text that does not contain "Part of AUTOSAR Standard" or "Part of Standard Release"
+3. Verify that the extracted autosar_standard is set to None
+4. Verify that the extracted standard_release is set to None
+5. Verify that the AutosarSource object is created with both fields as None
+
+**Expected Result**: AUTOSAR standard and release are set to None when not found in PDF content
+
+**Requirements Coverage**: SWR_PARSER_00022
+
+---
+
+#### SWUT_PARSER_00036
+**Title**: Test Applying Extracted AUTOSAR Standard and Release to All Types
+
+**Maturity**: draft
+
+**Description**: Verify that extracted AUTOSAR standard and release are applied to all types defined in the PDF document.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Parse text containing:
+   - "Part of AUTOSAR Standard: Foundation"
+   - "Part of Standard Release: R23-11"
+   - Multiple class definitions (ClassA, ClassB, ClassC)
+3. Verify that all three classes have source information with autosar_standard="Foundation"
+4. Verify that all three classes have source information with standard_release="R23-11"
+
+**Expected Result**: Extracted AUTOSAR standard and release are applied to all types in the document
+
+**Requirements Coverage**: SWR_PARSER_00022
+
+---
+
 ### 7. Extract Tables CLI Tests
 
 #### SWUT_CLI_00013
@@ -5021,4 +5195,56 @@ All existing test cases in this document are currently at maturity level **accep
 **Expected Result**: Log file format includes timestamps with milliseconds
 
 **Requirements Coverage**: SWR_CLI_00014
+
+---
+
+#### SWUT_MODEL_00042
+**Title**: Test AutosarSource with AUTOSAR Standard and Release Information
+
+**Maturity**: accept
+
+**Description**: Verify that AutosarSource can be created with AUTOSAR standard and release information.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarSource with:
+   - pdf_file="AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+   - page_number=42
+   - autosar_standard="TPS_BSWModuleDescriptionTemplate"
+   - standard_release="R21-11"
+2. Verify the pdf_file attribute is set to "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+3. Verify the page_number attribute is set to 42
+4. Verify the autosar_standard attribute is set to "TPS_BSWModuleDescriptionTemplate"
+5. Verify the standard_release attribute is set to "R21-11"
+
+**Expected Result**: AutosarSource is created with all attributes including AUTOSAR standard and release information
+
+**Requirements Coverage**: SWR_MODEL_00027
+
+---
+
+#### SWUT_MODEL_00043
+**Title**: Test AutosarSource with Optional AUTOSAR Standard and Release Fields
+
+**Maturity**: accept
+
+**Description**: Verify that AUTOSAR standard and release fields are optional in AutosarSource for backward compatibility.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarSource with:
+   - pdf_file="AUTOSAR_CP_TPS_ECUConfiguration.pdf"
+   - page_number=15
+   - autosar_standard=None
+   - standard_release=None
+2. Verify the pdf_file attribute is set to "AUTOSAR_CP_TPS_ECUConfiguration.pdf"
+3. Verify the page_number attribute is set to 15
+4. Verify the autosar_standard attribute is set to None
+5. Verify the standard_release attribute is set to None
+
+**Expected Result**: AutosarSource is created successfully with None values for optional AUTOSAR standard fields
+
+**Requirements Coverage**: SWR_MODEL_00027
 

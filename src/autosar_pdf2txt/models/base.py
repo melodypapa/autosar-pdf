@@ -23,6 +23,8 @@ class AutosarSource:
     Attributes:
         pdf_file: Path to the PDF file (relative or absolute).
         page_number: Page number in the PDF (1-indexed).
+        autosar_standard: Optional AUTOSAR standard identifier (e.g., "TPS_BSWModuleDescriptionTemplate").
+        standard_release: Optional AUTOSAR standard release (e.g., "R21-11").
 
     Examples:
         >>> source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
@@ -30,17 +32,35 @@ class AutosarSource:
         'AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf'
         >>> source.page_number
         42
+        >>> source_with_standard = AutosarSource(
+        ...     "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
+        ...     42,
+        ...     autosar_standard="TPS_BSWModuleDescriptionTemplate",
+        ...     standard_release="R21-11"
+        ... )
+        >>> source_with_standard.autosar_standard
+        'TPS_BSWModuleDescriptionTemplate'
+        >>> source_with_standard.standard_release
+        'R21-11'
     """
     pdf_file: str
     page_number: int
+    autosar_standard: Optional[str] = None
+    standard_release: Optional[str] = None
 
     def __str__(self) -> str:
         """Return user-friendly string representation.
 
         Returns:
-            Formatted string with PDF file and page number.
+            Formatted string with PDF file, page number, and optional AUTOSAR
+            standard and release information.
         """
-        return f"{self.pdf_file}, page {self.page_number}"
+        lines = [f"{self.pdf_file}, page {self.page_number}"]
+        if self.autosar_standard:
+            lines.append(f"AUTOSAR Standard: {self.autosar_standard}")
+        if self.standard_release:
+            lines.append(f"Standard Release: {self.standard_release}")
+        return "\n".join(lines)
 
 
 class AbstractAutosarBase(ABC):

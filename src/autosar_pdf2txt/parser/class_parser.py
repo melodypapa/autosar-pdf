@@ -72,6 +72,8 @@ class AutosarClassParser(AbstractTypeParser):
         line_index: int,
         pdf_filename: Optional[str] = None,
         page_number: Optional[int] = None,
+        autosar_standard: Optional[str] = None,
+        standard_release: Optional[str] = None,
     ) -> Optional[AutosarClass]:
         """Parse a class definition from PDF lines.
 
@@ -86,6 +88,8 @@ class AutosarClassParser(AbstractTypeParser):
             line_index: Current line index in the lines list.
             pdf_filename: Optional PDF filename for source tracking.
             page_number: Optional page number for source tracking.
+            autosar_standard: Optional AUTOSAR standard identifier for source tracking.
+            standard_release: Optional AUTOSAR standard release for source tracking.
 
         Returns:
             The parsed AutosarClass object, or None if parsing failed.
@@ -121,8 +125,17 @@ class AutosarClassParser(AbstractTypeParser):
 
         # Create source location
         source = None
-        if pdf_filename and page_number:
-            source = AutosarSource(pdf_file=pdf_filename, page_number=page_number)
+        if pdf_filename:
+            # Use page_number if provided, otherwise default to 1
+            # Note: In two-phase parsing, we don't have page-level granularity,
+            # so we use a default page number of 1
+            pn = page_number if page_number is not None else 1
+            source = AutosarSource(
+                pdf_file=pdf_filename,
+                page_number=pn,
+                autosar_standard=autosar_standard,
+                standard_release=standard_release,
+            )
 
         # Create AutosarClass directly (no intermediate ClassDefinition)
         return AutosarClass(

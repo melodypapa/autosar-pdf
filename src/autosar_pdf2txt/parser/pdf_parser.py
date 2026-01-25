@@ -86,6 +86,46 @@ class PdfParser:
                 "pdfplumber is not installed. Install it with: pip install pdfplumber"
             )
 
+    def _extract_autosar_metadata(self, text: str) -> tuple[Optional[str], Optional[str]]:
+        """Extract AUTOSAR standard and release from PDF text.
+
+        This method scans the extracted text for patterns indicating AUTOSAR
+        standard and release information, typically found in document headers
+        or footers.
+
+        Requirements:
+            SWR_PARSER_00022: PDF Source Location Extraction
+
+        Args:
+            text: The complete extracted text from the PDF.
+
+        Returns:
+            A tuple of (autosar_standard, standard_release). Both values are
+            Optional[str] and will be None if not found in the text.
+        """
+        import re
+
+        autosar_standard: Optional[str] = None
+        standard_release: Optional[str] = None
+
+        # Pattern for AUTOSAR standard: "Part of AUTOSAR Standard: <StandardName>" or "Part of AUTOSAR Standard <StandardName>"
+        standard_pattern = re.compile(r"Part of AUTOSAR Standard:?\s*(.+)")
+        # Pattern for AUTOSAR release: "Part of Standard Release: R<YY>-<MM>" or "Part of Standard Release R<YY>-<MM>"
+        release_pattern = re.compile(r"Part of Standard Release:?\s*(R\d{2}-\d{2})")
+
+        for line in text.split("\n"):
+            # Try to match AUTOSAR standard
+            standard_match = standard_pattern.match(line.strip())
+            if standard_match and autosar_standard is None:
+                autosar_standard = standard_match.group(1).strip()
+
+            # Try to match AUTOSAR release
+            release_match = release_pattern.match(line.strip())
+            if release_match and standard_release is None:
+                standard_release = release_match.group(1).strip()
+
+        return autosar_standard, standard_release
+
     def parse_pdf(self, pdf_path: str) -> AutosarDoc:
         """Parse a PDF file and extract the package hierarchy.
 
@@ -240,9 +280,10 @@ class PdfParser:
         """Parse model definitions from complete PDF text.
 
         This method processes the complete text from the entire PDF and:
-        1. Detects new type definitions (Class, Enumeration, Primitive)
-        2. Delegates to the appropriate specialized parser
-        3. Continues parsing for existing models across pages
+        1. Extracts AUTOSAR standard and release metadata
+        2. Detects new type definitions (Class, Enumeration, Primitive)
+        3. Delegates to the appropriate specialized parser
+        4. Continues parsing for existing models across pages
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -268,6 +309,9 @@ class PdfParser:
         if model_parsers is None:
             model_parsers = {}
 
+        # Extract AUTOSAR standard and release from text
+        autosar_standard, standard_release = self._extract_autosar_metadata(text)
+
         models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = []
         lines = text.split("\n")
 
@@ -290,17 +334,17 @@ class PdfParser:
                 # Delegate to appropriate parser
                 if class_match:
                     new_model = self._class_parser.parse_definition(
-                        lines, i, pdf_filename, None
+                        lines, i, pdf_filename, None, autosar_standard, standard_release
                     )
                     parser_type = "class"
                 elif primitive_match:
                     new_model = self._primitive_parser.parse_definition(
-                        lines, i, pdf_filename, None
+                        lines, i, pdf_filename, None, autosar_standard, standard_release
                     )
                     parser_type = "primitive"
                 else:  # enumeration_match
                     new_model = self._enum_parser.parse_definition(
-                        lines, i, pdf_filename, None
+                        lines, i, pdf_filename, None, autosar_standard, standard_release
                     )
                     parser_type = "enumeration"
 

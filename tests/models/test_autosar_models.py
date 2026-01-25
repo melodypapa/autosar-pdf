@@ -2215,3 +2215,41 @@ class TestAutosarSource:
         source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
         result = str(source)
         assert result == "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42"
+
+    def test_init_with_autosar_standard_and_release(self) -> None:
+        """Test initialization with AUTOSAR standard and release information.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+        """
+        from autosar_pdf2txt.models.base import AutosarSource
+
+        source = AutosarSource(
+            pdf_file="AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
+            page_number=42,
+            autosar_standard="TPS_BSWModuleDescriptionTemplate",
+            standard_release="R21-11",
+        )
+        assert source.pdf_file == "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+        assert source.page_number == 42
+        assert source.autosar_standard == "TPS_BSWModuleDescriptionTemplate"
+        assert source.standard_release == "R21-11"
+
+    def test_init_with_optional_autosar_standard_fields(self) -> None:
+        """Test initialization with optional AUTOSAR standard fields as None.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+        """
+        from autosar_pdf2txt.models.base import AutosarSource
+
+        source = AutosarSource(
+            pdf_file="AUTOSAR_CP_TPS_ECUConfiguration.pdf",
+            page_number=15,
+            autosar_standard=None,
+            standard_release=None,
+        )
+        assert source.pdf_file == "AUTOSAR_CP_TPS_ECUConfiguration.pdf"
+        assert source.page_number == 15
+        assert source.autosar_standard is None
+        assert source.standard_release is None

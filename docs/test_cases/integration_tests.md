@@ -43,6 +43,10 @@ All existing integration test cases in this document are currently at maturity l
 6. Verify the class has a note containing "AUTOSAR" or "Rootelement"
 7. Verify the class is in the "AutosarTopLevelStructure" package under M2 → AUTOSARTemplates
 8. Verify the note contains proper word spacing
+9. Verify the source information is present (source is not None)
+10. Verify the source pdf_file is "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf"
+11. Verify the source autosar_standard is "Foundation"
+12. Verify the source standard_release is "R23-11"
 
 **Part 2: Verify SwComponentType class from GenericStructureTemplate PDF**
 1. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
@@ -73,6 +77,9 @@ All existing integration test cases in this document are currently at maturity l
 - Bases: ["ARObject"]
 - Note contains "AUTOSAR" or "Rootelement" with proper word spacing
 - Package hierarchy: M2 → AUTOSARTemplates → AutosarTopLevelStructure
+- Source pdf_file: "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf"
+- Source autosar_standard: "Foundation"
+- Source standard_release: "R23-11"
 
 **Part 2: SwComponentType class**
 - Name: "SwComponentType"
@@ -91,7 +98,7 @@ All existing integration test cases in this document are currently at maturity l
 - All expected subclasses present: YES
 - No unexpected subclasses: YES
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_MODEL_00001, SWR_MODEL_00010, SWR_MODEL_00023
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00009, SWR_PARSER_00010, SWR_PARSER_00022, SWR_MODEL_00001, SWR_MODEL_00010, SWR_MODEL_00023, SWR_MODEL_00027
 
 ---
 

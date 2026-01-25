@@ -40,9 +40,11 @@ class TestPdfIntegration:
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00022: PDF Source Location Extraction
             SWR_MODEL_00001: AUTOSAR Class Representation
             SWR_MODEL_00010: AUTOSAR Attribute Representation
             SWR_MODEL_00023: AUTOSAR Document Model
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         Args:
             generic_structure_template_pdf: Cached parsed GenericStructureTemplate PDF data (AutosarDoc).
@@ -75,6 +77,15 @@ class TestPdfIntegration:
         assert "AUTOSAR" in autosar_class.note or "Rootelement" in autosar_class.note, \
             f"Note should contain AUTOSAR or Rootelement, got: '{autosar_class.note}'"
 
+        # Verify source information
+        assert autosar_class.source is not None, "AUTOSAR class should have source information"
+        assert autosar_class.source.pdf_file == "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf", \
+            f"Expected pdf_file 'AUTOSAR_FO_TPS_GenericStructureTemplate.pdf', got '{autosar_class.source.pdf_file}'"
+        assert autosar_class.source.autosar_standard == "Foundation", \
+            f"Expected autosar_standard 'Foundation', got '{autosar_class.source.autosar_standard}'"
+        assert autosar_class.source.standard_release == "R23-11", \
+            f"Expected standard_release 'R23-11', got '{autosar_class.source.standard_release}'"
+
         # Print AUTOSAR class information for verification
         print("\n=== AUTOSAR class verified ===")
         print(f"  Name: {autosar_class.name}")
@@ -82,6 +93,7 @@ class TestPdfIntegration:
         print(f"  Bases: {autosar_class.bases}")
         print(f"  Note: {autosar_class.note}")
         print(f"  Package: {first_package.name}")
+        print(f"  Source: {autosar_class.source}")
 
         # ========== Verify SwComponentType class from GenericStructureTemplate PDF ==========
         sw_component_type = generic_structure_sw_component_type

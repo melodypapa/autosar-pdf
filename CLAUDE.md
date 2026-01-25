@@ -88,7 +88,7 @@ src/autosar_pdf2txt/
 ├── __init__.py          # Package exports
 ├── models/
 │   ├── __init__.py
-│   ├── base.py            # AbstractAutosarBase abstract base class, AutosarSource for location tracking
+│   ├── base.py            # AbstractAutosarBase abstract base class, AutosarDocumentSource for location tracking
 │   ├── enums.py           # ATPType, AttributeKind enumerations
 │   ├── attributes.py      # AutosarAttribute, AutosarEnumLiteral
 │   ├── types.py           # AutosarClass, AutosarEnumeration, AutosarPrimitive
@@ -140,7 +140,7 @@ PDF Files → PdfParser (Two-Phase) → Specialized Parsers → AutosarDoc → M
    - **Parent Resolution**: Ancestry-based parent resolution with subclass validation (SWR_PARSER_00018, SWR_PARSER_00029)
 
 3. **Model Layer**: `models/` directory with modular design
-   - `base.py`: `AbstractAutosarBase` - shared base class for all AUTOSAR types, `AutosarSource` for location tracking
+   - `base.py`: `AbstractAutosarBase` - shared base class for all AUTOSAR types, `AutosarDocumentSource` for location tracking
    - `enums.py`: `ATPType`, `AttributeKind` enumerations
    - `attributes.py`: `AutosarAttribute`, `AutosarEnumLiteral`
    - `types.py`: `AutosarClass`, `AutosarEnumeration`, `AutosarPrimitive` (inherit from `AbstractAutosarBase`)
@@ -162,7 +162,7 @@ PDF Files → PdfParser (Two-Phase) → Specialized Parsers → AutosarDoc → M
 - **Specialized Parsers**: Type-specific parsers inherit from shared base with common functionality
 - **Modular Models**: Separated into base/types/attributes/containers for clear organization
 - **Abstract Base Pattern**: `AbstractAutosarBase` provides common interface for all types
-- **Source Location Tracking**: `AutosarSource` tracks PDF file and page number for each type
+- **Source Location Tracking**: `AutosarDocumentSource` tracks PDF file and page number for each type
 - **Unified Type System**: Classes, enumerations, and primitives all inherit from same base
 - **Inheritance Tracking**: Classes track bases, parent, children, subclasses, and aggregated_by
 - **Model-Level Validation**: All validation happens in `__post_init__`, not in the parser
@@ -172,7 +172,7 @@ PDF Files → PdfParser (Two-Phase) → Specialized Parsers → AutosarDoc → M
 
 **Models (`models/` directory)**
 - `base.py`: `AbstractAutosarBase` - abstract base class for all AUTOSAR types (name, package, note, source)
-  - `AutosarSource`: Tracks PDF file and page number where type was defined
+  - `AutosarDocumentSource`: Tracks PDF file and page number where type was defined
 - `enums.py`: `ATPType` (NONE, ATP_MIXED_STRING, ATP_VARIATION, ATP_MIXED), `AttributeKind`
 - `attributes.py`: `AutosarAttribute` (name, type, mult, kind, reference), `AutosarEnumLiteral` (name, index, description)
 - `types.py`:
@@ -427,11 +427,11 @@ The parser uses a two-phase approach to handle multi-page definitions:
 
 ### Source Location Tracking (SWR_MODEL_00027)
 
-Each AUTOSAR type can track its definition location using `AutosarSource`:
+Each AUTOSAR type can track its definition location using `AutosarDocumentSource`:
 
 ```python
 @dataclass(frozen=True)
-class AutosarSource:
+class AutosarDocumentSource:
     pdf_file: str      # Path to the PDF file
     page_number: int   # Page number (1-indexed)
 ```
@@ -603,7 +603,7 @@ If the parser is not extracting classes correctly from a PDF:
 8. **Check for M2 package prefixes** which affect hierarchy building (prefix is now preserved)
 
 9. **Check source location tracking**:
-   - Verify AutosarSource is being attached to types correctly
+   - Verify AutosarDocumentSource is being attached to types correctly
    - Check PDF file names and page numbers are accurate
 
 ### Understanding Package Hierarchy

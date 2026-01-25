@@ -4,7 +4,7 @@
 from autosar_pdf2txt.models.enums import ATPType, AttributeKind
 
 # Export base class
-from autosar_pdf2txt.models.base import AbstractAutosarBase, AutosarSource
+from autosar_pdf2txt.models.base import AbstractAutosarBase, AutosarDocumentSource
 
 # Export attribute classes
 from autosar_pdf2txt.models.attributes import AutosarAttribute, AutosarEnumLiteral
@@ -21,7 +21,7 @@ __all__ = [
     "AttributeKind",
     # Base class
     "AbstractAutosarBase",
-    "AutosarSource",
+    "AutosarDocumentSource",
     # Attribute classes
     "AutosarAttribute",
     "AutosarEnumLiteral",

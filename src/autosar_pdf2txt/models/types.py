@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from autosar_pdf2txt.models.attributes import AutosarAttribute, AutosarEnumLiteral
-from autosar_pdf2txt.models.base import AbstractAutosarBase, AutosarSource
+from autosar_pdf2txt.models.base import AbstractAutosarBase, AutosarDocumentSource
 from autosar_pdf2txt.models.enums import ATPType
 
 
@@ -82,7 +82,7 @@ class AutosarClass(AbstractAutosarBase):
         subclasses: Optional[List[str]] = None,
         aggregated_by: Optional[List[str]] = None,
         note: Optional[str] = None,
-        source: Optional[AutosarSource] = None,
+        source: Optional[AutosarDocumentSource] = None,
     ) -> None:
         """Initialize the AUTOSAR class.
 
@@ -189,7 +189,7 @@ class AutosarEnumeration(AbstractAutosarBase):
         package: str,
         enumeration_literals: Optional[List[AutosarEnumLiteral]] = None,
         note: Optional[str] = None,
-        source: Optional[AutosarSource] = None,
+        source: Optional[AutosarDocumentSource] = None,
     ) -> None:
         """Initialize the AUTOSAR enumeration.
 
@@ -270,7 +270,7 @@ class AutosarPrimitive(AbstractAutosarBase):
         package: str,
         attributes: Optional[Dict[str, AutosarAttribute]] = None,
         note: Optional[str] = None,
-        source: Optional[AutosarSource] = None,
+        source: Optional[AutosarDocumentSource] = None,
     ) -> None:
         """Initialize the AUTOSAR primitive type.
 

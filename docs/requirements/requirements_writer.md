@@ -102,7 +102,7 @@ The Children section shall:
 - Be included only when the children list is not empty
 - Display the list of child class names as bullet points
 - Sort child class names alphabetically in ascending order
-- Appear immediately after the Source section (if present) or Subclasses section (if no source) and before the Note section when present
+- Appear immediately after the Document Source section (if present) or Subclasses section (if no source) and before the Note section when present
 
 ---
 
@@ -132,7 +132,7 @@ The Children section shall:
 - Optional AUTOSAR standard identifier (if available from the parsing process)
 - Optional AUTOSAR standard release (if available from the parsing process)
 
-The source section shall:
+The Document Source section shall:
 - Only be included when source information is available from the parsing process
 - Display the PDF filename and page number on the first line
 - Display "AUTOSAR Standard: <identifier>" on a separate line if autosar_standard is not None

@@ -2185,8 +2185,8 @@ class TestAutosarDoc:
         assert str(doc) == "AutosarDoc(0 packages, 0 root classes)"
 
 
-class TestAutosarSource:
-    """Tests for AutosarSource class.
+class TestAutosarDocumentSource:
+    """Tests for AutosarDocumentSource class.
 
     Requirements:
         SWR_MODEL_00027: AUTOSAR Source Location Representation
@@ -2198,9 +2198,9 @@ class TestAutosarSource:
         Requirements:
             SWR_MODEL_00027: AUTOSAR Source Location Representation
         """
-        from autosar_pdf2txt.models.base import AutosarSource
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
-        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        source = AutosarDocumentSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
         assert source.pdf_file == "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
         assert source.page_number == 42
 
@@ -2210,9 +2210,9 @@ class TestAutosarSource:
         Requirements:
             SWR_MODEL_00027: AUTOSAR Source Location Representation
         """
-        from autosar_pdf2txt.models.base import AutosarSource
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
-        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        source = AutosarDocumentSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
         result = str(source)
         assert result == "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42"
 
@@ -2222,9 +2222,9 @@ class TestAutosarSource:
         Requirements:
             SWR_MODEL_00027: AUTOSAR Source Location Representation
         """
-        from autosar_pdf2txt.models.base import AutosarSource
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
-        source = AutosarSource(
+        source = AutosarDocumentSource(
             pdf_file="AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
             page_number=42,
             autosar_standard="TPS_BSWModuleDescriptionTemplate",
@@ -2241,9 +2241,9 @@ class TestAutosarSource:
         Requirements:
             SWR_MODEL_00027: AUTOSAR Source Location Representation
         """
-        from autosar_pdf2txt.models.base import AutosarSource
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
-        source = AutosarSource(
+        source = AutosarDocumentSource(
             pdf_file="AUTOSAR_CP_TPS_ECUConfiguration.pdf",
             page_number=15,
             autosar_standard=None,

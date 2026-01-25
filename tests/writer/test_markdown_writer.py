@@ -1559,10 +1559,10 @@ class TestMarkdownWriterFiles:
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
-        from autosar_pdf2txt.models.base import AutosarSource
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
         pkg = AutosarPackage(name="TestPackage")
-        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        source = AutosarDocumentSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
         cls = AutosarClass(
             name="TestClass",
             package="M2::Test",
@@ -1579,7 +1579,7 @@ class TestMarkdownWriterFiles:
         content = class_file.read_text(encoding="utf-8")
 
         # Verify Source section
-        assert "## Source\n\n" in content
+        assert "## Document Source\n\n" in content
         assert "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42" in content
 
         # Verify Note section
@@ -1592,10 +1592,10 @@ class TestMarkdownWriterFiles:
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
         """
-        from autosar_pdf2txt.models.base import AutosarSource
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
         pkg = AutosarPackage(name="TestPackage")
-        source = AutosarSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        source = AutosarDocumentSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
         enum = AutosarEnumeration(
             name="TestEnum",
             package="M2::Test",
@@ -1615,7 +1615,7 @@ class TestMarkdownWriterFiles:
         content = enum_file.read_text(encoding="utf-8")
 
         # Verify Source section
-        assert "## Source\n\n" in content
+        assert "## Document Source\n\n" in content
         assert "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42" in content
 
         # Verify Note section

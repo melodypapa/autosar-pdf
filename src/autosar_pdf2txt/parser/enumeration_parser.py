@@ -18,7 +18,7 @@ from typing import List, Optional, Tuple
 from autosar_pdf2txt.models import (
     AutosarEnumeration,
     AutosarEnumLiteral,
-    AutosarSource,
+    AutosarDocumentSource,
 )
 from autosar_pdf2txt.parser.base_parser import AbstractTypeParser, AutosarType
 
@@ -107,7 +107,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
             # Note: In two-phase parsing, we don't have page-level granularity,
             # so we use a default page number of 1
             pn = page_number if page_number is not None else 1
-            source = AutosarSource(
+            source = AutosarDocumentSource(
                 pdf_file=pdf_filename,
                 page_number=pn,
                 autosar_standard=autosar_standard,

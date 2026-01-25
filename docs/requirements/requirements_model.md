@@ -437,7 +437,7 @@ This requirement enables:
 
 **Maturity**: accept
 
-**Description**: The system shall provide a data model to represent source location information for AUTOSAR types. The source location shall include:
+**Description**: The system shall provide a data model (AutosarDocumentSource) to represent source location information for AUTOSAR types. The source location shall include:
 - `pdf_file`: Path to the PDF file (relative or absolute)
 - `page_number`: Page number in the PDF (1-indexed)
 - `autosar_standard`: Optional AUTOSAR standard identifier (e.g., "Foundation", "Classic Platform", "Adaptive Platform", "Methodology")

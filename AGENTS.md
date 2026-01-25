@@ -261,6 +261,56 @@ def test_add_class_duplicate(self) -> None:
         pkg.add_class(cls2)
 ```
 
+### Test-Driven Development (TDD) - MANDATORY
+
+**Critical Rule**: All new features and bug fixes MUST follow TDD methodology.
+
+**TDD Process** (see `docs/development/tdd_rules.md` for complete details):
+
+1. **Document Test Case FIRST** in `docs/test_cases/unit_tests.md`
+   - Test case ID (e.g., SWUT_CLI_00037)
+   - Test case title
+   - Requirement traceability
+   - Test description, steps, expected results
+
+2. **Write Failing Test** (Red phase)
+   - Write test based on documentation
+   - Verify test fails
+
+3. **Implement Minimum Code** (Green phase)
+   - Write only enough code to make test pass
+   - Verify test passes
+
+4. **Refactor** (if needed)
+   - Improve code quality
+   - Verify all tests pass
+
+5. **Update Requirements**
+   - Add/update requirement with maturity level
+   - Update requirement index
+
+**Common TDD Violations to Avoid**:
+- ❌ Implementing feature before writing tests
+- ❌ Skipping test case documentation
+- ❌ Writing too much code at once
+- ❌ Not running tests frequently
+
+**TDD Checklist** (see `docs/development/tdd_rules.md` for complete checklist):
+- [ ] Document test case in `docs/test_cases/unit_tests.md`
+- [ ] Write failing unit test
+- [ ] Implement minimum code to pass
+- [ ] Refactor if needed
+- [ ] Update requirements
+- [ ] Run quality checks
+
+**Why TDD is Mandatory**:
+- Ensures code matches requirements
+- Provides executable documentation
+- Prevents over-engineering
+- Catches bugs early
+- Facilitates refactoring
+- Improves code quality
+
 ## Quality Gates
 
 Before committing changes, run the following quality checks to ensure code quality:

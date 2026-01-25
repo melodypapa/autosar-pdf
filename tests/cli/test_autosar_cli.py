@@ -99,7 +99,6 @@ class TestAutosarCli:
 
         mock_logging.DEBUG = 10
         mock_logging.INFO = 20
-        mock_logging.basicConfig = MagicMock()
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
@@ -114,10 +113,14 @@ class TestAutosarCli:
 
             main()
 
-            # Verify logging was configured with DEBUG level
-            mock_logging.basicConfig.assert_called_once()
-            call_kwargs = mock_logging.basicConfig.call_args[1]
-            assert call_kwargs["level"] == mock_logging.DEBUG
+            # Verify root logger was configured with DEBUG level
+            root_logger = mock_logging.getLogger.return_value
+            # Check that DEBUG was set (may be called multiple times due to pdfminer suppression)
+            assert any(call[0][0] == mock_logging.DEBUG for call in root_logger.setLevel.call_args_list)
+
+            # Verify console handler was created with DEBUG level
+            assert any(call[0][0].setLevel.call_args[0][0] == mock_logging.DEBUG
+                      for call in root_logger.addHandler.call_args_list)
 
     @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md", "--include-class-details"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
@@ -221,7 +224,6 @@ class TestAutosarCli:
 
         mock_logging.DEBUG = 10
         mock_logging.INFO = 20
-        mock_logging.basicConfig = MagicMock()
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
@@ -236,10 +238,14 @@ class TestAutosarCli:
 
             main()
 
-            # Verify logging was configured with INFO level (not verbose)
-            mock_logging.basicConfig.assert_called_once()
-            call_kwargs = mock_logging.basicConfig.call_args[1]
-            assert call_kwargs["level"] == mock_logging.INFO
+            # Verify root logger was configured with INFO level (not verbose)
+            root_logger = mock_logging.getLogger.return_value
+            # Check that INFO was set (may be called multiple times due to pdfminer suppression)
+            assert any(call[0][0] == mock_logging.INFO for call in root_logger.setLevel.call_args_list)
+
+            # Verify console handler was created with INFO level
+            assert any(call[0][0].setLevel.call_args[0][0] == mock_logging.INFO
+                      for call in root_logger.addHandler.call_args_list)
 
     @patch("sys.argv", ["autosar-extract", "test.pdf"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
@@ -354,3 +360,201 @@ class TestAutosarCli:
             result = main()
 
             assert result == 0
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_log_file_argument_creates_handler(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00012: Test CLI creates file handler when --log-file is specified.
+
+        Requirements:
+            SWR_CLI_00014: CLI Logger File Specification
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        mock_path.return_value = mock_path_instance
+
+        # Mock FileHandler
+        mock_file_handler = MagicMock()
+        mock_logging.FileHandler.return_value = mock_file_handler
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
+             patch("builtins.print"):
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
+
+            result = main()
+
+            assert result == 0
+            # Verify FileHandler was created
+            mock_logging.FileHandler.assert_called_once()
+            # Verify FileHandler was added to root logger
+            mock_logging.getLogger.return_value.addHandler.assert_called()
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "logs/test.log"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_log_file_creates_parent_directories(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00013: Test CLI creates parent directories for log file.
+
+        Requirements:
+            SWR_CLI_00014: CLI Logger File Specification
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        mock_path_instance.parent.mkdir = MagicMock()
+        mock_path.return_value = mock_path_instance
+
+        # Mock FileHandler
+        mock_file_handler = MagicMock()
+        mock_logging.FileHandler.return_value = mock_file_handler
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
+             patch("builtins.print"):
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
+
+            result = main()
+
+            assert result == 0
+            # Verify parent directory creation
+            mock_path_instance.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log", "-v"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_log_file_with_verbose_mode(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00014: Test CLI combines --log-file with -v flag.
+
+        Requirements:
+            SWR_CLI_00005: CLI Verbose Mode
+            SWR_CLI_00014: CLI Logger File Specification
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        mock_path.return_value = mock_path_instance
+
+        # Mock FileHandler
+        mock_file_handler = MagicMock()
+        mock_logging.FileHandler.return_value = mock_file_handler
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
+             patch("builtins.print"):
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
+
+            result = main()
+
+            assert result == 0
+            # Verify both handlers were added (console + file)
+            root_logger = mock_logging.getLogger.return_value
+            assert root_logger.addHandler.call_count >= 2  # Console handler + file handler
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "/invalid/path/test.log"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_log_file_creation_error_continues_with_console_logging(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00015: Test CLI continues with console logging when log file creation fails.
+
+        Requirements:
+            SWR_CLI_00014: CLI Logger File Specification
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        # Simulate mkdir failure
+        mock_path_instance.parent.mkdir.side_effect = PermissionError("Permission denied")
+        mock_path.return_value = mock_path_instance
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
+             patch("builtins.print"):
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
+
+            result = main()
+
+            # Should still succeed with console-only logging
+            assert result == 0
+            # Should log error about failed log file creation
+            mock_logging.error.assert_called()
+            error_msg = mock_logging.error.call_args[0][0]
+            assert "Failed to create log file" in error_msg
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_log_file_format_includes_timestamps(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00016: Test CLI log file format includes timestamps.
+
+        Requirements:
+            SWR_CLI_00014: CLI Logger File Specification
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        mock_path.return_value = mock_path_instance
+
+        # Mock FileHandler and Formatter
+        mock_file_handler = MagicMock()
+        mock_formatter = MagicMock()
+        mock_logging.FileHandler.return_value = mock_file_handler
+        mock_logging.Formatter.return_value = mock_formatter
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \
+             patch("builtins.print"):
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
+
+            result = main()
+
+            assert result == 0
+            # Verify Formatter was created with timestamp format
+            mock_logging.Formatter.assert_called()
+            # Check that the format includes timestamp components
+            call_args = mock_logging.Formatter.call_args
+            assert call_args is not None
+            format_string = call_args[0][0] if call_args[0] else call_args[1].get('fmt')
+            assert "%(asctime)s" in format_string or "%(msecs)" in format_string

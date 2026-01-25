@@ -194,3 +194,227 @@ The TDD cycle works together with the test update rules:
 - **Refactoring Safety**: Tests prevent regressions during refactoring
 - **Design Focus**: Writing tests first leads to better design
 - **Faster Development**: Catch bugs early, reduce debugging time
+
+---
+
+## TDD Enforcement and Common Mistakes
+
+### Common TDD Violations
+
+#### Violation 1: Implementing Before Testing
+
+**Wrong Approach**:
+1. Implement the feature
+2. Write tests
+3. Update documentation
+
+**Correct TDD Approach**:
+1. Document test case in `docs/test_cases/unit_tests.md`
+2. Write failing test (Red)
+3. Implement minimum code to pass (Green)
+4. Refactor if needed
+
+**Why This Matters**:
+- Writing tests first ensures you understand the requirements
+- Prevents writing code that doesn't match requirements
+- Tests serve as executable documentation
+- Forces better design decisions
+
+#### Violation 2: Skipping Test Documentation
+
+**Wrong Approach**:
+1. Write test code directly
+2. Implement feature
+3. Forget to document test case
+
+**Correct TDD Approach**:
+1. Document test case in `docs/test_cases/unit_tests.md` FIRST
+2. Write test code based on documentation
+3. Implement feature
+4. Verify test passes
+
+**Why This Matters**:
+- Test documentation provides clear specification
+- Enables traceability between requirements and tests
+- Facilitates test case review and approval
+- Serves as reference for future maintenance
+
+#### Violation 3: Writing Too Much Code at Once
+
+**Wrong Approach**:
+1. Write complete feature implementation
+2. Write all tests at once
+3. Debug multiple issues simultaneously
+
+**Correct TDD Approach**:
+1. Write one failing test
+2. Write minimum code to pass that test
+3. Run tests to verify
+4. Repeat for next test
+
+**Why This Matters**:
+- Smaller changes are easier to debug
+- Tests guide implementation step by step
+- Prevents over-engineering
+- Faster feedback loop
+
+#### Violation 4: Not Running Tests Frequently
+
+**Wrong Approach**:
+1. Write multiple tests
+2. Implement multiple features
+3. Run tests at the end
+
+**Correct TDD Approach**:
+1. Write one test
+2. Run test (should fail)
+3. Implement code
+4. Run test (should pass)
+5. Repeat
+
+**Why This Matters**:
+- Catch issues early
+- Faster debugging
+- Prevents cascading failures
+- Maintains test suite health
+
+### TDD Checklist
+
+Before starting any new feature or bug fix:
+
+- [ ] **Step 1**: Document test case in `docs/test_cases/unit_tests.md`
+  - Test case ID (e.g., SWUT_CLI_00037)
+  - Test case title
+  - Requirement traceability
+  - Test description
+  - Test steps
+  - Expected results
+  - Test data (if applicable)
+
+- [ ] **Step 2**: Write failing unit test
+  - Test should fail (Red phase)
+  - Test should be clear and focused
+  - Test should have descriptive name
+
+- [ ] **Step 3**: Implement minimum code
+  - Write only enough code to make test pass (Green phase)
+  - Don't optimize or refactor yet
+  - Run test to verify it passes
+
+- [ ] **Step 4**: Refactor if needed
+  - Improve code quality
+  - Ensure tests still pass
+  - Run all tests to verify no regressions
+
+- [ ] **Step 5**: Update requirements if needed
+  - Add new requirement with maturity `draft`
+  - Update requirement maturity to `accept` after implementation
+  - Update requirement index in `docs/requirements/requirements.md`
+
+- [ ] **Step 6**: Run quality checks
+  ```bash
+  python3 -m pytest tests/ -v
+  ruff check src/ tests/
+  mypy src/autosar_pdf2txt/
+  ```
+
+### TDD Workflow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Step 1: Document Test Case                                 │
+│  ↓ docs/test_cases/unit_tests.md                            │
+│  - Write test case documentation                            │
+│  - Include test case ID, title, requirements, steps        │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 2: Write Failing Test (RED)                           │
+│  ↓ tests/<module>/test_<module>.py                          │
+│  - Write test based on documentation                        │
+│  - Run test: should FAIL                                    │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 3: Implement Minimum Code (GREEN)                     │
+│  ↓ src/autosar_pdf2txt/<module>/...                         │
+│  - Write minimum code to make test pass                     │
+│  - Run test: should PASS                                    │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 4: Refactor (if needed)                               │
+│  ↓ src/autosar_pdf2txt/<module>/...                         │
+│  - Improve code quality                                     │
+│  - Run all tests: should all PASS                           │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 5: Update Requirements                                │
+│  ↓ docs/requirements/requirements.md                        │
+│  - Add/update requirement with maturity level               │
+│  - Update requirement index                                 │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 6: Quality Gates                                      │
+│  ↓ Run all checks                                           │
+│  - pytest tests/ -v                                        │
+│  - ruff check src/ tests/                                  │
+│  - mypy src/autosar_pdf2txt/                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Integration with Version Control
+
+**Rule**: Each TDD cycle should result in a single commit.
+
+```bash
+# Correct: Single commit for complete TDD cycle
+git add docs/test_cases/unit_tests.md
+git add tests/cli/test_autosar_cli.py
+git add src/autosar_pdf2txt/cli/autosar_cli.py
+git add docs/requirements/requirements_cli.md
+git add docs/requirements/requirements.md
+git commit -m "feat: add --log-file CLI option
+
+- Add SWR_CLI_00014 requirement
+- Add SWUT_CLI_00037-00041 test cases
+- Implement file handler creation and configuration
+- Support parent directory creation
+- Graceful error handling for file creation failures
+- Timestamp format in log files"
+```
+
+### Automated TDD Verification
+
+To help enforce TDD rules, consider adding pre-commit hooks:
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+
+# Check if test documentation exists for new tests
+NEW_TESTS=$(git diff --cached --name-only | grep "tests/.*test_.*\.py")
+if [ -n "$NEW_TESTS" ]; then
+    echo "Checking for test documentation..."
+    # Add validation logic here
+fi
+
+# Run tests before commit
+python3 -m pytest tests/ -q
+if [ $? -ne 0 ]; then
+    echo "Tests failed. Please fix before committing."
+    exit 1
+fi
+```
+
+### Learning Resources
+
+For team members new to TDD:
+
+1. **Read**: `docs/development/tdd_rules.md` (this document)
+2. **Practice**: Start with simple features using the TDD checklist
+3. **Review**: Have code reviews verify TDD compliance
+4. **Pair**: Pair program with experienced TDD practitioners
+5. **Reflect**: After each task, review if TDD was followed correctly

@@ -16,6 +16,7 @@ def main() -> int:
         SWR_CLI_00010: CLI Class File Output
         SWR_CLI_00011: CLI Class Files Flag
         SWR_CLI_00012: CLI Class Hierarchy Flag
+        SWR_CLI_00014: CLI Logger File Specification
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -51,17 +52,49 @@ def main() -> int:
         action="store_true",
         help="Enable verbose output mode for detailed debug information",
     )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        help="Write log messages to the specified file (in addition to stderr)",
+    )
 
     args = parser.parse_args()
 
     # Configure logging based on verbose flag
     # SWR_CLI_00005: CLI Verbose Mode
     # SWR_CLI_00008: CLI Logging
+    # SWR_CLI_00014: CLI Logger File Specification
     log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="%(levelname)s: %(message)s",
-    )
+    log_format = "%(levelname)s: %(message)s"
+    log_file_format = "%(asctime)s.%(msecs)03d: %(levelname)s: %(message)s"
+    log_date_format = "%Y-%m-%d %H:%M:%S"
+
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    # Console handler (stderr)
+    console_handler = logging.StreamHandler(sys.stderr)
+    console_handler.setLevel(log_level)
+    console_handler.setFormatter(logging.Formatter(log_format))
+    root_logger.addHandler(console_handler)
+
+    # File handler (if --log-file is specified)
+    # SWR_CLI_00014: CLI Logger File Specification
+    if args.log_file:
+        try:
+            log_file_path = Path(args.log_file)
+            # Create parent directories if they don't exist
+            log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Create file handler with timestamps
+            file_handler = logging.FileHandler(log_file_path, mode='w', encoding='utf-8')
+            file_handler.setLevel(log_level)
+            file_handler.setFormatter(logging.Formatter(log_file_format, datefmt=log_date_format))
+            root_logger.addHandler(file_handler)
+        except Exception as e:
+            logging.error(f"Failed to create log file '{args.log_file}': {e}")
+            # Continue with console-only logging
 
     # Suppress pdfminer warnings about invalid color values in PDF files
     # These warnings don't affect text extraction functionality

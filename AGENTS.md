@@ -7,14 +7,18 @@ This document provides context information for iFlow CLI agents working on the a
 **autosar-pdf2txt** is a Python package for extracting AUTOSAR model hierarchies from PDF specification documents and converting them to Markdown format.
 
 ### Core Features
-- **PDF Extraction**: Extract AUTOSAR packages, classes, and enumerations from PDF specification documents
+- **PDF Extraction**: Extract AUTOSAR packages, classes, enumerations, and primitive types from PDF specification documents
+- **Two-Phase Parsing**: Read phase extracts all text from PDF, parse phase processes complete buffer for multi-page definitions
+- **Specialized Parsers**: Dedicated parsers for classes, enumerations, and primitive types with shared base functionality
 - **Hierarchical Parsing**: Parse complex hierarchical class structures with inheritance relationships
+- **Source Location Tracking**: Track PDF file and page number for each type definition and base class reference
 - **Markdown Output**: Generate well-formatted Markdown output with proper indentation
-- **Class Details**: Support for abstract classes, attributes, and ATP markers
+- **Class Details**: Support for abstract classes, attributes, ATP markers, and source information
 - **Class Hierarchy**: Generate separate class inheritance hierarchy files showing root classes and their subclasses
 - **Individual Class Files**: Create separate markdown files for each class with detailed information
 - **Model Validation**: Built-in duplicate prevention and validation at the model level
-- **Comprehensive Coverage**: 96%+ test coverage with robust error handling
+- **Subclasses Validation**: Validate subclass relationships against actual inheritance hierarchy
+- **Comprehensive Coverage**: 97%+ test coverage with robust error handling
 
 ### Technology Stack
 - **Language**: Python 3.7+
@@ -30,7 +34,7 @@ This document provides context information for iFlow CLI agents working on the a
 The project follows a **pipeline architecture** with clear separation of concerns:
 
 ```
-PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → Markdown Output
+PDF Files → PdfParser (Two-Phase) → Specialized Parsers → AutosarDoc → MarkdownWriter → Markdown Output
 ```
 
 #### Layered Structure
@@ -40,43 +44,59 @@ PDF Files → PdfParser → AutosarPackage/AutosarClass → MarkdownWriter → M
    - Validates inputs
    - Orchestrates the pipeline
 
-2. **Parsing Layer**: `parser/pdf_parser.py`
-   - Reads PDF files using pdfplumber
-   - Extracts text line-by-line
-   - Recognizes AUTOSAR patterns (Class, Package, Attributes, etc.)
-   - Builds `ClassDefinition` intermediate objects
-   - Constructs nested `AutosarPackage` hierarchy
+2. **Parsing Layer**: `parser/` directory with two-phase architecture
+   - **Two-Phase Approach** (SWR_PARSER_00003):
+     - **Read Phase**: Extract all text from all pages using pdfplumber's `extract_words()` with `x_tolerance=1`
+     - **Parse Phase**: Process complete text buffer with state management for multi-page definitions
+   - **Base Parser** (`base_parser.py`): `AbstractTypeParser` - shared functionality for all specialized parsers
+     - Common regex patterns
+     - Attribute validation and filtering
+     - Package path validation
+     - ATP marker validation
+     - Source location tracking
+   - **Specialized Parsers**:
+     - `class_parser.py`: `AutosarClassParser` - parses class definitions, attributes, base classes, subclasses
+     - `enumeration_parser.py`: `AutosarEnumerationParser` - parses enumeration types and literals
+     - `primitive_parser.py`: `AutosarPrimitiveParser` - parses primitive type definitions
+   - **Orchestrator** (`pdf_parser.py`): `PdfParser` - coordinates specialized parsers, manages two-phase process
+   - **Parent Resolution**: Ancestry-based parent resolution with subclass validation (SWR_PARSER_00018, SWR_PARSER_00029)
 
 3. **Model Layer**: `models/` directory, modular design
-   - `base.py`: `AbstractAutosarBase` - shared base class for all AUTOSAR types
+   - `base.py`: `AbstractAutosarBase` - shared base class for all AUTOSAR types, `AutosarSource` for location tracking
    - `enums.py`: `ATPType`, `AttributeKind` enumerations
    - `attributes.py`: `AutosarAttribute`, `AutosarEnumLiteral`
    - `types.py`: `AutosarClass`, `AutosarEnumeration`, `AutosarPrimitive` (inherit from `AbstractAutosarBase`)
    - `containers.py`: `AutosarPackage`, `AutosarDoc`
    - Unified type system: Packages contain `types` list (classes, enumerations, primitives)
-   - Inheritance tracking: `AutosarClass` has `parent` and `children` attributes
+   - Inheritance tracking: `AutosarClass` has `bases`, `parent`, `children`, `subclasses`, `aggregated_by` attributes
+   - Source location: Each type can track its definition location (PDF file and page number)
    - Duplicate prevention at model level
 
 4. **Output Layer**: `writer/markdown_writer.py`
    - Traverses package hierarchy
    - Generates markdown with proper indentation
    - Supports both consolidated output and per-class file generation
+   - Writes source information (PDF file and page number)
 
 #### Directory Structure
 
 ```
 src/autosar_pdf2txt/
-├── __init__.py          # Package exports
+├── __init__.py          # Package exports and version
 ├── models/
 │   ├── __init__.py
-│   ├── base.py            # AbstractAutosarBase abstract base class
+│   ├── base.py            # AbstractAutosarBase, AutosarSource
 │   ├── enums.py           # ATPType, AttributeKind enumerations
 │   ├── attributes.py      # AutosarAttribute, AutosarEnumLiteral
 │   ├── types.py           # AutosarClass, AutosarEnumeration, AutosarPrimitive
 │   └── containers.py      # AutosarPackage, AutosarDoc
 ├── parser/
 │   ├── __init__.py
-│   └── pdf_parser.py      # PdfParser class for extracting AUTOSAR from PDFs
+│   ├── base_parser.py     # AbstractTypeParser base class with shared functionality
+│   ├── class_parser.py    # AutosarClassParser for class definitions
+│   ├── enumeration_parser.py  # AutosarEnumerationParser for enumerations
+│   ├── primitive_parser.py    # AutosarPrimitiveParser for primitives
+│   └── pdf_parser.py      # PdfParser orchestrator with two-phase parsing
 ├── writer/
 │   ├── __init__.py
 │   └── markdown_writer.py # MarkdownWriter class
@@ -225,7 +245,7 @@ Key coding rules summary:
 ### Coverage Goals
 - Target 100% coverage for all modules (currently at 97%+)
 - Tests cover success paths, error paths, and edge cases
-- Coverage reports automatically generated at `scripts/report/coverage.md`
+- Coverage reports automatically generated at `scripts/report/coverage.md` after each test run
 
 ### Test Patterns
 
@@ -263,11 +283,22 @@ All of the following must pass before committing:
 All code includes requirement IDs in docstrings for traceability to `docs/requirements/requirements.md`. Coding standards are defined in `docs/development/coding_rules.md` with stable identifiers.
 
 **Requirements by Module**:
-- **Model**: SWR_MODEL_00001 - SWR_MODEL_00026
-- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00017
-- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00007
-- **CLI**: SWR_CLI_00001 - SWR_CLI_00011
+- **Model**: SWR_MODEL_00001 - SWR_MODEL_00027
+- **Parser**: SWR_PARSER_00001 - SWR_PARSER_00029
+- **Writer**: SWR_WRITER_00001 - SWR_WRITER_00008
+- **CLI**: SWR_CLI_00001 - SWR_CLI_00013
 - **Package**: SWR_PACKAGE_00001 - SWR_PACKAGE_00003
+
+**Key New Requirements**:
+- SWR_PARSER_00003: Two-phase PDF parsing approach (read phase + parse phase)
+- SWR_PARSER_00018: Ancestry-based parent resolution
+- SWR_PARSER_00023: Abstract base parser for common functionality
+- SWR_PARSER_00027: Parser backward compatibility
+- SWR_PARSER_00028: Direct model creation by specialized parsers
+- SWR_PARSER_00029: Subclasses contradiction validation
+- SWR_MODEL_00018: AUTOSAR type abstract base class
+- SWR_MODEL_00027: AUTOSAR source location representation
+- SWR_WRITER_00008: Markdown source information output
 
 ## Custom Slash Commands
 
@@ -349,30 +380,43 @@ If the parser is not extracting classes correctly from a PDF:
            print(page.extract_text())
    ```
 
-3. **Verify regex patterns** in `pdf_parser.py` match the PDF format:
-   - Class definitions: `CLASS_PATTERN`, `PRIMITIVE_PATTERN`, `ENUMERATION_PATTERN`
-   - Package paths: `PACKAGE_PATTERN`
-   - Attributes: `ATTRIBUTE_PATTERN` (checks for "Attribute Type Mult. Kind Note" header)
-   - Enumeration literals: `ENUMERATION_LITERAL_HEADER_PATTERN`, `ENUMERATION_LITERAL_PATTERN`
-   - ATP markers: `ATP_MIXED_STRING_PATTERN`, `ATP_VARIATION_PATTERN`, `ATP_MIXED_PATTERN`
+3. **Verify regex patterns** in specialized parsers match the PDF format:
+   - **Class Parser** (`class_parser.py`): `CLASS_PATTERN`, `ATTRIBUTE_HEADER_PATTERN`, `ATTRIBUTE_PATTERN`
+   - **Enumeration Parser** (`enumeration_parser.py`): `ENUMERATION_PATTERN`, `ENUMERATION_LITERAL_HEADER_PATTERN`, `ENUMERATION_LITERAL_PATTERN`
+   - **Primitive Parser** (`primitive_parser.py`): `PRIMITIVE_PATTERN`
+   - **Base Parser** (`base_parser.py`): `PACKAGE_PATTERN`, `ATP_MIXED_STRING_PATTERN`, `ATP_VARIATION_PATTERN`, `ATP_MIXED_PATTERN`
 
-4. **Check for attribute extraction issues**:
+4. **Check two-phase parsing issues**:
+   - Verify read phase is extracting all text correctly
+   - Check parse phase state management for multi-page definitions
+   - Look for issues with current_models and model_parsers dictionaries
+
+5. **Check for attribute extraction issues**:
    - Verify attribute header recognition: "Attribute Type Mult. Kind Note"
    - Check for metadata lines being incorrectly parsed (SWR_PARSER_00011)
    - Look for multi-line attribute fragments (SWR_PARSER_00012)
    - Common problematic fragments: "Element", "SizeProfile", "data", "If", "has"
 
-5. **Check for enumeration literal extraction**:
+6. **Check for enumeration literal extraction**:
    - Verify literal header recognition: "Literal Description"
    - Ensure literals are being extracted with correct indices
 
-6. **Check for M2 package prefixes** which affect hierarchy building
+7. **Check for parent resolution issues**:
+   - Verify ancestry-based parent resolution is working correctly
+   - Check for circular inheritance detection
+   - Validate subclass relationships (SWR_PARSER_00029)
+
+8. **Check for M2 package prefixes** which affect hierarchy building (prefix is now preserved)
+
+9. **Check source location tracking**:
+   - Verify AutosarSource is being attached to types correctly
+   - Check PDF file names and page numbers are accurate
 
 ### Understanding Package Hierarchy
 
 The parser builds package hierarchies from path strings like `"M2::AUTOSAR::DataTypes"`:
 
-- `M2::` prefix is stripped during parsing
+- `M2::` prefix is **preserved** (M2 is treated as the root metamodel package)
 - `::` separator indicates nesting levels
 - Each level becomes a nested `AutosarPackage`
 - Types (classes, enumerations, primitives) are added to the deepest package level via `add_type()`
@@ -383,11 +427,12 @@ Example:
 Package: M2::AUTOSAR::DataTypes
 
 Creates hierarchy:
-AutosarPackage("AUTOSAR")
-  └── AutosarPackage("DataTypes")
-        ├── AutosarClass("SwDataDefProps")
-        ├── AutosarEnumeration("CategoryEnum")
-        └── AutosarPrimitive("Limit")
+AutosarPackage("M2")
+  └── AutosarPackage("AUTOSAR")
+        └── AutosarPackage("DataTypes")
+              ├── AutosarClass("SwDataDefProps")
+              ├── AutosarEnumeration("CategoryEnum")
+              └── AutosarPrimitive("Limit")
 ```
 
 ### Understanding Model Inheritance
@@ -395,16 +440,18 @@ AutosarPackage("AUTOSAR")
 The model layer uses an abstract base class pattern:
 
 ```
-AbstractAutosarBase (name, package, note)
-    ├── AutosarClass (is_abstract, atp_type, attributes, bases, parent, children)
+AbstractAutosarBase (name, package, note, source)
+    ├── AutosarClass (is_abstract, atp_type, attributes, bases, parent, children, subclasses, aggregated_by)
     ├── AutosarEnumeration (enumeration_literals)
     └── AutosarPrimitive (attributes)
 ```
 
-- **AutosarClass**: Tracks inheritance with `bases` (all parents), `parent` (immediate parent), and `children` (derived classes)
+- **AutosarClass**: Tracks inheritance with `bases` (all parents), `parent` (immediate parent), `children` (derived classes), `subclasses` (explicitly documented subclasses), and `aggregated_by` (classes that aggregate this class)
+- **AutosarClass**: Includes `source` attribute tracking PDF file and page number where the class was defined
 - **AutosarEnumeration**: Contains `AutosarEnumLiteral` objects
 - **AutosarPrimitive**: Represents primitive data types like `Limit`, `Interval`
 - **AutosarPackage**: Contains unified `types` list (can hold any of the above types)
+- **AutosarDoc**: Document-level container for packages and root classes, provides query methods
 
 Access types in packages:
 ```python
@@ -417,9 +464,20 @@ enum = pkg.get_enumeration("MyEnum")  # Returns only AutosarEnumeration | None
 prim = pkg.get_primitive("Limit")  # Returns only AutosarPrimitive | None
 ```
 
+Document-level operations:
+```python
+# Parse PDF and get AutosarDoc
+parser = PdfParser()
+doc = parser.parse_pdf("file.pdf")
+
+# Query packages and root classes
+pkg = doc.get_package("AUTOSAR")
+root_cls = doc.get_root_class("SwComponentPrototype")
+```
+
 ### Test-Driven Development Workflow
 
-When fixing bugs or adding features:
+When fixing bugs or adding features, follow the Red-Green-Refactor cycle:
 
 1. **Write a failing test first** that reproduces the issue
 2. **Run the test** to confirm it fails:
@@ -434,12 +492,27 @@ When fixing bugs or adding features:
    ```
 6. **Check coverage** to ensure new code is covered
 
+**TDD Guidelines** (see `docs/development/tdd_rules.md`):
+- **Unit tests as first priority**: Use unit tests for TDD cycle (faster, easier to debug, no external dependencies)
+- **Integration tests for validation**: Integration tests MUST use real PDF files from `examples/pdf/` directory
+- Integration tests verify end-to-end functionality with actual AUTOSAR specification documents
+- Integration tests are used for final validation and regression testing
+
 ## Documentation Structure
 
 The project maintains comprehensive documentation in the `docs/` directory:
 
-- `docs/requirements/requirements.md` - Complete software requirements specification with stable IDs
+- `docs/requirements/requirements.md` - Complete software requirements specification index with stable IDs
+- `docs/requirements/requirements_model.md` - Model requirements (SWR_MODEL_00001 - SWR_MODEL_00027)
+- `docs/requirements/requirements_parser.md` - Parser requirements (SWR_PARSER_00001 - SWR_PARSER_00029)
+- `docs/requirements/requirements_writer.md` - Writer requirements (SWR_WRITER_00001 - SWR_WRITER_00008)
+- `docs/requirements/requirements_cli.md` - CLI requirements (SWR_CLI_00001 - SWR_CLI_00013)
+- `docs/requirements/requirements_package.md` - Package requirements (SWR_PACKAGE_00001 - SWR_PACKAGE_00003)
 - `docs/development/coding_rules.md` - Detailed coding standards combining PEP 8 with project-specific rules
+- `docs/development/tdd_rules.md` - Test-driven development rules and guidelines
+- `docs/development/test_update_rules.md` - Test update procedures
+- `docs/development/integration_test_performance.md` - Integration test performance guidelines
+- `docs/development/version_control.md` - Version control practices
 - `docs/models/` - Model-specific documentation
 - `docs/test_cases/` - Test case documentation with traceability to requirements
 - `scripts/report/coverage.md` - Auto-generated coverage reports (updated after each test run)
@@ -455,10 +528,72 @@ The `examples/pdf/` directory contains sample AUTOSAR specification PDFs for tes
 - `AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf`
 - `AUTOSAR_CP_TPS_SystemTemplate.pdf`
 - `AUTOSAR_CP_TPS_TimingExtensions.pdf`
+- `AUTOSAR_FO_TPS_GenericStructureTemplate.pdf`
 
 Use these files to test parser changes or verify extraction behavior.
 
 ## Key Implementation Details
+
+### Two-Phase PDF Parsing (SWR_PARSER_00003)
+
+The parser uses a two-phase approach to handle multi-page definitions:
+
+1. **Read Phase**:
+   - Extract all text from all pages using pdfplumber's `extract_words()` with `x_tolerance=1`
+   - Reconstruct text from words while preserving line breaks based on vertical position
+   - Accumulate all pages' text into a single StringIO buffer
+
+2. **Parse Phase**:
+   - Process all lines sequentially from the complete text buffer
+   - Maintain state management for multi-page definitions via `current_models` and `model_parsers` dictionaries
+   - Delegate to appropriate specialized parsers (class, enumeration, primitive) for each type definition
+   - Continue parsing for existing models across page boundaries
+
+**Benefits**:
+- Complete text available for analysis before parsing begins
+- Simpler debugging with all text in a single buffer
+- Consistent handling of multi-page definitions through state management
+- Better separation of concerns between reading and parsing phases
+
+### Specialized Parser Architecture
+
+The parser uses specialized parsers for each AUTOSAR type, all inheriting from `AbstractTypeParser`:
+
+- **`AutosarClassParser`**: Handles class definitions, attributes, base classes, subclasses, notes
+- **`AutosarEnumerationParser`**: Handles enumeration type definitions and literals
+- **`AutosarPrimitiveParser`**: Handles primitive type definitions and attributes
+
+**Shared Functionality** (in `AbstractTypeParser`):
+- Common regex patterns for type definitions
+- Attribute validation and filtering logic
+- Package path validation
+- ATP marker detection and validation
+- Source location tracking
+
+### Source Location Tracking (SWR_MODEL_00027)
+
+Each AUTOSAR type can track its definition location using `AutosarSource`:
+
+```python
+@dataclass(frozen=True)
+class AutosarSource:
+    pdf_file: str      # Path to the PDF file
+    page_number: int   # Page number (1-indexed)
+```
+
+Types include source location in their `source` attribute, enabling traceability back to the original PDF documentation.
+
+### Parent Resolution and Validation (SWR_PARSER_00018, SWR_PARSER_00029)
+
+The parser uses ancestry-based parent resolution:
+
+1. **Parent Resolution**: After all classes are parsed, analyze each class's `bases` list to determine the immediate parent
+2. **Subclasses Validation**: Validate that the `subclasses` attribute does not contain contradictions:
+   - Subclass must actually exist in the model
+   - Subclass must have this class in its `bases` list
+   - Subclass cannot be in this class's `bases` list (circular inheritance)
+   - Subclass cannot be in this class's parent's `bases` list (would be an ancestor)
+   - Subclass cannot be the parent class itself
 
 ### Markdown Indentation Rules
 - Packages: indent = `level * 2` spaces
@@ -466,25 +601,26 @@ Use these files to test parser changes or verify extraction behavior.
 - Format: `* <name>` or `* <name> (abstract)`
 
 ### Duplicate Handling
-- Model-level duplicate prevention in `AutosarPackage.add_class()` and `AutosarPackage.add_subpackage()`
+- Model-level duplicate prevention in `AutosarPackage.add_type()`, `add_class()`, and `add_subpackage()`
 - Checks for duplicates by name before adding
 - Raises `ValueError` when attempting to add duplicates
 - No writer-level deduplication needed (model guarantees uniqueness)
 
 ### Model Validation
 - Empty/whitespace names raise `ValueError`
-- Duplicate classes in package raise `ValueError`
+- Duplicate types in package raise `ValueError`
 - Duplicate subpackages in package raise `ValueError`
+- Multiple ATP markers on same class raise `ValueError`
 
 ### PDF Parsing Patterns
 - Class definitions: `Class <name> (abstract)`
 - Primitive type definitions: `Primitive <name>` (SWR_PARSER_00013)
 - Enumeration type definitions: `Enumeration <name>` (SWR_PARSER_00013)
 - Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
-- Package definitions: `Package <M2::?><path>`
-- Base classes: `Base <class_list>`
-- Subclasses: `Subclasses <class_list>`
-- Notes: `Note <text>` (documentation/comments)
+- Package definitions: `Package <M2::?><path>` (M2 prefix is preserved)
+- Base classes: `Base <class_list>` (extracted from Base column in class tables)
+- Subclasses: `Subclasses <class_list>` (descendants that inherit from this class)
+- Notes: Extracted from Note column, may span multiple lines until next known pattern
 - Attribute header: `Attribute Type Mult. Kind Note` (SWR_PARSER_00010)
 - Enumeration literal header: `Literal Description` (SWR_PARSER_00014)
 - Attributes: `<name> <type> <mult> <kind> <description>` (SWR_PARSER_00011, SWR_PARSER_00012)
@@ -494,10 +630,14 @@ Use these files to test parser changes or verify extraction behavior.
 
 The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_tolerance=1`) instead of raw text extraction to properly handle word spacing and avoid concatenated words due to tight kerning in PDF files (SWR_PARSER_00009).
 
+### M2 Package Prefix Handling
+
+The parser preserves the "M2::" prefix in package paths when present, treating "M2" as the root metamodel package. This ensures complete package hierarchy is maintained (e.g., M2 → AUTOSARTemplates → BswModuleTemplate).
+
 ## Version Information
 
-- **Current Version**: 0.15.0
-- **Python Requirement**: >= 3.7
+- **Current Version**: 0.15.1
+- **Python Requirement**: >= 3.7 (supports 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13)
 - **Main Dependency**: pdfplumber >= 0.10.0
 
 ## License

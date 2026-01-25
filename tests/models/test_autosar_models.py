@@ -1391,13 +1391,34 @@ class TestAutosarPackage:
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
+
+        Note:
+            Duplicate classes are logged as warnings and skipped, not raised as errors.
         """
+        from unittest.mock import patch, MagicMock
+
         pkg = AutosarPackage(name="TestPackage")
         cls1 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=False)
         cls2 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=True)
         pkg.add_class(cls1)
-        with pytest.raises(ValueError, match="already exists"):
+
+        # Mock the logger to capture the warning
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
             pkg.add_class(cls2)
+
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
+            assert "Type '%s' already exists in package '%s'" in call_args[0]
+            assert mock_logger.warning.call_args[0][1] == "DuplicateClass"
+            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+
+        # Verify only one class was added (the first one)
+        assert len(pkg.types) == 1
+        assert pkg.types[0].name == "DuplicateClass"
+        assert pkg.types[0].is_abstract is False
 
     def test_add_subpackage_success(self) -> None:
         """Test successfully adding a subpackage.
@@ -1619,18 +1640,41 @@ class TestAutosarPackage:
         assert pkg.types[0].name == "MyEnum"
 
     def test_add_type_duplicate(self) -> None:
-        """Test add_type method rejects duplicate type names.
+        """Test add_type method handles duplicate type names gracefully.
 
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
+
+        Note:
+            Duplicates are logged as warnings and skipped, not raised as errors.
+            This allows parsing multiple PDFs that may define the same class name.
         """
+        from unittest.mock import patch, MagicMock
+
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)
         enum = AutosarEnumeration(name="MyType", package="M2::Test")
 
         pkg.add_type(cls)
-        with pytest.raises(ValueError, match="Type 'MyType' already exists"):
+
+        # Mock the logger to capture the warning
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
             pkg.add_type(enum)
+
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
+            assert "Type '%s' already exists in package '%s'" in call_args[0]
+            # Verify the arguments passed to the warning
+            assert mock_logger.warning.call_args[0][1] == "MyType"
+            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+
+        # Verify only one type was added (the first one)
+        assert len(pkg.types) == 1
+        assert pkg.types[0].name == "MyType"
+        assert isinstance(pkg.types[0], AutosarClass)
 
     def test_add_enumeration(self) -> None:
         """Test add_enumeration method.
@@ -1910,15 +1954,32 @@ class TestAutosarPackage:
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
             SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+
+        Note:
+            Duplicates are logged as warnings and skipped, not raised as errors.
         """
+        from unittest.mock import patch, MagicMock
+
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)
         enum = AutosarEnumeration(name="MyType", package="M2::Test")
 
         pkg.add_type(cls)
-        with pytest.raises(ValueError, match="Type 'MyType' already exists"):
+
+        # Mock the logger to capture the warning
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
             pkg.add_type(enum)
 
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
+            assert "Type '%s' already exists in package '%s'" in call_args[0]
+            assert mock_logger.warning.call_args[0][1] == "MyType"
+            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+
+        # Verify only one type was added (the first one)
         assert len(pkg.types) == 1
         assert isinstance(pkg.types[0], AutosarClass)
 

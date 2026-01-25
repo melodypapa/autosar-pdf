@@ -255,16 +255,27 @@ class TestMarkdownWriter:
             SWR_MODEL_00006: Add Class to Package
             SWR_WRITER_00002: Markdown Package Hierarchy Output
             SWR_WRITER_00003: Markdown Class Output Format
+
+        Note:
+            Duplicate classes are logged as warnings and skipped, not raised as errors.
         """
+        from unittest.mock import patch, MagicMock
+
         pkg = AutosarPackage(name="TestPackage")
         pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
 
-        # Attempting to add duplicate class should raise ValueError
-        try:
+        # Mock the logger to capture the warning
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
             pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
-            assert False, "Expected ValueError for duplicate class"
-        except ValueError as e:
-            assert "already exists" in str(e)
+
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0]
+            assert "Type '%s' already exists in package '%s'" in call_args[0]
+            assert mock_logger.warning.call_args[0][1] == "MyClass"
+            assert mock_logger.warning.call_args[0][2] == "TestPackage"
 
         # Writer should only output the first class
         writer = MarkdownWriter()

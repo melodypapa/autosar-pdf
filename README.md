@@ -4,14 +4,17 @@ A Python package to extract AUTOSAR model hierarchies from PDF specification doc
 
 ## Features
 
-- **PDF Extraction**: Extract AUTOSAR packages, classes, and enumerations from PDF specification documents
+- **PDF Extraction**: Extract AUTOSAR packages, classes, enumerations, and primitive types from PDF specification documents
+- **Two-Phase Parsing**: Read phase extracts all text from PDF, parse phase processes complete buffer for multi-page definitions
 - **Hierarchical Parsing**: Parse complex hierarchical class structures with inheritance relationships
+- **Source Location Tracking**: Track PDF file and page number for each type definition and base class reference
 - **Markdown Output**: Generate well-formatted markdown output with proper indentation
-- **Class Details**: Support for abstract classes, attributes, and ATP markers
+- **Class Details**: Support for abstract classes, attributes, ATP markers, and source information
 - **Class Hierarchy**: Generate separate class inheritance hierarchy files showing root classes and their subclasses
 - **Individual Class Files**: Create separate markdown files for each class with detailed information
 - **Model Validation**: Built-in duplicate prevention and validation at the model level
-- **Comprehensive Coverage**: 96%+ test coverage with robust error handling
+- **Subclasses Validation**: Validate subclass relationships against actual inheritance hierarchy
+- **Comprehensive Coverage**: 97%+ test coverage with robust error handling
 
 ## Installation
 
@@ -66,7 +69,13 @@ autosar-extract path/to/file.pdf -o output.md --include-class-details
 autosar-extract path/to/file.pdf -v
 
 # Combine all options
-autosar-extract examples/pdf/ -o data/autosar_models.md --include-class-hierarchy --include-class-details 
+autosar-extract examples/pdf/ -o data/autosar_models.md --include-class-hierarchy --include-class-details
+
+# Write logs to a file with timestamps
+autosar-extract examples/pdf/ -o output.md --log-file extraction.log
+
+# Combine log file with verbose mode for detailed logging
+autosar-extract examples/pdf/ -o output.md --log-file extraction.log -v
 ```
 
 #### CLI Options
@@ -75,6 +84,7 @@ autosar-extract examples/pdf/ -o data/autosar_models.md --include-class-hierarch
 - `-o OUTPUT, --output OUTPUT`: Output file path (default: stdout)
 - `--include-class-details`: Create separate markdown files for each class (requires `-o`)
 - `--include-class-hierarchy`: Generate class inheritance hierarchy in a separate file (requires `-o`)
+- `--log-file LOG_FILE`: Write log messages to a file with timestamps (default: console only)
 - `-v, --verbose`: Enable verbose output mode for detailed debug information
 
 ### Python API
@@ -369,12 +379,12 @@ pytest tests/ && ruff check src/ tests/ && mypy src/autosar_pdf2txt/
 
 ### Test Coverage
 
-The project maintains 96%+ test coverage with comprehensive test suites for all modules:
+The project maintains 97%+ test coverage with comprehensive test suites for all modules:
 
 - **Models**: 100% coverage (attributes, containers, enums, types)
-- **Parser**: 98% coverage (PDF parsing, pattern recognition, hierarchy building)
-- **Writer**: 98% coverage (markdown generation, class hierarchy, file output)
-- **CLI**: 75% coverage (acceptable per requirements - error handling paths)
+- **Parser**: 90% coverage (PDF parsing, pattern recognition, hierarchy building, subclasses validation)
+- **Writer**: 100% coverage (markdown generation, class hierarchy, file output)
+- **CLI**: 82% coverage (acceptable per requirements - error handling paths)
 
 ## License
 
@@ -396,6 +406,26 @@ Contributions are welcome! Please ensure:
 - **Documentation**: See `docs/` directory for detailed requirements and development guidelines
 
 ## Changelog
+
+### Version 0.16.0
+- Added CLI log file support (`--log-file`) for persistent logging with timestamps
+- Implemented subclasses validation (SWR_PARSER_00029) to detect inheritance contradictions
+- Added comprehensive TDD enforcement documentation to prevent future violations
+- Enhanced test documentation with 15 new test cases for log file feature
+- Enhanced test documentation with 10 new test cases for subclasses validation
+- Improved test coverage from 96% to 97%
+- Updated AGENTS.md with mandatory TDD section
+- Updated development guidelines with TDD enforcement and common mistakes
+
+### Version 0.15.0
+- Implemented two-phase PDF parsing approach (read phase + parse phase)
+- Added specialized parsers for classes, enumerations, and primitives
+- Added ancestry-based parent resolution for complex inheritance hierarchies
+- Added source location tracking for PDF file and page number
+- Added subclasses attribute to track explicitly documented subclass relationships
+- Refactored requirements documentation into separate module files
+- Enhanced TDD rules with test type selection strategy
+- Fixed multi-line class list parsing and multi-page class definition handling
 
 ### Version 0.9.0
 - Added class hierarchy generation feature (`--include-class-hierarchy`)

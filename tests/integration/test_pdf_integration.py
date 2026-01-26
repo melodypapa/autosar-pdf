@@ -342,3 +342,130 @@ class TestPdfIntegration:
         print(f"  Extracted classes: {actual_count}")
         print("  All expected classes found: YES")
         print(f"  Sample classes: {sorted(list(extracted_classes))[:10]}...")
+
+    def test_parse_bsw_module_description_pdf_and_verify_atomic_sw_component_type_bases(
+        self, bsw_module_description_atomic_sw_component_type: AutosarClass
+    ) -> None:
+        """Test parsing BSWModuleDescriptionTemplate PDF and verify AtomicSwComponentType base classes.
+
+        SWIT_00002 Part 2: Verify AtomicSwComponentType base classes from AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate PDF
+
+        This test detects the bug where "SwComponentTypeClass AtomicSwComponentType (abstract)"
+        is incorrectly parsed as a base class instead of just "SwComponentType".
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_MODEL_00001: AUTOSAR Class Representation
+
+        Args:
+            bsw_module_description_atomic_sw_component_type: Cached AtomicSwComponentType class from BSWModuleDescriptionTemplate PDF.
+        """
+        # ========== Verify AtomicSwComponentType class from BSWModuleDescriptionTemplate PDF ==========
+        atomic_sw_component_type = bsw_module_description_atomic_sw_component_type
+
+        # Verify class name
+        assert atomic_sw_component_type.name == "AtomicSwComponentType", \
+            f"Expected class name 'AtomicSwComponentType', got '{atomic_sw_component_type.name}'"
+
+        # Verify package name is M2::AUTOSARTemplates::SWComponentTemplate::Components
+        expected_package = "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+        assert atomic_sw_component_type.package == expected_package, \
+            f"Expected package '{expected_package}', got '{atomic_sw_component_type.package}'"
+
+        # Verify base list contains all expected base classes
+        expected_bases = [
+            "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier",
+            "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable",
+            "PackageableElement", "Referrable", "SwComponentType"
+        ]
+        assert len(atomic_sw_component_type.bases) == len(expected_bases), \
+            f"Expected {len(expected_bases)} base classes, got {len(atomic_sw_component_type.bases)}"
+
+        # This is the critical check - verify each expected base is in the list
+        for base in expected_bases:
+            assert base in atomic_sw_component_type.bases, \
+                f"Expected '{base}' in bases, got {atomic_sw_component_type.bases}"
+
+        # Verify SwComponentType is in the base list (indicating AtomicSwComponentType inherits from SwComponentType)
+        assert "SwComponentType" in atomic_sw_component_type.bases, \
+            f"Expected 'SwComponentType' in bases, got {atomic_sw_component_type.bases}"
+
+        # CRITICAL: Verify the LAST base class is exactly "SwComponentType", not a corrupted string
+        # This catches the bug where it becomes "SwComponentTypeClass AtomicSwComponentType (abstract)"
+        assert atomic_sw_component_type.bases[-1] == "SwComponentType", \
+            f"Expected last base to be 'SwComponentType', got '{atomic_sw_component_type.bases[-1]}'"
+
+        # Verify the total number of base classes is 12
+        expected_base_count = 12
+        assert len(atomic_sw_component_type.bases) == expected_base_count, \
+            f"Expected {expected_base_count} base classes, got {len(atomic_sw_component_type.bases)}"
+
+        # Print AtomicSwComponentType class information for verification
+        print("\n=== AtomicSwComponentType class verified ===")
+        print(f"  Name: {atomic_sw_component_type.name}")
+        print(f"  Package: {atomic_sw_component_type.package}")
+        print(f"  Abstract: {atomic_sw_component_type.is_abstract}")
+        print(f"  Bases ({len(atomic_sw_component_type.bases)}): {', '.join(atomic_sw_component_type.bases)}")
+        print(f"  Last base: {atomic_sw_component_type.bases[-1]}")
+        print("  SwComponentType in bases: YES")
+        print("  Base corruption check: PASSED")
+
+    def test_parse_timing_extensions_pdf_and_verify_atomic_sw_component_type_bases(
+        self, timing_extensions_atomic_sw_component_type: AutosarClass
+    ) -> None:
+        """Test parsing TimingExtensions PDF and verify AtomicSwComponentType base classes.
+
+        SWIT_00002 Part 2: Verify AtomicSwComponentType base classes from AUTOSAR_CP_TPS_TimingExtensions PDF
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_MODEL_00001: AUTOSAR Class Representation
+            SWR_MODEL_00010: AUTOSAR Attribute Representation
+
+        Args:
+            timing_extensions_atomic_sw_component_type: Cached AtomicSwComponentType class from TimingExtensions PDF.
+        """
+        # ========== Verify AtomicSwComponentType class from TimingExtensions PDF ==========
+        atomic_sw_component_type = timing_extensions_atomic_sw_component_type
+
+        # Verify class name
+        assert atomic_sw_component_type.name == "AtomicSwComponentType", \
+            f"Expected class name 'AtomicSwComponentType', got '{atomic_sw_component_type.name}'"
+
+        # Verify package name is M2::AUTOSARTemplates::SWComponentTemplate::Components
+        expected_package = "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+        assert atomic_sw_component_type.package == expected_package, \
+            f"Expected package '{expected_package}', got '{atomic_sw_component_type.package}'"
+
+        # Verify base list contains all expected base classes
+        expected_bases = [
+            "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier",
+            "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable",
+            "PackageableElement", "Referrable", "SwComponentType"
+        ]
+        assert len(atomic_sw_component_type.bases) == len(expected_bases), \
+            f"Expected {len(expected_bases)} base classes, got {len(atomic_sw_component_type.bases)}"
+        for base in expected_bases:
+            assert base in atomic_sw_component_type.bases, \
+                f"Expected '{base}' in bases, got {atomic_sw_component_type.bases}"
+
+        # Verify SwComponentType is in the base list (indicating AtomicSwComponentType inherits from SwComponentType)
+        assert "SwComponentType" in atomic_sw_component_type.bases, \
+            f"Expected 'SwComponentType' in bases, got {atomic_sw_component_type.bases}"
+
+        # Verify the total number of base classes is 12
+        expected_base_count = 12
+        assert len(atomic_sw_component_type.bases) == expected_base_count, \
+            f"Expected {expected_base_count} base classes, got {len(atomic_sw_component_type.bases)}"
+
+        # Print AtomicSwComponentType class information for verification
+        print("\n=== AtomicSwComponentType class verified ===")
+        print(f"  Name: {atomic_sw_component_type.name}")
+        print(f"  Package: {atomic_sw_component_type.package}")
+        print(f"  Abstract: {atomic_sw_component_type.is_abstract}")
+        print(f"  Bases ({len(atomic_sw_component_type.bases)}): {', '.join(sorted(atomic_sw_component_type.bases))}")
+        print("  SwComponentType in bases: YES")

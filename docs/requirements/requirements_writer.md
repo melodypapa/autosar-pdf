@@ -128,45 +128,42 @@ The Children section shall:
 
 **Description**: The markdown writer shall output source information in individual class files when using the `--include-class-details` flag. The output shall include:
 - A "Document Source" section listing all source locations where the type is defined (if sources are available)
-- Proper formatting with PDF filename and page number for each source
-- Optional AUTOSAR standard identifier (if available from the parsing process)
-- Optional AUTOSAR standard release (if available from the parsing process)
+- A markdown table format with columns for PDF file, page number, AUTOSAR standard, and standard release
+- Display **all source locations** where the type is defined (supports types appearing in multiple PDFs)
+- One row per source location in the table
 
 The Document Source section shall:
 - Only be included when source information is available from the parsing process
-- Display **all source locations** where the type is defined (supports types appearing in multiple PDFs)
-- For each source, display the PDF filename and page number on the first line
-- Display "AUTOSAR Standard: <identifier>" on a separate line if autosar_standard is not None
-- Display "Standard Release: <release>" on a separate line if standard_release is not None
-- Format each source location with all its information grouped together
+- Use markdown table format with column headers: PDF File, Page, AUTOSAR Standard, Standard Release
+- Include all four columns regardless of whether some values are empty (use "-" for missing values)
+- Sort rows alphabetically by PDF filename
 
 **Example Output (single source)**:
-```
+```markdown
 ## Document Source
 
-AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42
-AUTOSAR Standard: Classic Platform
-Standard Release: R23-11
+| PDF File | Page | AUTOSAR Standard | Standard Release |
+|----------|------|------------------|------------------|
+| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | Classic Platform | R23-11 |
 ```
 
 **Example Output (multiple sources)**:
-```
+```markdown
 ## Document Source
 
-AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42
-AUTOSAR Standard: Classic Platform
-Standard Release: R23-11
-
-AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf, page 15
-AUTOSAR Standard: Classic Platform
-Standard Release: R23-11
+| PDF File | Page | AUTOSAR Standard | Standard Release |
+|----------|------|------------------|------------------|
+| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | Classic Platform | R23-11 |
+| AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf | 15 | Classic Platform | R23-11 |
 ```
 
-**Example Output (minimal)**:
-```
+**Example Output (minimal - no standard info)**:
+```markdown
 ## Document Source
 
-AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42
+| PDF File | Page | AUTOSAR Standard | Standard Release |
+|----------|------|------------------|------------------|
+| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |
 ```
 
-This requirement enables complete traceability of AUTOSAR type definitions to their source documents, including specification document identification, version tracking, and support for types defined across multiple PDF specifications.
+This requirement enables complete traceability of AUTOSAR type definitions to their source documents using a structured table format for easy reading and parsing, including specification document identification, version tracking, and support for types defined across multiple PDF specifications.

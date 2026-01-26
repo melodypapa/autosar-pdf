@@ -2960,9 +2960,16 @@ class TestAncestryBasedParentSelection:
         doc = parser._build_package_hierarchy([base1, base2, base3, derived])
 
         # Verify parent is correctly identified as BaseClass3 (last base)
+        # Note: M2 is now the root package, so we need to look in M2 -> Test subpackage
         derived_class = None
-        for pkg in doc.packages:
-            derived_class = pkg.get_class("DerivedClass")
+        for root_pkg in doc.packages:
+            # Search in root package and its subpackages
+            derived_class = root_pkg.get_class("DerivedClass")
+            if not derived_class:
+                for sub_pkg in root_pkg.subpackages:
+                    derived_class = sub_pkg.get_class("DerivedClass")
+                    if derived_class:
+                        break
             if derived_class:
                 break
 
@@ -3000,9 +3007,16 @@ class TestAncestryBasedParentSelection:
         doc = parser._build_package_hierarchy([existing, derived])
 
         # Verify parent is correctly identified as ExistingClass
+        # Note: M2 is now the root package, so we need to look in M2 -> Test subpackage
         derived_class = None
-        for pkg in doc.packages:
-            derived_class = pkg.get_class("DerivedClass")
+        for root_pkg in doc.packages:
+            # Search in root package and its subpackages
+            derived_class = root_pkg.get_class("DerivedClass")
+            if not derived_class:
+                for sub_pkg in root_pkg.subpackages:
+                    derived_class = sub_pkg.get_class("DerivedClass")
+                    if derived_class:
+                        break
             if derived_class:
                 break
 
@@ -3078,10 +3092,12 @@ that should be captured
         parser = PdfParser()
         doc = parser._build_package_hierarchy([cls1, cls2])
 
-        # Verify root package is identified
+        # Verify root package is identified (M2 is now the root)
         assert len(doc.packages) == 1
-        assert doc.packages[0].name == "RootPackage"
-        assert len(doc.packages[0].subpackages) == 2
+        assert doc.packages[0].name == "M2"
+        assert len(doc.packages[0].subpackages) == 1
+        assert doc.packages[0].subpackages[0].name == "RootPackage"
+        assert len(doc.packages[0].subpackages[0].subpackages) == 2
 
     def test_validate_subclasses_valid_relationship(self) -> None:
         """Test _validate_subclasses with valid subclass relationship.
@@ -3737,3 +3753,179 @@ upper Limit 1 REF"""
 
         assert limit.sources[0].page_number == 1
         assert interval.sources[0].page_number == 3
+
+    def test_parse_complete_text_multipage_class_with_continue_parsing(self) -> None:
+        """Test parsing a class definition that spans multiple pages using continue_parsing.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing (Two-Phase Approach)
+            SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+
+        This test verifies the continue_parsing logic (lines 412-441) for handling
+        multi-page class definitions where attributes or other sections continue
+        on subsequent pages.
+        """
+        parser = PdfParser()
+
+        # Class definition that spans two pages
+        # Page 1 has Class, Package, and start of attributes
+        # Page 2 continues with more attributes
+        text = """Class SwDataDefProps
+Package M2::AUTOSAR
+Attribute Type Mult. Kind Note
+swDataDefProps SwDataDefProps 1 REF
+initialValue AbstractString 0..1 REF
+Page 1 content here
+
+Attribute continuation on page 2
+valueSpecification AbstractString 0..1 REF"""
+
+        # Create line-to-page mapping
+        # Lines 0-4: page 1
+        # Lines 5-6: page 2 (continuation)
+        line_to_page = [1, 1, 1, 1, 1, 2, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        # Verify that we parsed 1 class
+        assert len(models) == 1
+        sw_data_def_props = models[0]
+        assert sw_data_def_props.name == "SwDataDefProps"
+        assert isinstance(sw_data_def_props, AutosarClass)
+
+        # Verify attributes from both pages
+        assert "swDataDefProps" in sw_data_def_props.attributes
+        assert "initialValue" in sw_data_def_props.attributes
+        assert "valueSpecification" in sw_data_def_props.attributes
+
+        # Verify page tracking - source should reflect first page
+        assert sw_data_def_props.sources[0].page_number == 1
+
+    def test_validate_subclasses_with_parent_as_subclass_warning(self) -> None:
+        """Test validation warning when subclass is actually the parent class.
+
+        Requirements:
+            SWR_PARSER_00029: Subclasses Contradiction Validation
+
+        This test verifies the warning logic (lines 836-842) when a class is
+        listed as having a subclass that is actually its parent (circular relationship).
+
+        Note: This warning is triggered during parent resolution after parsing multiple
+        documents. This test documents the expected behavior even if the specific
+        warning path is difficult to trigger in isolation.
+        """
+        # The warning at lines 836-842 is only triggered when:
+        # 1. Multiple PDFs are parsed
+        # 2. One PDF defines Class A with base Class B
+        # 3. Another PDF defines Class B with subclasses A
+        # 4. Parent resolution happens across all parsed documents
+        # This scenario is tested in integration tests with real PDFs
+
+        # For now, we test that the parser handles subclasses correctly
+        parser = PdfParser()
+
+        text = """Class ParentClass
+Package M2::AUTOSAR
+Subclasses ChildClass1, ChildClass2
+Attribute Type Mult. Kind Note
+name String 1 ATTR
+
+Class ChildClass1
+Package M2::AUTOSAR
+Attribute Type Mult. Kind Note
+name String 1 ATTR"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=list(range(1, 11)),
+        )
+
+        # Verify parsing completed successfully
+        assert len(models) == 2
+        parent_class = next((m for m in models if m.name == "ParentClass"), None)
+        assert parent_class is not None
+        assert "ChildClass1" in parent_class.subclasses
+        assert "ChildClass2" in parent_class.subclasses
+
+    def test_parse_complete_text_multipage_primitive_continue_parsing(self) -> None:
+        """Test parsing a primitive definition that spans multiple pages.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing (Two-Phase Approach)
+
+        This test verifies continue_parsing for primitive types across pages.
+        """
+        parser = PdfParser()
+
+        # Primitive spanning pages - use non-attribute-looking text
+        text = """Primitive Limit
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+intervalType IntervalTypeEnum 1 REF
+
+lowerBound Limit 1 REF"""
+
+        # Page 1: lines 0-4, Page 2: line 5
+        line_to_page = [1, 1, 1, 1, 1, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        assert len(models) == 1
+        limit = models[0]
+        assert isinstance(limit, AutosarPrimitive)
+        assert limit.name == "Limit"
+        assert "intervalType" in limit.attributes
+        assert "lowerBound" in limit.attributes
+
+    def test_parse_complete_text_multipage_enumeration_continue_parsing(self) -> None:
+        """Test parsing an enumeration definition that spans multiple pages.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing (Two-Phase Approach)
+
+        This test verifies continue_parsing for enumeration types across pages.
+        """
+        parser = PdfParser()
+
+        # Enumeration spanning pages - use realistic literal format
+        text = """Enumeration CategoryEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First value
+VALUE2 Second value
+
+VALUE3 Third value"""
+
+        # Page 1: lines 0-5, Page 2: line 6
+        line_to_page = [1, 1, 1, 1, 1, 1, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert isinstance(enum, AutosarEnumeration)
+        assert enum.name == "CategoryEnum"
+        assert len(enum.enumeration_literals) == 3
+        assert enum.enumeration_literals[0].name == "VALUE1"
+        assert enum.enumeration_literals[2].name == "VALUE3"

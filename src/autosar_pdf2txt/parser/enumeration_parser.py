@@ -13,7 +13,8 @@ Requirements:
     SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
 """
 
-from typing import List, Optional, Tuple
+import re
+from typing import List, Match, Optional, Tuple
 
 from autosar_pdf2txt.models import (
     AutosarEnumeration,
@@ -221,7 +222,6 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
             # Clean description by removing ATP marker
             if index is not None:
-                import re
                 literal_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", literal_description).strip()
 
             # Create and add the literal
@@ -247,7 +247,6 @@ class AutosarEnumerationParser(AbstractTypeParser):
             The index if found, None otherwise.
         """
         # Look for pattern like "atp.EnumerationLiteralIndex=0"
-        import re
         index_pattern = re.compile(r"atp\.EnumerationLiteralIndex=(\d+)")
         match = index_pattern.search(description)
         if match:
@@ -255,7 +254,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
         return None
 
     def _process_note_line(
-        self, note_match, lines: List[str], line_index: int, current_model: AutosarEnumeration
+        self, note_match: Match, lines: List[str], line_index: int, current_model: AutosarEnumeration
     ) -> None:
         """Process a note line and extract multi-line note text.
 
@@ -268,23 +267,5 @@ class AutosarEnumerationParser(AbstractTypeParser):
             line_index: Current line index.
             current_model: The current AutosarEnumeration being parsed.
         """
-        note_text = note_match.group(1).strip()
-
-        # Check if note continues on next lines
-        i = line_index + 1
-        while i < len(lines):
-            next_line = lines[i].strip()
-            # Note continues if next line doesn't start with a known pattern
-            if (next_line and
-                not self.CLASS_PATTERN.match(next_line) and
-                not self.PRIMITIVE_PATTERN.match(next_line) and
-                not self.ENUMERATION_PATTERN.match(next_line) and
-                not self.PACKAGE_PATTERN.match(next_line) and
-                not self.NOTE_PATTERN.match(next_line) and
-                not self.ENUMERATION_LITERAL_HEADER_PATTERN.match(next_line)):
-                note_text += " " + next_line
-                i += 1
-            else:
-                break
-
-        current_model.note = note_text.strip()
+        note_text = self._extract_note_text(note_match, lines, line_index, parser_type="enumeration")
+        current_model.note = note_text

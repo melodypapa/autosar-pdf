@@ -689,7 +689,8 @@ class PdfParser:
                 # Base class not found - log warning if not already warned
                 if base_name not in warned_bases:
                     logger.warning(
-                        "Class '%s' references base class '%s' which could not be located in the model",
+                        "Class '%s::%s' references base class '%s' which could not be located in the model",
+                        cls.package,
                         cls.name,
                         base_name,
                     )

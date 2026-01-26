@@ -72,9 +72,6 @@ class AutosarPackage:
             If a type with the same name already exists, the sources are merged.
             This allows tracking when a type is defined in multiple PDFs.
         """
-        import logging
-        logger = logging.getLogger(__name__)
-
         for existing_type in self.types:
             if existing_type.name == typ.name:
                 # Merge sources from the duplicate type
@@ -87,18 +84,6 @@ class AutosarPackage:
                     for source in typ.sources:
                         if str(source) in added_sources:
                             existing_type.sources.append(source)
-                    logger.info(
-                        "Type '%s' already exists in package '%s', merging %d new source(s)",
-                        typ.name,
-                        self.name,
-                        len(added_sources),
-                    )
-                else:
-                    logger.debug(
-                        "Type '%s' already exists in package '%s' with same sources, skipping",
-                        typ.name,
-                        self.name,
-                    )
                 return
         self.types.append(typ)
 

@@ -617,24 +617,14 @@ class TestPdfParser:
         packages = doc.packages
 
         # Try to manually add duplicate class with different source (should merge sources)
-        from unittest.mock import patch, MagicMock
-
         duplicate_class = AutosarClass(name="ExistingClass", package="M2::Test",
     is_abstract=False,
             bases=["Base2"],
             sources=[source2]
         )
 
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = MagicMock()
-            mock_get_logger.return_value = mock_logger
-            packages[0].add_class(duplicate_class)
-            # Verify info was logged about merging sources
-            mock_logger.info.assert_called_once()
-            call_args = mock_logger.info.call_args[0]
-            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
-            assert mock_logger.info.call_args[0][1] == "ExistingClass"
-            assert mock_logger.info.call_args[0][3] == 1
+        # Add duplicate class (sources should be merged silently)
+        packages[0].add_class(duplicate_class)
 
         # Now test with duplicate class definitions
         class_defs = [
@@ -654,17 +644,8 @@ class TestPdfParser:
             ),
         ]
 
-        # Should log info and merge sources
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = MagicMock()
-            mock_get_logger.return_value = mock_logger
-            doc = parser._build_package_hierarchy(class_defs)
-            # Verify info was logged about merging sources
-            mock_logger.info.assert_called_once()
-            call_args = mock_logger.info.call_args[0]
-            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
-            assert mock_logger.info.call_args[0][1] == "DuplicateClass"
-            assert mock_logger.info.call_args[0][3] == 1
+        # Should merge sources silently
+        doc = parser._build_package_hierarchy(class_defs)
 
         # Verify only one class was added (the first one)
         assert len(doc.packages[0].types) == 1

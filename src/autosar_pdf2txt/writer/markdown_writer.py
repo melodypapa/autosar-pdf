@@ -389,9 +389,11 @@ class MarkdownWriter:
             output.write("\n")
 
         # Write source section if available
-        if cls.source:
+        if cls.sources:
             output.write("## Document Source\n\n")
-            output.write(f"{cls.source}\n\n")
+            for source in cls.sources:
+                output.write(f"{source}\n")
+            output.write("\n")
 
         # Write children if present
         if cls.children:
@@ -472,9 +474,11 @@ class MarkdownWriter:
         output.write(f"**{enum.name}**\n\n")
 
         # Write source if available
-        if enum.source:
+        if enum.sources:
             output.write("## Document Source\n\n")
-            output.write(f"{enum.source}\n\n")
+            for source in enum.sources:
+                output.write(f"{source}\n")
+            output.write("\n")
 
         # Write note if present
         if enum.note:

@@ -1387,38 +1387,46 @@ class TestAutosarPackage:
         assert pkg.types[0] == cls
 
     def test_add_class_duplicate(self) -> None:
-        """Test adding duplicate class raises ValueError.
+        """Test adding duplicate class with sources merging.
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
 
         Note:
-            Duplicate classes are logged as warnings and skipped, not raised as errors.
+            Duplicate classes have their sources merged instead of being skipped.
         """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
         from unittest.mock import patch, MagicMock
 
         pkg = AutosarPackage(name="TestPackage")
-        cls1 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=False)
-        cls2 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=True)
+        source1 = AutosarDocumentSource("file1.pdf", 1)
+        source2 = AutosarDocumentSource("file2.pdf", 5)
+        cls1 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=False, sources=[source1])
+        cls2 = AutosarClass(name="DuplicateClass", package="M2::Test", is_abstract=True, sources=[source2])
         pkg.add_class(cls1)
 
-        # Mock the logger to capture the warning
+        # Mock the logger to capture the info log
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
             pkg.add_class(cls2)
 
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args[0]
-            assert "Type '%s' already exists in package '%s'" in call_args[0]
-            assert mock_logger.warning.call_args[0][1] == "DuplicateClass"
-            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+            # Verify info was logged about merging sources
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0]
+            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
+            assert mock_logger.info.call_args[0][1] == "DuplicateClass"
+            assert mock_logger.info.call_args[0][2] == "TestPackage"
+            assert mock_logger.info.call_args[0][3] == 1
 
         # Verify only one class was added (the first one)
         assert len(pkg.types) == 1
         assert pkg.types[0].name == "DuplicateClass"
         assert pkg.types[0].is_abstract is False
+        # Verify sources were merged
+        assert len(pkg.types[0].sources) == 2
+        assert pkg.types[0].sources[0].pdf_file == "file1.pdf"
+        assert pkg.types[0].sources[1].pdf_file == "file2.pdf"
 
     def test_add_subpackage_success(self) -> None:
         """Test successfully adding a subpackage.
@@ -1640,41 +1648,48 @@ class TestAutosarPackage:
         assert pkg.types[0].name == "MyEnum"
 
     def test_add_type_duplicate(self) -> None:
-        """Test add_type method handles duplicate type names gracefully.
+        """Test add_type method handles duplicate type names gracefully with sources merging.
 
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
 
         Note:
-            Duplicates are logged as warnings and skipped, not raised as errors.
-            This allows parsing multiple PDFs that may define the same class name.
+            Duplicate types have their sources merged instead of being skipped.
         """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
         from unittest.mock import patch, MagicMock
 
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)
-        enum = AutosarEnumeration(name="MyType", package="M2::Test")
+        source1 = AutosarDocumentSource("file1.pdf", 1)
+        source2 = AutosarDocumentSource("file2.pdf", 3)
+        cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False, sources=[source1])
+        enum = AutosarEnumeration(name="MyType", package="M2::Test", sources=[source2])
 
         pkg.add_type(cls)
 
-        # Mock the logger to capture the warning
+        # Mock the logger to capture the info log
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
             pkg.add_type(enum)
 
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args[0]
-            assert "Type '%s' already exists in package '%s'" in call_args[0]
-            # Verify the arguments passed to the warning
-            assert mock_logger.warning.call_args[0][1] == "MyType"
-            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+            # Verify info was logged about merging sources
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0]
+            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
+            # Verify the arguments passed to the info log
+            assert mock_logger.info.call_args[0][1] == "MyType"
+            assert mock_logger.info.call_args[0][2] == "TestPackage"
+            assert mock_logger.info.call_args[0][3] == 1
 
         # Verify only one type was added (the first one)
         assert len(pkg.types) == 1
         assert pkg.types[0].name == "MyType"
         assert isinstance(pkg.types[0], AutosarClass)
+        # Verify sources were merged
+        assert len(pkg.types[0].sources) == 2
+        assert pkg.types[0].sources[0].pdf_file == "file1.pdf"
+        assert pkg.types[0].sources[1].pdf_file == "file2.pdf"
 
     def test_add_enumeration(self) -> None:
         """Test add_enumeration method.
@@ -1949,39 +1964,47 @@ class TestAutosarPackage:
         assert pkg.has_type("Limit") is True
 
     def test_duplicate_prevention_across_type_kinds(self) -> None:
-        """Test duplicate names prevented across classes, enumerations, and primitives.
+        """Test duplicate names handled with sources merging across classes, enumerations, and primitives.
 
         Requirements:
             SWR_MODEL_00020: AUTOSAR Package Type Support
             SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
 
         Note:
-            Duplicates are logged as warnings and skipped, not raised as errors.
+            Duplicate types have their sources merged instead of being skipped.
         """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
         from unittest.mock import patch, MagicMock
 
         pkg = AutosarPackage(name="TestPackage")
-        cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False)
-        enum = AutosarEnumeration(name="MyType", package="M2::Test")
+        source1 = AutosarDocumentSource("class.pdf", 1)
+        source2 = AutosarDocumentSource("enum.pdf", 2)
+        cls = AutosarClass(name="MyType", package="M2::Test", is_abstract=False, sources=[source1])
+        enum = AutosarEnumeration(name="MyType", package="M2::Test", sources=[source2])
 
         pkg.add_type(cls)
 
-        # Mock the logger to capture the warning
+        # Mock the logger to capture the info log
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
             pkg.add_type(enum)
 
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args[0]
-            assert "Type '%s' already exists in package '%s'" in call_args[0]
-            assert mock_logger.warning.call_args[0][1] == "MyType"
-            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+            # Verify info was logged about merging sources
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0]
+            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
+            assert mock_logger.info.call_args[0][1] == "MyType"
+            assert mock_logger.info.call_args[0][2] == "TestPackage"
+            assert mock_logger.info.call_args[0][3] == 1
 
         # Verify only one type was added (the first one)
         assert len(pkg.types) == 1
         assert isinstance(pkg.types[0], AutosarClass)
+        # Verify sources were merged
+        assert len(pkg.types[0].sources) == 2
+        assert pkg.types[0].sources[0].pdf_file == "class.pdf"
+        assert pkg.types[0].sources[1].pdf_file == "enum.pdf"
 
     def test_add_class_backward_compatibility(self) -> None:
         """Test add_class method still works.

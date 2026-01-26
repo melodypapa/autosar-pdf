@@ -31,9 +31,9 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard == "Foundation"
-        assert models[0].source.standard_release == "R23-11"
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard == "Foundation"
+        assert models[0].sources[0].standard_release == "R23-11"
 
     def test_extract_autosar_standard_classic_platform(self) -> None:
         """Test extracting AUTOSAR standard 'Classic Platform' from PDF content.
@@ -52,9 +52,9 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard == "Classic Platform"
-        assert models[0].source.standard_release == "R22-11"
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard == "Classic Platform"
+        assert models[0].sources[0].standard_release == "R22-11"
 
     def test_extract_autosar_standard_adaptive_platform(self) -> None:
         """Test extracting AUTOSAR standard 'Adaptive Platform' from PDF content.
@@ -73,9 +73,9 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard == "Adaptive Platform"
-        assert models[0].source.standard_release == "R24-03"
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard == "Adaptive Platform"
+        assert models[0].sources[0].standard_release == "R24-03"
 
     def test_extract_autosar_standard_methodology(self) -> None:
         """Test extracting AUTOSAR standard 'Methodology' from PDF content.
@@ -94,9 +94,9 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard == "Methodology"
-        assert models[0].source.standard_release == "R23-11"
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard == "Methodology"
+        assert models[0].sources[0].standard_release == "R23-11"
 
     def test_missing_autosar_standard_and_release(self) -> None:
         """Test handling PDFs without AUTOSAR standard and release metadata.
@@ -112,9 +112,9 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard is None
-        assert models[0].source.standard_release is None
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard is None
+        assert models[0].sources[0].standard_release is None
 
     def test_apply_extracted_metadata_to_all_classes(self) -> None:
         """Test that extracted AUTOSAR standard and release are applied to all classes.
@@ -137,9 +137,9 @@ testAttr string 1 ATTR Test attribute
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard == "Foundation"
-        assert models[0].source.standard_release == "R23-11"
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard == "Foundation"
+        assert models[0].sources[0].standard_release == "R23-11"
 
     def test_extract_only_standard_without_release(self) -> None:
         """Test extracting AUTOSAR standard when release is not present.
@@ -157,9 +157,9 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard == "Foundation"
-        assert models[0].source.standard_release is None
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard == "Foundation"
+        assert models[0].sources[0].standard_release is None
 
     def test_extract_only_release_without_standard(self) -> None:
         """Test extracting AUTOSAR release when standard is not present.
@@ -177,6 +177,6 @@ Package M2::TestPackage
         models = parser._parse_complete_text(text, "test.pdf")
 
         assert len(models) == 1
-        assert models[0].source is not None
-        assert models[0].source.autosar_standard is None
-        assert models[0].source.standard_release == "R23-11"
+        assert models[0].sources is not None
+        assert models[0].sources[0].autosar_standard is None
+        assert models[0].sources[0].standard_release == "R23-11"

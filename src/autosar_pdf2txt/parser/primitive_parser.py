@@ -126,7 +126,7 @@ class AutosarPrimitiveParser(AbstractTypeParser):
         return AutosarPrimitive(
             name=primitive_name,
             package=package_path,
-            source=source,
+            sources=[source] if source else [],
         )
 
     def continue_parsing(

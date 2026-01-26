@@ -69,20 +69,36 @@ class AutosarPackage:
             typ: The AutosarClass, AutosarEnumeration, or AutosarPrimitive to add.
 
         Note:
-            If a type with the same name already exists, a warning is logged and
-            the duplicate is skipped. This allows parsing multiple PDFs that may
-            define the same class name (common in AUTOSAR specifications).
+            If a type with the same name already exists, the sources are merged.
+            This allows tracking when a type is defined in multiple PDFs.
         """
         import logging
         logger = logging.getLogger(__name__)
 
         for existing_type in self.types:
             if existing_type.name == typ.name:
-                logger.warning(
-                    "Type '%s' already exists in package '%s', skipping duplicate definition",
-                    typ.name,
-                    self.name,
-                )
+                # Merge sources from the duplicate type
+                existing_sources = {str(s) for s in existing_type.sources}
+                new_sources = {str(s) for s in typ.sources}
+                added_sources = new_sources - existing_sources
+
+                if added_sources:
+                    # Add only non-duplicate sources
+                    for source in typ.sources:
+                        if str(source) in added_sources:
+                            existing_type.sources.append(source)
+                    logger.info(
+                        "Type '%s' already exists in package '%s', merging %d new source(s)",
+                        typ.name,
+                        self.name,
+                        len(added_sources),
+                    )
+                else:
+                    logger.debug(
+                        "Type '%s' already exists in package '%s' with same sources, skipping",
+                        typ.name,
+                        self.name,
+                    )
                 return
         self.types.append(typ)
 

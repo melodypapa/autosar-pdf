@@ -153,7 +153,7 @@ class AutosarClassParser(AbstractTypeParser):
             package=package_path,
             is_abstract=is_abstract,
             atp_type=atp_type,
-            source=source,
+            sources=[source] if source else [],
         )
 
     def continue_parsing(

@@ -214,6 +214,12 @@ class AutosarClassParser(AbstractTypeParser):
             # This ensures that multi-line class lists are processed before sections like note/new class
             if self._in_class_list_section and current_model:
                 line_stripped = line.strip()
+                # Skip class definition headers that appear on new pages (multi-page class definitions)
+                # These look like "Class ClassName (abstract)" and should NOT be treated as continuations
+                if self._is_new_type_definition(line_stripped):
+                    # This is a repeated class header on a new page - skip it
+                    i += 1
+                    continue
                 if line_stripped and ("," in line_stripped or any(fragment in line_stripped for fragment in self.CONTINUATION_FRAGMENTS)):
                     (items, last_item), last_item_complete = self._handle_class_list_continuation(
                         line_stripped,
@@ -239,20 +245,6 @@ class AutosarClassParser(AbstractTypeParser):
                 # A valid type definition must be followed by a Package line
                 # If not, it's likely a continuation header (e.g., multi-page table)
                 is_valid_new_definition = self._is_valid_type_definition(lines, i)
-
-                # Check if this is a repeated class name (valid sections but no Package line)
-                # This happens when a class definition spans multiple pages and the class
-                # name is repeated on subsequent pages
-                if is_valid_new_definition:
-                    # Check if there's actually a Package line
-                    has_package = any(lines[j].strip().startswith("Package ")
-                                    for j in range(i + 1, min(i + 4, len(lines))))
-                    if not has_package:
-                        # Valid sections (Subclasses/Base/Aggregated by) but no Package line
-                        # This is a repeated class header on a new page - stop parsing current class
-                        self._finalize_pending_class_lists(current_model)
-                        self._finalize_pending_attribute(current_model)
-                        return i, True
 
                 if is_valid_new_definition:
                     # New type definition - finalize and return

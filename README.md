@@ -407,6 +407,32 @@ Contributions are welcome! Please ensure:
 
 ## Changelog
 
+### Version 0.19.0
+- Added page number tracking in two-phase parsing (SWR_PARSER_00030) for accurate source location
+- Enhanced multi-page class definition parsing with improved state management
+- Added integration tests for multi-page class parsing scenarios
+- Improved page boundary marker handling with `<<<PAGE:N>>>` format
+- Specialized parsers now receive accurate page numbers from parse phase
+- Fixed page number assignment for types defined beyond page 1
+- Enhanced integration test documentation with multi-page parsing test cases
+
+### Version 0.18.0
+- Enhanced M2 package prefix preservation as root metamodel package
+- Improved source location tracking with AUTOSAR standard and release extraction
+- Added markdown table format for source information output (SWR_WRITER_00008)
+- Refactored duplicate type handling to log warnings instead of raising errors
+- Renamed AutosarSource to AutosarDocumentSource for clarity
+- Enhanced source information display in individual class files
+- Updated requirements documentation with source location details
+- Added 7 new AUTOSAR FO (Foundation) template PDFs to examples
+
+### Version 0.17.0
+- Enhanced integration tests for multi-page class definition parsing
+- Improved state management for multi-page definitions
+- Added test documentation for multi-page parsing scenarios
+- Fixed issues with class definitions spanning multiple pages
+- Improved error messages for parsing failures
+
 ### Version 0.16.0
 - Added CLI log file support (`--log-file`) for persistent logging with timestamps
 - Implemented subclasses validation (SWR_PARSER_00029) to detect inheritance contradictions

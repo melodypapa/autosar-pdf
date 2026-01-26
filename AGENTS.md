@@ -9,15 +9,18 @@ This document provides context information for iFlow CLI agents working on the a
 ### Core Features
 - **PDF Extraction**: Extract AUTOSAR packages, classes, enumerations, and primitive types from PDF specification documents
 - **Two-Phase Parsing**: Read phase extracts all text from PDF, parse phase processes complete buffer for multi-page definitions
+- **Page Number Tracking**: Accurate page number tracking for all type definitions (SWR_PARSER_00030)
 - **Specialized Parsers**: Dedicated parsers for classes, enumerations, and primitive types with shared base functionality
 - **Hierarchical Parsing**: Parse complex hierarchical class structures with inheritance relationships
-- **Source Location Tracking**: Track PDF file and page number for each type definition and base class reference, with optional AUTOSAR standard and release information
+- **Source Location Tracking**: Track PDF file and page number for each type definition, with optional AUTOSAR standard and release information
 - **Markdown Output**: Generate well-formatted Markdown output with proper indentation
+- **Source Table Format**: Markdown table format for source information with PDF file, page, standard, and release columns
 - **Class Details**: Support for abstract classes, attributes, ATP markers, and source information
 - **Class Hierarchy**: Generate separate class inheritance hierarchy files showing root classes and their subclasses
 - **Individual Class Files**: Create separate markdown files for each class with detailed information
 - **Model Validation**: Built-in duplicate handling with warnings for multiple PDFs that may define the same class name
 - **Subclasses Validation**: Validate subclass relationships against actual inheritance hierarchy (SWR_PARSER_00029)
+- **M2 Package Preservation**: Preserve M2:: prefix as root metamodel package for complete hierarchy
 - **Log File Support**: CLI supports persistent logging with timestamps via --log-file option
 - **Comprehensive Coverage**: 97%+ test coverage with robust error handling
 
@@ -374,6 +377,7 @@ All code includes requirement IDs in docstrings for traceability to `docs/requir
 - SWR_PARSER_00027: Parser backward compatibility
 - SWR_PARSER_00028: Direct model creation by specialized parsers
 - SWR_PARSER_00029: Subclasses contradiction validation
+- SWR_PARSER_00030: Page number tracking in two-phase parsing
 - SWR_MODEL_00018: AUTOSAR type abstract base class
 - SWR_MODEL_00027: AUTOSAR source location representation with optional AUTOSAR standard and release
 - SWR_WRITER_00008: Markdown source information output
@@ -500,6 +504,7 @@ The parser builds package hierarchies from path strings like `"M2::AUTOSAR::Data
 - Each level becomes a nested `AutosarPackage`
 - Types (classes, enumerations, primitives) are added to the deepest package level via `add_type()`
 - Packages maintain a unified `types` collection containing all type variants
+- Output maintains full package paths including M2:: prefix
 
 Example:
 ```
@@ -527,9 +532,10 @@ AbstractAutosarBase (name, package, note, source)
 
 - **AutosarClass**: Tracks inheritance with `bases` (all parents), `parent` (immediate parent), `children` (derived classes), `subclasses` (explicitly documented subclasses), and `aggregated_by` (classes that aggregate this class)
 - **AutosarClass**: Includes `source` attribute tracking PDF file and page number where the class was defined
+- **AutosarClass**: Supports `aggregated_by` list to track classes that aggregate this class (composition relationships)
 - **AutosarEnumeration**: Contains `AutosarEnumLiteral` objects
 - **AutosarPrimitive**: Represents primitive data types like `Limit`, `Interval`
-- **AutosarPackage**: Contains unified `types` list (can hold any of the above types)
+- **AutosarPackage`: Contains unified `types` list (can hold any of the above types)
 - **AutosarDoc**: Document-level container for packages and root classes, provides query methods
 
 Access types in packages:
@@ -600,6 +606,7 @@ The project maintains comprehensive documentation in the `docs/` directory:
 
 The `examples/pdf/` directory contains sample AUTOSAR specification PDFs for testing:
 
+**Classic Platform (CP) Templates:**
 - `AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf`
 - `AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf`
 - `AUTOSAR_CP_TPS_ECUConfiguration.pdf`
@@ -607,7 +614,16 @@ The `examples/pdf/` directory contains sample AUTOSAR specification PDFs for tes
 - `AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf`
 - `AUTOSAR_CP_TPS_SystemTemplate.pdf`
 - `AUTOSAR_CP_TPS_TimingExtensions.pdf`
+
+**Foundation (FO) Templates:**
+- `AUTOSAR_FO_TPS_AbstractPlatformSpecification.pdf`
+- `AUTOSAR_FO_TPS_ARXMLSerializationRules.pdf`
+- `AUTOSAR_FO_TPS_FeatureModelExchangeFormat.pdf`
 - `AUTOSAR_FO_TPS_GenericStructureTemplate.pdf`
+- `AUTOSAR_FO_TPS_LogAndTraceExtract.pdf`
+- `AUTOSAR_FO_TPS_SecurityExtractTemplate.pdf`
+- `AUTOSAR_FO_TPS_StandardizationTemplate.pdf`
+- `AUTOSAR_FO_TPS_XMLSchemaProductionRules.pdf`
 
 Use these files to test parser changes or verify extraction behavior.
 
@@ -638,20 +654,37 @@ The parser uses a two-phase approach to handle multi-page definitions:
 - Better separation of concerns between reading and parsing phases
 - **Accurate page number tracking** for all type definitions (SWR_PARSER_00030)
 
+**Page Number Tracking Details** (SWR_PARSER_00030):
+- Read phase inserts `<<<PAGE:N>>>` markers before each page's content (N is 1-indexed)
+- Parse phase maintains `current_page` variable, updating it when detecting page markers
+- Page marker lines are skipped during type definition parsing
+- Specialized parsers receive the actual page number when creating `AutosarDocumentSource`
+- Without page boundary tracking, all types would be assigned `page_number=1`
+- Accurate page numbers enable users to locate type definitions in the original PDF
+
 ### Specialized Parser Architecture
 
 The parser uses specialized parsers for each AUTOSAR type, all inheriting from `AbstractTypeParser`:
 
-- **`AutosarClassParser`**: Handles class definitions, attributes, base classes, subclasses, notes
+- **`AutosarClassParser`**: Handles class definitions, attributes, base classes, subclasses, notes, aggregated_by
 - **`AutosarEnumerationParser`**: Handles enumeration type definitions and literals
 - **`AutosarPrimitiveParser`**: Handles primitive type definitions and attributes
 
 **Shared Functionality** (in `AbstractTypeParser`):
-- Common regex patterns for type definitions
+- Common regex patterns for type definitions (CLASS_PATTERN, PRIMITIVE_PATTERN, ENUMERATION_PATTERN, etc.)
 - Attribute validation and filtering logic
-- Package path validation
-- ATP marker detection and validation
-- Source location tracking
+- Package path validation (including M2:: prefix preservation)
+- ATP marker detection and validation (ATP_MIXED_STRING, ATP_VARIATION, ATP_MIXED)
+- Source location tracking with page number support
+- Multi-line attribute handling with continuation detection
+- Fragment filtering (Element, SizeProfile, etc.)
+- Reference indicator detection (Prototype, Ref, Dependency, etc.)
+
+**Parser State Management**:
+- `current_models`: Dictionary tracking active model definitions across page boundaries
+- `model_parsers`: Dictionary mapping model names to their respective parser instances
+- `current_page`: Tracks current page number during parse phase (SWR_PARSER_00030)
+- Enables seamless handling of multi-page class definitions
 
 ### Source Location Tracking (SWR_MODEL_00027)
 
@@ -667,6 +700,21 @@ class AutosarDocumentSource:
 ```
 
 Types include source location in their `source` attribute, enabling traceability back to the original PDF documentation with optional AUTOSAR standard and release information.
+
+**Markdown Output Format** (SWR_WRITER_00008):
+Source information is written to individual class files in a table format:
+
+```markdown
+## Document Source
+
+| PDF File | Page | AUTOSAR Standard | Release |
+|----------|------|------------------|---------|
+| AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf | 45 | TPS_SoftwareComponentTemplate | R21-11 |
+```
+
+- Multiple sources are sorted by PDF filename
+- Missing standard or release information displays as "-"
+- Each type can have multiple sources when defined across different PDFs
 
 ### Parent Resolution and Validation (SWR_PARSER_00018, SWR_PARSER_00029)
 
@@ -698,6 +746,10 @@ The parser uses ancestry-based parent resolution:
 - Duplicate subpackages in package raise `ValueError`
 - Multiple ATP markers on same class raise `ValueError`
 - Subclasses contradictions raise `ValueError` with descriptive messages (SWR_PARSER_00029)
+- Circular inheritance detection prevents infinite loops
+- Subclass existence validation ensures referenced subclasses exist in model
+- Subclass relationship validation ensures subclass actually inherits from parent
+- Aggregated_by relationship tracking for class composition
 
 ### PDF Parsing Patterns
 - Class definitions: `Class <name> (abstract)`
@@ -707,11 +759,13 @@ The parser uses ancestry-based parent resolution:
 - Package definitions: `Package <M2::?><path>` (M2 prefix is preserved)
 - Base classes: `Base <class_list>` (extracted from Base column in class tables)
 - Subclasses: `Subclasses <class_list>` (descendants that inherit from this class)
+- Aggregated by: `Aggregated by <class_list>` (classes that aggregate this class)
 - Notes: Extracted from Note column, may span multiple lines until next known pattern
 - Attribute header: `Attribute Type Mult. Kind Note` (SWR_PARSER_00010)
 - Enumeration literal header: `Literal Description` (SWR_PARSER_00014)
 - Attributes: `<name> <type> <mult> <kind> <description>` (SWR_PARSER_00011, SWR_PARSER_00012)
 - Enumeration literals: `<name> <description>` (SWR_PARSER_00015)
+- Page boundary markers: `<<<PAGE:N>>>` (inserted during read phase for page tracking, SWR_PARSER_00030)
 
 ### PDF Text Extraction Strategy
 
@@ -721,7 +775,64 @@ The parser uses word-level extraction (pdfplumber's `extract_words()` with `x_to
 
 The parser preserves the "M2::" prefix in package paths when present, treating "M2" as the root metamodel package. This ensures complete package hierarchy is maintained (e.g., M2 → AUTOSARTemplates → BswModuleTemplate).
 
+**Key Points**:
+- "M2::" prefix is preserved in package paths (not stripped)
+- M2 is treated as the top-level root package
+- Package hierarchy building respects the M2 prefix
+- Output maintains the full package path including M2::
+- Example: "M2::AUTOSAR::DataTypes" creates M2 → AUTOSAR → DataTypes hierarchy
+
+### Architecture Improvements
+
+Recent architectural enhancements have improved maintainability and performance:
+
+**Specialized Parser Base Class** (SWR_PARSER_00023):
+- Extracted common parsing functionality into `AbstractTypeParser`
+- Shared regex patterns for type, attribute, and ATP detection
+- Unified attribute validation and filtering logic
+- Consistent package path and source location tracking
+- Multi-line attribute handling with continuation detection
+- Reduced code duplication across specialized parsers
+
+**Direct Model Creation** (SWR_PARSER_00028):
+- Specialized parsers create model objects directly instead of returning intermediate data structures
+- Eliminates need for data model transformation in `PdfParser`
+- Cleaner separation of concerns between parsing and model creation
+- More efficient memory usage with direct object creation
+
+**State Management for Multi-Page Definitions**:
+- `current_models` dictionary tracks active models across page boundaries
+- `model_parsers` dictionary maps model names to parser instances
+- Enables seamless handling of class definitions spanning multiple pages
+- Maintains parsing context without complex callback mechanisms
+
 ## Changelog
+
+### Version 0.19.0
+- Added page number tracking in two-phase parsing (SWR_PARSER_00030) for accurate source location
+- Enhanced multi-page class definition parsing with improved state management
+- Added integration tests for multi-page class parsing scenarios
+- Improved page boundary marker handling with `<<<PAGE:N>>>` format
+- Specialized parsers now receive accurate page numbers from parse phase
+- Fixed page number assignment for types defined beyond page 1
+- Enhanced integration test documentation with multi-page parsing test cases
+
+### Version 0.18.0
+- Enhanced M2 package prefix preservation as root metamodel package
+- Improved source location tracking with AUTOSAR standard and release extraction
+- Added markdown table format for source information output (SWR_WRITER_00008)
+- Refactored duplicate type handling to log warnings instead of raising errors
+- Renamed AutosarSource to AutosarDocumentSource for clarity
+- Enhanced source information display in individual class files
+- Updated requirements documentation with source location details
+- Added 7 new AUTOSAR FO (Foundation) template PDFs to examples
+
+### Version 0.17.0
+- Enhanced integration tests for multi-page class definition parsing
+- Improved state management for multi-page definitions
+- Added test documentation for multi-page parsing scenarios
+- Fixed issues with class definitions spanning multiple pages
+- Improved error messages for parsing failures
 
 ### Version 0.16.0
 - Added CLI log file support (`--log-file`) for persistent logging with timestamps (SWR_CLI_00014)
@@ -746,7 +857,7 @@ The parser preserves the "M2::" prefix in package paths when present, treating "
 
 ## Version Information
 
-- **Current Version**: 0.16.0
+- **Current Version**: 0.19.0
 - **Python Requirement**: >= 3.7 (supports 3.7, 3.8, 3.9, 3.10, 3.11)
 - **Main Dependency**: pdfplumber >= 0.10.0
 

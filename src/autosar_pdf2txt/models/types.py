@@ -44,7 +44,7 @@ class AutosarClass(AbstractAutosarBase):
         parent: Name of the immediate parent class from the bases list (None for root classes).
         children: List of child class names that inherit from this class.
         aggregated_by: List of class names that aggregate this class.
-        source: Optional source location for the class definition itself (inherited).
+        sources: List of source locations for the class definition itself (inherited).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
@@ -82,7 +82,7 @@ class AutosarClass(AbstractAutosarBase):
         subclasses: Optional[List[str]] = None,
         aggregated_by: Optional[List[str]] = None,
         note: Optional[str] = None,
-        source: Optional[AutosarDocumentSource] = None,
+        sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
         """Initialize the AUTOSAR class.
 
@@ -104,12 +104,12 @@ class AutosarClass(AbstractAutosarBase):
             subclasses: List of subclass names explicitly listed in the PDF.
             aggregated_by: List of class names that aggregate this class.
             note: Optional documentation.
-            source: Optional source location for this class definition.
+            sources: Optional list of source locations for this class definition.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
         """
-        super().__init__(name, package, note, source)
+        super().__init__(name, package, note, sources)
         self.is_abstract = is_abstract
         self.atp_type = atp_type
         self.attributes = attributes or {}
@@ -189,7 +189,7 @@ class AutosarEnumeration(AbstractAutosarBase):
         package: str,
         enumeration_literals: Optional[List[AutosarEnumLiteral]] = None,
         note: Optional[str] = None,
-        source: Optional[AutosarDocumentSource] = None,
+        sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
         """Initialize the AUTOSAR enumeration.
 
@@ -203,12 +203,12 @@ class AutosarEnumeration(AbstractAutosarBase):
             package: The full package path.
             enumeration_literals: List of enumeration literal values.
             note: Optional documentation.
-            source: Optional source location for this enumeration definition.
+            sources: Optional list of source locations for this enumeration definition.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
         """
-        super().__init__(name, package, note, source)
+        super().__init__(name, package, note, sources)
         self.enumeration_literals = enumeration_literals or []
 
     def __str__(self) -> str:
@@ -270,7 +270,7 @@ class AutosarPrimitive(AbstractAutosarBase):
         package: str,
         attributes: Optional[Dict[str, AutosarAttribute]] = None,
         note: Optional[str] = None,
-        source: Optional[AutosarDocumentSource] = None,
+        sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
         """Initialize the AUTOSAR primitive type.
 
@@ -284,12 +284,12 @@ class AutosarPrimitive(AbstractAutosarBase):
             package: The full package path.
             attributes: Dictionary of attributes.
             note: Optional documentation.
-            source: Optional source location for this primitive definition.
+            sources: Optional list of source locations for this primitive definition.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
         """
-        super().__init__(name, package, note, source)
+        super().__init__(name, package, note, sources)
         self.attributes = attributes or {}
 
     def __str__(self) -> str:

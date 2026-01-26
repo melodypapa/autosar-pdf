@@ -78,16 +78,16 @@ class TestPdfIntegration:
             f"Note should contain AUTOSAR or Rootelement, got: '{autosar_class.note}'"
 
         # Verify source information
-        assert autosar_class.source is not None, "AUTOSAR class should have source information"
-        assert autosar_class.source.pdf_file == "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf", \
-            f"Expected pdf_file 'AUTOSAR_FO_TPS_GenericStructureTemplate.pdf', got '{autosar_class.source.pdf_file}'"
-        assert autosar_class.source.autosar_standard == "Foundation", \
-            f"Expected autosar_standard 'Foundation', got '{autosar_class.source.autosar_standard}'"
-        assert autosar_class.source.standard_release == "R23-11", \
-            f"Expected standard_release 'R23-11', got '{autosar_class.source.standard_release}'"
+        assert autosar_class.sources is not None, "AUTOSAR class should have source information"
+        assert autosar_class.sources[0].pdf_file == "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf", \
+            f"Expected pdf_file 'AUTOSAR_FO_TPS_GenericStructureTemplate.pdf', got '{autosar_class.sources[0].pdf_file}'"
+        assert autosar_class.sources[0].autosar_standard == "Foundation", \
+            f"Expected autosar_standard 'Foundation', got '{autosar_class.sources[0].autosar_standard}'"
+        assert autosar_class.sources[0].standard_release == "R23-11", \
+            f"Expected standard_release 'R23-11', got '{autosar_class.sources[0].standard_release}'"
         # SWR_PARSER_00030: Verify page number is tracked correctly
-        assert autosar_class.source.page_number == 421, \
-            f"Expected page_number 421, got {autosar_class.source.page_number}"
+        assert autosar_class.sources[0].page_number == 421, \
+            f"Expected page_number 421, got {autosar_class.sources[0].page_number}"
 
         # Print AUTOSAR class information for verification
         print("\n=== AUTOSAR class verified ===")
@@ -96,7 +96,7 @@ class TestPdfIntegration:
         print(f"  Bases: {autosar_class.bases}")
         print(f"  Note: {autosar_class.note}")
         print(f"  Package: {first_package.name}")
-        print(f"  Source: {autosar_class.source}")
+        print(f"  Source: {autosar_class.sources[0]}")
 
         # ========== Verify SwComponentType class from GenericStructureTemplate PDF ==========
         sw_component_type = generic_structure_sw_component_type

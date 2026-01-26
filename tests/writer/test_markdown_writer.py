@@ -249,7 +249,7 @@ class TestMarkdownWriter:
         assert result2 == expected
 
     def test_model_level_duplicate_prevention(self) -> None:
-        """SWUT_WRITER_00013: Test that model-level duplicate prevention works with writer.
+        """SWUT_WRITER_00013: Test that model-level duplicate prevention works with sources merging.
 
         Requirements:
             SWR_MODEL_00006: Add Class to Package
@@ -257,25 +257,29 @@ class TestMarkdownWriter:
             SWR_WRITER_00003: Markdown Class Output Format
 
         Note:
-            Duplicate classes are logged as warnings and skipped, not raised as errors.
+            Duplicate classes have their sources merged instead of being skipped.
         """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
         from unittest.mock import patch, MagicMock
 
         pkg = AutosarPackage(name="TestPackage")
-        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
+        source1 = AutosarDocumentSource("file1.pdf", 1)
+        source2 = AutosarDocumentSource("file2.pdf", 2)
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, sources=[source1]))
 
-        # Mock the logger to capture the warning
+        # Mock the logger to capture the info log
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
-            pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False))
+            pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, sources=[source2]))
 
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args[0]
-            assert "Type '%s' already exists in package '%s'" in call_args[0]
-            assert mock_logger.warning.call_args[0][1] == "MyClass"
-            assert mock_logger.warning.call_args[0][2] == "TestPackage"
+            # Verify info was logged about merging sources
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0]
+            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
+            assert mock_logger.info.call_args[0][1] == "MyClass"
+            assert mock_logger.info.call_args[0][2] == "TestPackage"
+            assert mock_logger.info.call_args[0][3] == 1
 
         # Writer should only output the first class
         writer = MarkdownWriter()
@@ -1567,7 +1571,7 @@ class TestMarkdownWriterFiles:
             name="TestClass",
             package="M2::Test",
             is_abstract=False,
-            source=source,
+            sources=[source],
             note="This is a test note for the class."
         )
         pkg.add_class(cls)
@@ -1599,7 +1603,7 @@ class TestMarkdownWriterFiles:
         enum = AutosarEnumeration(
             name="TestEnum",
             package="M2::Test",
-            source=source,
+            sources=[source],
             note="This is a test note for the enumeration."
         )
         enum.enumeration_literals = [

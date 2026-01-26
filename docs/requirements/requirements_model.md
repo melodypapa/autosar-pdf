@@ -82,11 +82,11 @@ The ATP type enum shall support the following values:
 ---
 
 ### SWR_MODEL_00006
-**Title**: Add Class to Package
+**Title**: Add Type to Package with Source Merging
 
 **Maturity**: accept
 
-**Description**: The system shall provide functionality to add an AutosarClass to an AutosarPackage. The system shall check for duplicate classes by class name. If a class with the same name already exists in the package, the class shall not be added again.
+**Description**: The system shall provide functionality to add types (AutosarClass, AutosarEnumeration, or AutosarPrimitive) to an AutosarPackage. The system shall check for duplicate types by type name. If a type with the same name already exists in the package, the system shall merge the source locations from the new type with the existing type instead of adding a duplicate. This allows tracking when the same type is defined in multiple PDF documents.
 
 ---
 
@@ -437,13 +437,16 @@ This requirement enables:
 
 **Maturity**: accept
 
-**Description**: The system shall provide a data model (AutosarDocumentSource) to represent source location information for AUTOSAR types. The source location shall include:
+**Description**: The system shall provide a data model (AutosarDocumentSource) to represent source location information for AUTOSAR types. Each source location shall include:
 - `pdf_file`: Path to the PDF file (relative or absolute)
 - `page_number`: Page number in the PDF (1-indexed)
 - `autosar_standard`: Optional AUTOSAR standard identifier (e.g., "Foundation", "Classic Platform", "Adaptive Platform", "Methodology")
 - `standard_release`: Optional AUTOSAR standard release (e.g., "R23-11", "R22-11", "R24-03")
 
+AUTOSAR types shall track a **list of source locations** to support types that appear in multiple PDF documents. Each type inheriting from AbstractAutosarBase shall have a `sources` attribute (list of AutosarDocumentSource objects).
+
 The source location shall be:
 - Immutable (frozen dataclass)
-- Optional for all AUTOSAR types (backward compatibility)
+- Multiple sources supported per type
+- Empty list by default (no sources)
 - Attachable to any type inheriting from AbstractAutosarBase

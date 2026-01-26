@@ -120,7 +120,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
         return AutosarEnumeration(
             name=enum_name,
             package=package_path,
-            source=source,
+            sources=[source] if source else [],
         )
 
     def continue_parsing(

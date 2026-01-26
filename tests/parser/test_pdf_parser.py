@@ -589,7 +589,7 @@ class TestPdfParser:
         assert len(module2.types) == 1  # Class3
 
     def test_build_package_handles_duplicate_classes(self) -> None:
-        """Test that _build_package_hierarchy handles duplicate classes gracefully.
+        """Test that _build_package_hierarchy handles duplicate classes with sources merging.
 
         SWUT_PARSER_00016: Test Building Package Handles Duplicate Classes
 
@@ -598,35 +598,43 @@ class TestPdfParser:
         """
         parser = PdfParser()
         from autosar_pdf2txt.models import AutosarClass
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
 
         # Create package with a class
+        source1 = AutosarDocumentSource("file1.pdf", 1)
+        source2 = AutosarDocumentSource("file2.pdf", 2)
+        source3 = AutosarDocumentSource("file3.pdf", 3)
+
         doc = parser._build_package_hierarchy([
             AutosarClass(
                 name="ExistingClass",
                 package="AUTOSAR",
                 is_abstract=False,
-                bases=["Base1"]
+                bases=["Base1"],
+                sources=[source1]
             )
         ])
         packages = doc.packages
 
-        # Try to manually add duplicate class (should log warning and skip)
+        # Try to manually add duplicate class with different source (should merge sources)
         from unittest.mock import patch, MagicMock
 
         duplicate_class = AutosarClass(name="ExistingClass", package="M2::Test",
     is_abstract=False,
-            bases=["Base2"]
+            bases=["Base2"],
+            sources=[source2]
         )
 
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
             packages[0].add_class(duplicate_class)
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args[0]
-            assert "Type '%s' already exists in package '%s'" in call_args[0]
-            assert mock_logger.warning.call_args[0][1] == "ExistingClass"
+            # Verify info was logged about merging sources
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0]
+            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
+            assert mock_logger.info.call_args[0][1] == "ExistingClass"
+            assert mock_logger.info.call_args[0][3] == 1
 
         # Now test with duplicate class definitions
         class_defs = [
@@ -634,31 +642,38 @@ class TestPdfParser:
                 name="DuplicateClass",
                 package="AUTOSAR",
                 is_abstract=False,
-                bases=["Base1"]
+                bases=["Base1"],
+                sources=[source1]
             ),
             AutosarClass(
                 name="DuplicateClass",
                 package="AUTOSAR",
                 is_abstract=False,
-                bases=["Base2"]
+                bases=["Base2"],
+                sources=[source3]
             ),
         ]
 
-        # Should log warning and skip duplicate, not raise error
+        # Should log info and merge sources
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
             doc = parser._build_package_hierarchy(class_defs)
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
-            call_args = mock_logger.warning.call_args[0]
-            assert "Type '%s' already exists in package '%s'" in call_args[0]
-            assert mock_logger.warning.call_args[0][1] == "DuplicateClass"
+            # Verify info was logged about merging sources
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0]
+            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
+            assert mock_logger.info.call_args[0][1] == "DuplicateClass"
+            assert mock_logger.info.call_args[0][3] == 1
 
         # Verify only one class was added (the first one)
         assert len(doc.packages[0].types) == 1
         assert doc.packages[0].types[0].name == "DuplicateClass"
         assert doc.packages[0].types[0].bases == ["Base1"]
+        # Verify sources were merged
+        assert len(doc.packages[0].types[0].sources) == 2
+        assert doc.packages[0].types[0].sources[0].pdf_file == "file1.pdf"
+        assert doc.packages[0].types[0].sources[1].pdf_file == "file3.pdf"
 
     def test_parse_pdf_with_nonexistent_file(self) -> None:
         """Test parsing a non-existent PDF file.
@@ -3509,13 +3524,13 @@ Note Base for all identifiable elements"""
         assert identifiable is not None
 
         # SWR_PARSER_00030: Verify accurate page tracking
-        assert ar_object.source is not None
-        assert ar_object.source.pdf_file == "test.pdf"
-        assert ar_object.source.page_number == 1
+        assert ar_object.sources is not None
+        assert ar_object.sources[0].pdf_file == "test.pdf"
+        assert ar_object.sources[0].page_number == 1
 
-        assert identifiable.source is not None
-        assert identifiable.source.pdf_file == "test.pdf"
-        assert identifiable.source.page_number == 5
+        assert identifiable.sources is not None
+        assert identifiable.sources[0].pdf_file == "test.pdf"
+        assert identifiable.sources[0].page_number == 5
 
     def test_parse_complete_text_default_page_one(self) -> None:
         """Test that default page number is 1 when no page markers present.
@@ -3550,9 +3565,9 @@ Note Identifiable element"""
 
         # Both should have page 1 (default)
         for model in models:
-            assert model.source is not None
-            assert model.source.pdf_file == "test.pdf"
-            assert model.source.page_number == 1
+            assert model.sources is not None
+            assert model.sources[0].pdf_file == "test.pdf"
+            assert model.sources[0].page_number == 1
 
     def test_parse_complete_text_multiple_pages_same_type(self) -> None:
         """Test parsing multiple classes of the same type on different pages.
@@ -3609,9 +3624,9 @@ Note Referrable element"""
         identifiable = next((m for m in models if m.name == "Identifiable"), None)
         referrable = next((m for m in models if m.name == "Referrable"), None)
 
-        assert ar_object.source.page_number == 1
-        assert identifiable.source.page_number == 1
-        assert referrable.source.page_number == 2
+        assert ar_object.sources[0].page_number == 1
+        assert identifiable.sources[0].page_number == 1
+        assert referrable.sources[0].page_number == 2
 
     def test_parse_complete_text_enumeration_page_tracking(self) -> None:
         """Test page tracking for enumeration types.
@@ -3666,8 +3681,8 @@ LiteralB Literal B"""
         test_enum = next((m for m in models if m.name == "TestEnum"), None)
         another_enum = next((m for m in models if m.name == "AnotherEnum"), None)
 
-        assert test_enum.source.page_number == 1
-        assert another_enum.source.page_number == 2
+        assert test_enum.sources[0].page_number == 1
+        assert another_enum.sources[0].page_number == 2
 
     def test_parse_complete_text_primitive_page_tracking(self) -> None:
         """Test page tracking for primitive types.
@@ -3720,5 +3735,5 @@ upper Limit 1 REF"""
         limit = next((m for m in models if m.name == "Limit"), None)
         interval = next((m for m in models if m.name == "Interval"), None)
 
-        assert limit.source.page_number == 1
-        assert interval.source.page_number == 3
+        assert limit.sources[0].page_number == 1
+        assert interval.sources[0].page_number == 3

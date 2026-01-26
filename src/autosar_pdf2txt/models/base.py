@@ -7,7 +7,7 @@ Requirements:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,8 @@ class AbstractAutosarBase(ABC):
         name: The name of the type.
         package: The full package path in PDF format (e.g., "M2::MSR::DataDictionary::RecordLayout").
         note: Optional documentation or comments about the type.
-        source: Optional source location (pdf_file, page_number) where this type was defined.
+        sources: List of source locations (pdf_file, page_number) where this type was defined.
+            A type may appear in multiple PDF documents.
 
     Examples:
         >>> type_obj = AbstractAutosarBase("MyType")  # This would fail - can't instantiate abstract class
@@ -87,14 +88,14 @@ class AbstractAutosarBase(ABC):
     name: str
     package: str
     note: Optional[str]
-    source: Optional[AutosarDocumentSource]
+    sources: List[AutosarDocumentSource]
 
     def __init__(
         self,
         name: str,
         package: str,
         note: Optional[str] = None,
-        source: Optional[AutosarDocumentSource] = None,
+        sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
         """Initialize the abstract base class.
 
@@ -106,7 +107,8 @@ class AbstractAutosarBase(ABC):
             name: The name of the type.
             package: The full package path in PDF format.
             note: Optional documentation or comments about the type.
-            source: Optional source location (PDF file and page number).
+            sources: Optional list of source locations (PDF files and page numbers).
+                Defaults to empty list if not provided.
 
         Raises:
             ValueError: If name is empty or contains only whitespace.
@@ -116,7 +118,7 @@ class AbstractAutosarBase(ABC):
         self.name = name
         self.package = package
         self.note = note
-        self.source = source
+        self.sources = sources if sources is not None else []
 
     @abstractmethod
     def __str__(self) -> str:

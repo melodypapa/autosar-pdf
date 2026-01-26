@@ -103,9 +103,46 @@ All existing integration test cases in this document are currently at maturity l
 
 ---
 
-### 2. TimingExtensions PDF Integration Tests
+### 2. BSWModuleDescriptionTemplate PDF Integration Tests
 
 #### SWIT_00002
+**Title**: Test Parsing BSWModuleDescriptionTemplate PDF and Verifying AtomicSwComponentType Base Classes
+
+**Maturity**: accept
+
+**Description**: Integration test that parses the AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf PDF file and verifies that the AtomicSwComponentType class has correct base classes.
+
+This test is critical for detecting a multi-page parsing bug where the base class "SwComponentType" gets corrupted to "SwComponentTypeClass AtomicSwComponentType (abstract)" when the class definition spans multiple pages.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf using the PdfParser
+2. Find the AtomicSwComponentType class in the extracted packages (searching through M2 → AUTOSARTemplates → SWComponentTemplate → Components)
+3. Verify the class name is "AtomicSwComponentType"
+4. Verify the package name is "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+5. Verify the base list contains all expected base classes: "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable", "SwComponentType"
+6. Verify SwComponentType is in the base list (indicating AtomicSwComponentType inherits from SwComponentType)
+7. **CRITICAL CHECK**: Verify the last base class is exactly "SwComponentType", not "SwComponentTypeClass AtomicSwComponentType (abstract)"
+8. Verify the total number of base classes is 12
+
+**Expected Result**:
+
+**AtomicSwComponentType from BSWModuleDescriptionTemplate PDF**
+- Name: "AtomicSwComponentType"
+- Package: "M2::AUTOSARTemplates::SWComponentTemplate::Components"
+- Bases: ["ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable", "SwComponentType"]
+- Total base classes: 12
+- Last base class: "SwComponentType" (not corrupted)
+- SwComponentType is in base list: YES
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001
+
+---
+
+### 3. TimingExtensions PDF Integration Tests
+
+#### SWIT_00003
 **Title**: Test Parsing TimingExtensions PDF and Verifying Class List
 
 **Maturity**: accept
@@ -124,10 +161,12 @@ All existing integration test cases in this document are currently at maturity l
 7. Verify no unexpected additional types were extracted
 
 **Expected Result**:
+
+**TimingExtensions class list**
 - Total extracted types: 148
 - All expected classes present: YES
 - No missing classes
 - No extra classes
 
-**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001, SWR_MODEL_00023
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_MODEL_00001, SWR_MODEL_00023, SWR_MODEL_00010
 

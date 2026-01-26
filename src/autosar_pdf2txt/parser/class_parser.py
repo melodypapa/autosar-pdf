@@ -240,6 +240,20 @@ class AutosarClassParser(AbstractTypeParser):
                 # If not, it's likely a continuation header (e.g., multi-page table)
                 is_valid_new_definition = self._is_valid_type_definition(lines, i)
 
+                # Check if this is a repeated class name (valid sections but no Package line)
+                # This happens when a class definition spans multiple pages and the class
+                # name is repeated on subsequent pages
+                if is_valid_new_definition:
+                    # Check if there's actually a Package line
+                    has_package = any(lines[j].strip().startswith("Package ")
+                                    for j in range(i + 1, min(i + 4, len(lines))))
+                    if not has_package:
+                        # Valid sections (Subclasses/Base/Aggregated by) but no Package line
+                        # This is a repeated class header on a new page - stop parsing current class
+                        self._finalize_pending_class_lists(current_model)
+                        self._finalize_pending_attribute(current_model)
+                        return i, True
+
                 if is_valid_new_definition:
                     # New type definition - finalize and return
                     self._finalize_pending_class_lists(current_model)

@@ -71,9 +71,14 @@ def generic_structure_sw_component_type(generic_structure_template_pdf: AutosarD
     Skips:
         If SwComponentType class is not found.
     """
-    # AUTOSARTemplates is a top-level package in this PDF
-    autosar_templates = generic_structure_template_pdf.packages[0]
-    if not autosar_templates or autosar_templates.name != "AUTOSARTemplates":
+    # Find M2 package (root metamodel package)
+    m2 = generic_structure_template_pdf.get_package("M2")
+    if not m2:
+        pytest.skip("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> SWComponentTemplate -> Components
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
         pytest.skip("AUTOSARTemplates package not found")
 
     sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
@@ -107,9 +112,14 @@ def generic_structure_arelement(generic_structure_template_pdf: AutosarDoc) -> A
     Skips:
         If ARElement class is not found.
     """
-    # AUTOSARTemplates is a top-level package in this PDF
-    autosar_templates = generic_structure_template_pdf.packages[0]
-    if not autosar_templates or autosar_templates.name != "AUTOSARTemplates":
+    # Find M2 package (root metamodel package)
+    m2 = generic_structure_template_pdf.get_package("M2")
+    if not m2:
+        pytest.skip("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> GenericStructure -> GeneralTemplateClasses -> ARPackage
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
         pytest.skip("AUTOSARTemplates package not found")
 
     generic_structure = autosar_templates.get_subpackage("GenericStructure")
@@ -152,6 +162,111 @@ def timing_extensions_pdf(parser: PdfParser) -> AutosarDoc:
         pytest.skip(f"PDF file not found: {pdf_path}")
 
     return parser.parse_pdf(pdf_path)
+
+
+@pytest.fixture(scope="session")
+def bsw_module_description_pdf(parser: PdfParser) -> AutosarDoc:
+    """Parse and cache the BSWModuleDescriptionTemplate PDF.
+
+    This fixture parses the PDF once per session and caches the result.
+
+    Args:
+        parser: Shared PdfParser instance.
+
+    Returns:
+        AutosarDoc containing parsed packages and root classes.
+
+    Skips:
+        If the PDF file is not found.
+    """
+    pdf_path = "examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+
+    if not os.path.exists(pdf_path):
+        pytest.skip(f"PDF file not found: {pdf_path}")
+
+    return parser.parse_pdf(pdf_path)
+
+
+@pytest.fixture(scope="session")
+def bsw_module_description_atomic_sw_component_type(bsw_module_description_pdf: AutosarDoc) -> AutosarClass:
+    """Cache the AtomicSwComponentType class from BSWModuleDescriptionTemplate PDF.
+
+    This fixture pre-fetches and caches the AtomicSwComponentType class,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        bsw_module_description_pdf: Parsed BSWModuleDescriptionTemplate PDF data.
+
+    Returns:
+        The AtomicSwComponentType AutosarClass.
+
+    Skips:
+        If AtomicSwComponentType class is not found.
+    """
+    # Find M2 package (root metamodel package)
+    m2 = bsw_module_description_pdf.get_package("M2")
+    if not m2:
+        pytest.skip("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> SWComponentTemplate -> Components
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        pytest.skip("AUTOSARTemplates package not found")
+
+    sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
+    if not sw_component_template:
+        pytest.skip("SWComponentTemplate package not found")
+
+    components = sw_component_template.get_subpackage("Components")
+    if not components:
+        pytest.skip("Components package not found")
+
+    atomic_sw_component_type = components.get_class("AtomicSwComponentType")
+    if not atomic_sw_component_type:
+        pytest.skip("AtomicSwComponentType class not found")
+
+    return atomic_sw_component_type
+
+
+@pytest.fixture(scope="session")
+def timing_extensions_atomic_sw_component_type(timing_extensions_pdf: AutosarDoc) -> AutosarClass:
+    """Cache the AtomicSwComponentType class from TimingExtensions PDF.
+
+    This fixture pre-fetches and caches the AtomicSwComponentType class,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        timing_extensions_pdf: Parsed TimingExtensions PDF data.
+
+    Returns:
+        The AtomicSwComponentType AutosarClass.
+
+    Skips:
+        If AtomicSwComponentType class is not found.
+    """
+    # Find M2 package (root metamodel package)
+    m2 = timing_extensions_pdf.get_package("M2")
+    if not m2:
+        pytest.skip("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> SWComponentTemplate -> Components
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        pytest.skip("AUTOSARTemplates package not found")
+
+    sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
+    if not sw_component_template:
+        pytest.skip("SWComponentTemplate package not found")
+
+    components = sw_component_template.get_subpackage("Components")
+    if not components:
+        pytest.skip("Components package not found")
+
+    atomic_sw_component_type = components.get_class("AtomicSwComponentType")
+    if not atomic_sw_component_type:
+        pytest.skip("AtomicSwComponentType class not found")
+
+    return atomic_sw_component_type
 
 
 def find_class_by_name(packages: List[AutosarPackage], class_name: str) -> Optional[Tuple[AutosarPackage, AutosarClass]]:

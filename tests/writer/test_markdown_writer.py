@@ -1562,6 +1562,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_WRITER_00008: Markdown Source Information Output
         """
         from autosar_pdf2txt.models.base import AutosarDocumentSource
 
@@ -1582,9 +1583,11 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "TestClass.md"
         content = class_file.read_text(encoding="utf-8")
 
-        # Verify Source section
+        # Verify Source section with table format
         assert "## Document Source\n\n" in content
-        assert "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42" in content
+        assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
+        assert "|----------|------|------------------|------------------|" in content
+        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |" in content
 
         # Verify Note section
         assert "## Note\n\n" in content
@@ -1595,6 +1598,7 @@ class TestMarkdownWriterFiles:
 
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_WRITER_00008: Markdown Source Information Output
         """
         from autosar_pdf2txt.models.base import AutosarDocumentSource
 
@@ -1618,9 +1622,11 @@ class TestMarkdownWriterFiles:
         enum_file = tmp_path / "TestPackage" / "TestEnum.md"
         content = enum_file.read_text(encoding="utf-8")
 
-        # Verify Source section
+        # Verify Source section with table format
         assert "## Document Source\n\n" in content
-        assert "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42" in content
+        assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
+        assert "|----------|------|------------------|------------------|" in content
+        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |" in content
 
         # Verify Note section
         assert "## Note\n\n" in content
@@ -1632,3 +1638,73 @@ class TestMarkdownWriterFiles:
         assert "  * First literal" in content
         assert "* LITERAL2 (index=1)" in content
         assert "  * Second literal" in content
+
+    def test_write_class_with_multiple_sources(self, tmp_path: Path) -> None:
+        """Test writing a class with multiple sources in table format.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_WRITER_00008: Markdown Source Information Output
+        """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
+
+        pkg = AutosarPackage(name="TestPackage")
+        source1 = AutosarDocumentSource("AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", 42)
+        source2 = AutosarDocumentSource("AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf", 15)
+        cls = AutosarClass(
+            name="TestClass",
+            package="M2::Test",
+            is_abstract=False,
+            sources=[source1, source2]
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "TestClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Source section with table format
+        assert "## Document Source\n\n" in content
+        assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
+        assert "|----------|------|------------------|------------------|" in content
+        # Verify both sources are present (sorted alphabetically by PDF filename)
+        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |" in content
+        assert "| AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf | 15 | - | - |" in content
+
+    def test_write_class_with_source_and_standard_info(self, tmp_path: Path) -> None:
+        """Test writing a class with source including AUTOSAR standard information.
+
+        Requirements:
+            SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_WRITER_00008: Markdown Source Information Output
+        """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
+
+        pkg = AutosarPackage(name="TestPackage")
+        source = AutosarDocumentSource(
+            "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
+            42,
+            autosar_standard="Classic Platform",
+            standard_release="R23-11"
+        )
+        cls = AutosarClass(
+            name="TestClass",
+            package="M2::Test",
+            is_abstract=False,
+            sources=[source]
+        )
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "TestClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Source section with table format including standard info
+        assert "## Document Source\n\n" in content
+        assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
+        assert "|----------|------|------------------|------------------|" in content
+        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | Classic Platform | R23-11 |" in content

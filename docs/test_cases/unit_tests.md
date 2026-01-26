@@ -2929,11 +2929,42 @@ All existing test cases in this document are currently at maturity level **accep
 ---
 
 #### SWUT_WRITER_00052
+**Title**: Test Source Section Table Format
+
+**Maturity**: accept
+
+**Description**: Verify that the Document Source section is displayed in markdown table format with columns for PDF File, Page, AUTOSAR Standard, and Standard Release.
+
+**Precondition**: A MarkdownWriter instance and a class with source information
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create a class with source that has:
+   - pdf_file: "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+   - page_number: 42
+   - autosar_standard: None
+   - standard_release: None
+3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+4. Read the class file content
+5. Extract the Document Source section
+6. Verify the table format includes:
+   - Table header: "| PDF File | Page | AUTOSAR Standard | Standard Release |"
+   - Table separator: "|----------|------|------------------|------------------|"
+   - Table row: "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |"
+   - Missing values displayed as "-"
+
+**Expected Result**: Document Source section displays as a properly formatted markdown table with all columns
+
+**Requirements Coverage**: SWR_WRITER_00008
+
+---
+
+#### SWUT_WRITER_00053
 **Title**: Test Source Section with AUTOSAR Standard and Release Information
 
 **Maturity**: accept
 
-**Description**: Verify that the Document Source section includes AUTOSAR standard and release information when available.
+**Description**: Verify that the Document Source section table includes AUTOSAR standard and release information when available.
 
 **Precondition**: A MarkdownWriter instance and a class with source information including AUTOSAR standard and release
 
@@ -2942,45 +2973,78 @@ All existing test cases in this document are currently at maturity level **accep
 2. Create a class with source that has:
    - pdf_file: "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
    - page_number: 42
-   - autosar_standard: "TPS_BSWModuleDescriptionTemplate"
-   - standard_release: "R21-11"
+   - autosar_standard: "Classic Platform"
+   - standard_release: "R23-11"
 3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
 4. Read the class file content
 5. Extract the Document Source section
-6. Verify the source section includes:
-   - PDF filename and page number
-   - "AUTOSAR Standard: TPS_BSWModuleDescriptionTemplate"
-   - "Standard Release: R21-11"
+6. Verify the table row includes:
+   - PDF filename: "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+   - Page number: "42"
+   - AUTOSAR Standard: "Classic Platform"
+   - Standard Release: "R23-11"
 
-**Expected Result**: Document Source section includes AUTOSAR standard and release information
+**Expected Result**: Document Source section table displays AUTOSAR standard and release information in the appropriate columns
 
 **Requirements Coverage**: SWR_WRITER_00008
 
 ---
 
-#### SWUT_WRITER_00053
-**Title**: Test Source Section Without AUTOSAR Standard and Release Information
+#### SWUT_WRITER_00054
+**Title**: Test Source Section with Multiple Sources
 
 **Maturity**: accept
 
-**Description**: Verify that the Document Source section works correctly when AUTOSAR standard and release are None (backward compatibility).
+**Description**: Verify that the Document Source section table correctly displays multiple source locations, sorted alphabetically by PDF filename.
 
-**Precondition**: A MarkdownWriter instance and a class with source information without AUTOSAR standard and release
+**Precondition**: A MarkdownWriter instance and a class with multiple source locations
 
 **Test Steps**:
 1. Create a MarkdownWriter instance
-2. Create a class with source that has:
-   - pdf_file: "AUTOSAR_CP_TPS_ECUConfiguration.pdf"
-   - page_number: 15
-   - autosar_standard: None
-   - standard_release: None
+2. Create a class with two sources:
+   - Source 1: pdf_file="AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf", page_number=15
+   - Source 2: pdf_file="AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf", page_number=42
 3. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
 4. Read the class file content
 5. Extract the Document Source section
-6. Verify the source section includes only PDF filename and page number
-7. Verify no AUTOSAR standard or release lines are present
+6. Verify the table has:
+   - Two data rows (in addition to header and separator)
+   - Sources sorted alphabetically by PDF filename
+   - First row: AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf (comes before "Software" alphabetically)
+   - Second row: AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf
 
-**Expected Result**: Document Source section displays correctly without AUTOSAR standard and release fields
+**Expected Result**: Document Source section table displays all sources in alphabetical order by PDF filename
+
+**Requirements Coverage**: SWR_WRITER_00008
+
+---
+
+#### SWUT_WRITER_00055
+**Title**: Test Enumeration Source Section Table Format
+
+**Maturity**: accept
+
+**Description**: Verify that the Document Source section for enumerations uses the same table format as classes.
+
+**Precondition**: A MarkdownWriter instance and an enumeration with source information
+
+**Test Steps**:
+1. Create a MarkdownWriter instance
+2. Create an enumeration with source that has:
+   - pdf_file: "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
+   - page_number: 42
+   - autosar_standard: None
+   - standard_release: None
+3. Add enumeration literals to the enumeration
+4. Call writer.write_packages_to_files([pkg], base_dir=tmp_path)
+5. Read the enumeration file content
+6. Extract the Document Source section
+7. Verify the table format includes:
+   - Table header: "| PDF File | Page | AUTOSAR Standard | Standard Release |"
+   - Table separator: "|----------|------|------------------|------------------|"
+   - Table row: "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |"
+
+**Expected Result**: Enumeration Document Source section displays as a properly formatted markdown table
 
 **Requirements Coverage**: SWR_WRITER_00008
 
@@ -4299,19 +4363,22 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Create class definitions with independent bases:
+2. Create class definitions in "M2::Test" package with independent bases:
    - BaseClass1 (root class)
    - BaseClass2 (root class, independent from BaseClass1)
    - BaseClass3 (root class, independent from BaseClass1 and BaseClass2)
    - DerivedClass (inherits from BaseClass1, BaseClass2, BaseClass3)
 3. Build package hierarchy from class definitions
-4. Verify DerivedClass.parent is "BaseClass3" (the last base in the list)
+4. Verify M2 is the root package with Test as a subpackage
+5. Verify DerivedClass.parent is "BaseClass3" (the last base in the list)
 
 **Expected Result**:
+- M2 is preserved as the root package
+- Test subpackage exists under M2
 - Parent is correctly identified as BaseClass3 (the last base)
 - All bases are independent, so the last one is chosen
 
-**Requirements Coverage**: SWR_PARSER_00017
+**Requirements Coverage**: SWR_PARSER_00017, SWR_PARSER_00002
 
 ---
 
@@ -4326,19 +4393,22 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Create class definitions:
+2. Create class definitions in "M2::Test" package:
    - ExistingClass (root class)
    - NonExistentBase (NOT defined in the model)
    - DerivedClass (inherits from ExistingClass, NonExistentBase)
 3. Build package hierarchy from class definitions
-4. Verify DerivedClass.parent is "ExistingClass"
-5. Verify warning is logged for NonExistentBase
+4. Verify M2 is the root package with Test as a subpackage
+5. Verify DerivedClass.parent is "ExistingClass"
+6. Verify warning is logged for NonExistentBase
 
 **Expected Result**:
+- M2 is preserved as the root package
+- Test subpackage exists under M2
 - Parent is correctly identified as ExistingClass (the only valid base)
 - Missing base is filtered out and warning is logged
 
-**Requirements Coverage**: SWR_PARSER_00017
+**Requirements Coverage**: SWR_PARSER_00017, SWR_PARSER_00002
 
 ---
 

@@ -391,8 +391,14 @@ class MarkdownWriter:
         # Write source section if available
         if cls.sources:
             output.write("## Document Source\n\n")
-            for source in cls.sources:
-                output.write(f"{source}\n")
+            # Table header
+            output.write("| PDF File | Page | AUTOSAR Standard | Standard Release |\n")
+            output.write("|----------|------|------------------|------------------|\n")
+            # Sort sources by PDF filename
+            for source in sorted(cls.sources, key=lambda s: s.pdf_file):
+                autosar_standard = source.autosar_standard if source.autosar_standard else "-"
+                standard_release = source.standard_release if source.standard_release else "-"
+                output.write(f"| {source.pdf_file} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
             output.write("\n")
 
         # Write children if present
@@ -476,8 +482,14 @@ class MarkdownWriter:
         # Write source if available
         if enum.sources:
             output.write("## Document Source\n\n")
-            for source in enum.sources:
-                output.write(f"{source}\n")
+            # Table header
+            output.write("| PDF File | Page | AUTOSAR Standard | Standard Release |\n")
+            output.write("|----------|------|------------------|------------------|\n")
+            # Sort sources by PDF filename
+            for source in sorted(enum.sources, key=lambda s: s.pdf_file):
+                autosar_standard = source.autosar_standard if source.autosar_standard else "-"
+                standard_release = source.standard_release if source.standard_release else "-"
+                output.write(f"| {source.pdf_file} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
             output.write("\n")
 
         # Write note if present

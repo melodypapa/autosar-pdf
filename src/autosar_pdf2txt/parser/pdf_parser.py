@@ -512,6 +512,7 @@ class PdfParser:
         """Get or create package chain for a given package path.
 
         Requirements:
+            SWR_PARSER_00002: PDF Content Patterns
             SWR_PARSER_00006: Package Hierarchy Building
 
         Args:
@@ -520,12 +521,12 @@ class PdfParser:
 
         Returns:
             The leaf package in the chain.
-        """
-        # Remove M2:: prefix if present
-        if package_path.startswith("M2::"):
-            package_path = package_path[4:]
 
-        # Split by ::
+        Note:
+            M2:: prefix is preserved to maintain the complete package hierarchy
+            with M2 as the root metamodel package.
+        """
+        # Split by :: (preserving M2:: prefix if present)
         parts = package_path.split("::")
 
         # Build package chain

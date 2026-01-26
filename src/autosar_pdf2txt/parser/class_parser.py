@@ -14,7 +14,7 @@ Requirements:
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Match, Optional, Tuple
 
 from autosar_pdf2txt.models import (
     AttributeKind,
@@ -40,8 +40,6 @@ class AutosarClassParser(AbstractTypeParser):
         SWR_PARSER_00024: AutosarClass Specialized Parser
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
     """
-
-    
 
     def __init__(self) -> None:
         """Initialize the AutosarClass parser.
@@ -206,7 +204,7 @@ class AutosarClassParser(AbstractTypeParser):
             if class_list_match:
                 section_name, match = class_list_match
                 self._finalize_pending_class_lists(current_model)
-                items, last_item, last_item_complete = self._parse_class_list_line(section_name, match)
+                items, last_item, last_item_complete = self._parse_class_list_line(match)
                 self._pending_class_lists[section_name] = (items, last_item, last_item_complete)
                 self._in_class_list_section = section_name
                 i += 1
@@ -321,14 +319,13 @@ class AutosarClassParser(AbstractTypeParser):
 
         return None
 
-    def _parse_class_list_line(self, section_name: str, match: re.Match) -> Tuple[Optional[List[str]], Optional[str], bool]:
+    def _parse_class_list_line(self, match: re.Match) -> Tuple[Optional[List[str]], Optional[str], bool]:
         """Parse a class list line (Base, Subclasses, Aggregated by).
 
         Requirements:
             SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
 
         Args:
-            section_name: The section name (base_classes, subclasses, aggregated_by).
             match: The regex match object.
 
         Returns:
@@ -438,7 +435,7 @@ class AutosarClassParser(AbstractTypeParser):
             self._pending_class_lists[section_name] = (None, None, True)
 
     def _process_note_line(
-        self, note_match: re.Match, lines: List[str], line_index: int, current_model: AutosarClass
+        self, note_match: Match, lines: List[str], line_index: int, current_model: AutosarClass
     ) -> int:
         """Process a note line and extract multi-line note text.
 
@@ -454,29 +451,18 @@ class AutosarClassParser(AbstractTypeParser):
         Returns:
             The line index after processing the note (may have consumed multiple lines).
         """
-        note_text = note_match.group(1).strip()
+        note_text = self._extract_note_text(note_match, lines, line_index, parser_type="class")
+        current_model.note = note_text
 
-        # Check if note continues on next lines
+        # Find where the note ended
         i = line_index + 1
         while i < len(lines):
             next_line = lines[i].strip()
-            # Note continues if next line doesn't start with a known pattern
-            if (next_line and
-                not self.CLASS_PATTERN.match(next_line) and
-                not self.PRIMITIVE_PATTERN.match(next_line) and
-                not self.ENUMERATION_PATTERN.match(next_line) and
-                not self.PACKAGE_PATTERN.match(next_line) and
-                not self.BASE_PATTERN.match(next_line) and
-                not self.SUBCLASS_PATTERN.match(next_line) and
-                not self.AGGREGATED_BY_PATTERN.match(next_line) and
-                not self.NOTE_PATTERN.match(next_line) and
-                not self.ATTRIBUTE_HEADER_PATTERN.match(next_line)):
-                note_text += " " + next_line
+            if self._is_note_continuation(next_line, parser_type="class"):
                 i += 1
             else:
                 break
 
-        current_model.note = note_text.strip()
         return i
 
     def _process_attribute_line(
@@ -541,16 +527,15 @@ class AutosarClassParser(AbstractTypeParser):
             words = line.split()
 
             # A real attribute line should have:
-            # - Third word as multiplicity (0..1, *, 0..*) or kind (attr, aggr)
-            # - Type should start with uppercase or be a valid type
+            # - Third word as multiplicity (0..1, *, 0..*) or kind (attr, aggr, ref)
             third_word = words[2] if len(words) > 2 else ""
             fourth_word = words[3] if len(words) > 3 else ""
 
             is_new_attribute = (
                 # Third word is multiplicity or kind
-                third_word in ["0..1", "0..*", "*", "1", "attr", "aggr"] or
+                third_word in (self.MULTIPLICITIES | self.ATTR_KINDS_ALL) or
                 # Fourth word is kind (for lines like "dynamicArray String 0..1 attr")
-                fourth_word in ["attr", "aggr"]
+                fourth_word in (self.ATTR_KINDS_ATTR | self.ATTR_KINDS_AGGR | self.ATTR_KINDS_REF)
             )
 
             if is_new_attribute:
@@ -567,35 +552,7 @@ class AutosarClassParser(AbstractTypeParser):
                 result["pending_attr_type"] = attr_type
 
                 # Extract multiplicity, kind, and note from the attribute line
-                multiplicity = "1"
-                kind = AttributeKind.ATTR
-                note = ""
-
-                if len(words) > 2:
-                    # Check if third word is multiplicity or kind
-                    if words[2] in ["0..1", "0..*", "*"]:
-                        multiplicity = words[2]
-                        # Fourth word is kind
-                        if len(words) > 3 and words[3] in ["attr", "aggr", "ref"]:
-                            if words[3] == "attr":
-                                kind = AttributeKind.ATTR
-                            elif words[3] == "aggr":
-                                kind = AttributeKind.AGGR
-                            else:  # words[3] == "ref"
-                                kind = AttributeKind.REF
-                            # Fifth word onwards is note
-                            if len(words) > 4:
-                                note = " ".join(words[4:])
-                    elif words[2] in ["attr", "aggr", "ref"]:
-                        if words[2] == "attr":
-                            kind = AttributeKind.ATTR
-                        elif words[2] == "aggr":
-                            kind = AttributeKind.AGGR
-                        else:  # words[2] == "ref"
-                            kind = AttributeKind.REF
-                        # Third word onwards is note
-                        if len(words) > 3:
-                            note = " ".join(words[3:])
+                multiplicity, kind, note = self._extract_attribute_parts(words, supports_ref=True)
 
                 result["pending_attr_multiplicity"] = multiplicity
                 result["pending_attr_kind"] = kind
@@ -606,38 +563,6 @@ class AutosarClassParser(AbstractTypeParser):
                     words, pending_attr_name, pending_attr_note
                 )
                 result.update(continuation_result)
-
-        return result
-
-    def _handle_attribute_continuation(
-        self, words: List[str], pending_attr_name: str, pending_attr_note: Optional[str]
-    ) -> Dict[str, Any]:
-        """Handle continuation of multi-line attribute.
-
-        Requirements:
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            words: Words from the continuation line.
-            pending_attr_name: Pending attribute name.
-            pending_attr_note: Pending attribute note.
-
-        Returns:
-            Dictionary with updated pending_attr_note.
-        """
-        result = {"pending_attr_note": pending_attr_note}
-
-        # Check if this is a continuation of the note
-        # Continuation lines typically don't have the structure of a new attribute
-        # They don't have multiplicity (0..1, *, 0..*) or kind (attr, aggr, ref)
-        if len(words) > 2:
-            third_word = words[2]
-            if third_word not in ["0..1", "0..*", "*", "attr", "aggr", "ref"]:
-                # This is likely a continuation of the note
-                if pending_attr_note:
-                    result["pending_attr_note"] = pending_attr_note + " " + " ".join(words[2:])
-                else:
-                    result["pending_attr_note"] = " ".join(words[2:])
 
         return result
 

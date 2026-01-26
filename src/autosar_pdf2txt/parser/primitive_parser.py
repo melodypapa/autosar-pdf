@@ -10,7 +10,7 @@ Requirements:
     SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Match, Optional, Tuple
 
 from autosar_pdf2txt.models import (
     AttributeKind,
@@ -279,11 +279,14 @@ class AutosarPrimitiveParser(AbstractTypeParser):
             third_word = words[2] if len(words) > 2 else ""
             fourth_word = words[3] if len(words) > 3 else ""
 
+            valid_third = self.MULTIPLICITIES | self.ATTR_KINDS_ATTR | self.ATTR_KINDS_AGGR
+            valid_fourth = self.ATTR_KINDS_ATTR | self.ATTR_KINDS_AGGR
+
             is_new_attribute = (
                 # Third word is multiplicity or kind
-                third_word in ["0..1", "0..*", "*", "attr", "aggr"] or
+                third_word in valid_third or
                 # Fourth word is kind (for lines like "dynamicArray String 0..1 attr")
-                fourth_word in ["attr", "aggr"]
+                fourth_word in valid_fourth
             )
 
             if is_new_attribute:
@@ -300,31 +303,7 @@ class AutosarPrimitiveParser(AbstractTypeParser):
                 result["pending_attr_type"] = attr_type
 
                 # Extract multiplicity, kind, and note from the attribute line
-                multiplicity = "1"
-                kind = AttributeKind.ATTR
-                note = ""
-
-                if len(words) > 2:
-                    # Check if third word is multiplicity or kind
-                    if words[2] in ["0..1", "0..*", "*"]:
-                        multiplicity = words[2]
-                        # Fourth word is kind
-                        if len(words) > 3 and words[3] in ["attr", "aggr"]:
-                            if words[3] == "attr":
-                                kind = AttributeKind.ATTR
-                            else:  # words[3] == "aggr"
-                                kind = AttributeKind.AGGR
-                            # Fifth word onwards is note
-                            if len(words) > 4:
-                                note = " ".join(words[4:])
-                    elif words[2] in ["attr", "aggr"]:
-                        if words[2] == "attr":
-                            kind = AttributeKind.ATTR
-                        else:  # words[2] == "aggr"
-                            kind = AttributeKind.AGGR
-                        # Third word onwards is note
-                        if len(words) > 3:
-                            note = " ".join(words[3:])
+                multiplicity, kind, note = self._extract_attribute_parts(words, supports_ref=False)
 
                 result["pending_attr_multiplicity"] = multiplicity
                 result["pending_attr_kind"] = kind
@@ -332,41 +311,10 @@ class AutosarPrimitiveParser(AbstractTypeParser):
             elif pending_attr_name is not None and pending_attr_type is not None:
                 # This is a continuation line for the pending attribute
                 continuation_result = self._handle_attribute_continuation(
-                    words, pending_attr_name, pending_attr_note
+                    words, pending_attr_name, pending_attr_note,
+                    valid_third_words=valid_third
                 )
                 result.update(continuation_result)
-
-        return result
-
-    def _handle_attribute_continuation(
-        self, words: List[str], pending_attr_name: str, pending_attr_note: Optional[str]
-    ) -> Dict[str, Any]:
-        """Handle continuation of multi-line attribute.
-
-        Requirements:
-            SWR_PARSER_00012: Multi-Line Attribute Handling
-
-        Args:
-            words: Words from the continuation line.
-            pending_attr_name: Pending attribute name.
-            pending_attr_note: Pending attribute note.
-
-        Returns:
-            Dictionary with updated pending_attr_note.
-        """
-        result = {"pending_attr_note": pending_attr_note}
-
-        # Check if this is a continuation of the note
-        # Continuation lines typically don't have the structure of a new attribute
-        # They don't have multiplicity (0..1, *, 0..*) or kind (attr, aggr)
-        if len(words) > 2:
-            third_word = words[2]
-            if third_word not in ["0..1", "0..*", "*", "attr", "aggr"]:
-                # This is likely a continuation of the note
-                if pending_attr_note:
-                    result["pending_attr_note"] = pending_attr_note + " " + " ".join(words[2:])
-                else:
-                    result["pending_attr_note"] = " ".join(words[2:])
 
         return result
 
@@ -395,7 +343,7 @@ class AutosarPrimitiveParser(AbstractTypeParser):
         self._pending_attr_note = None
 
     def _process_note_line(
-        self, note_match, lines: List[str], line_index: int, current_model: AutosarPrimitive
+        self, note_match: Match, lines: List[str], line_index: int, current_model: AutosarPrimitive
     ) -> None:
         """Process a note line and extract multi-line note text.
 
@@ -408,23 +356,5 @@ class AutosarPrimitiveParser(AbstractTypeParser):
             line_index: Current line index.
             current_model: The current AutosarPrimitive being parsed.
         """
-        note_text = note_match.group(1).strip()
-
-        # Check if note continues on next lines
-        i = line_index + 1
-        while i < len(lines):
-            next_line = lines[i].strip()
-            # Note continues if next line doesn't start with a known pattern
-            if (next_line and
-                not self.CLASS_PATTERN.match(next_line) and
-                not self.PRIMITIVE_PATTERN.match(next_line) and
-                not self.ENUMERATION_PATTERN.match(next_line) and
-                not self.PACKAGE_PATTERN.match(next_line) and
-                not self.NOTE_PATTERN.match(next_line) and
-                not self.ATTRIBUTE_HEADER_PATTERN.match(next_line)):
-                note_text += " " + next_line
-                i += 1
-            else:
-                break
-
-        current_model.note = note_text.strip()
+        note_text = self._extract_note_text(note_match, lines, line_index, parser_type="primitive")
+        current_model.note = note_text

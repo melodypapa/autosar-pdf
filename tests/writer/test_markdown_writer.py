@@ -260,26 +260,14 @@ class TestMarkdownWriter:
             Duplicate classes have their sources merged instead of being skipped.
         """
         from autosar_pdf2txt.models.base import AutosarDocumentSource
-        from unittest.mock import patch, MagicMock
 
         pkg = AutosarPackage(name="TestPackage")
         source1 = AutosarDocumentSource("file1.pdf", 1)
         source2 = AutosarDocumentSource("file2.pdf", 2)
         pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, sources=[source1]))
 
-        # Mock the logger to capture the info log
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = MagicMock()
-            mock_get_logger.return_value = mock_logger
-            pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, sources=[source2]))
-
-            # Verify info was logged about merging sources
-            mock_logger.info.assert_called_once()
-            call_args = mock_logger.info.call_args[0]
-            assert "Type '%s' already exists in package '%s', merging %d new source(s)" in call_args[0]
-            assert mock_logger.info.call_args[0][1] == "MyClass"
-            assert mock_logger.info.call_args[0][2] == "TestPackage"
-            assert mock_logger.info.call_args[0][3] == 1
+        # Add duplicate class (sources should be merged silently)
+        pkg.add_class(AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, sources=[source2]))
 
         # Writer should only output the first class
         writer = MarkdownWriter()

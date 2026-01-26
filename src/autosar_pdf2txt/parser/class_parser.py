@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from autosar_pdf2txt.models import (
     AttributeKind,
     AutosarClass,
-    AutosarDocumentSource,
 )
 from autosar_pdf2txt.parser.base_parser import AbstractTypeParser, AutosarType
 
@@ -137,7 +136,7 @@ class AutosarClassParser(AbstractTypeParser):
             is_abstract = True
 
         # Check if this is a valid class definition (followed by package path)
-        if not self._is_valid_class_definition(lines, line_index):
+        if not self._is_valid_type_definition(lines, line_index):
             return None
 
         # Extract package path
@@ -146,19 +145,9 @@ class AutosarClassParser(AbstractTypeParser):
             return None
 
         # Create source location
-        source = None
-        if pdf_filename:
-            # SWR_PARSER_00030: Use page_number directly (no default fallback)
-            # Page boundary markers now ensure accurate page tracking in two-phase parsing
-            # page_number should always be provided by the main loop, but check for None for safety
-            if page_number is None:
-                page_number = 1
-            source = AutosarDocumentSource(
-                pdf_file=pdf_filename,
-                page_number=page_number,
-                autosar_standard=autosar_standard,
-                standard_release=standard_release,
-            )
+        source = self._create_source_location(
+            pdf_filename, page_number, autosar_standard, standard_release
+        )
 
         # Create AutosarClass directly (no intermediate ClassDefinition)
         return AutosarClass(
@@ -168,54 +157,6 @@ class AutosarClassParser(AbstractTypeParser):
             atp_type=atp_type,
             source=source,
         )
-
-    def _is_valid_class_definition(self, lines: List[str], start_index: int) -> bool:
-        """Check if this is a valid class definition.
-
-        A valid class definition must be followed by a Package line within 3 lines.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-
-        Args:
-            lines: List of text lines from the PDF.
-            start_index: Starting line index.
-
-        Returns:
-            True if valid, False otherwise.
-        """
-        for i in range(start_index + 1, min(start_index + 4, len(lines))):
-            line = lines[i].strip()
-            if line.startswith("Package "):
-                return True
-            if line and not line.startswith("Note "):
-                # Found a non-package, non-note line - invalid
-                return False
-        return False
-
-    def _extract_package_path(self, lines: List[str], start_index: int) -> Optional[str]:
-        """Extract package path from lines following class definition.
-
-        Requirements:
-            SWR_PARSER_00006: Package Hierarchy Building
-
-        Args:
-            lines: List of text lines from the PDF.
-            start_index: Starting line index.
-
-        Returns:
-            The package path, or None if not found.
-        """
-        for i in range(start_index + 1, min(start_index + 4, len(lines))):
-            line = lines[i].strip()
-            package_match = self.PACKAGE_PATTERN.match(line)
-            if package_match:
-                # Remove M2:: prefix if present
-                package_path = package_match.group(2)
-                if package_match.group(1):  # M2:: was present
-                    package_path = "M2::" + package_path
-                return package_path
-        return None
 
     def continue_parsing(
         self,
@@ -295,33 +236,11 @@ class AutosarClassParser(AbstractTypeParser):
                 continue
 
             # Check for new class/primitive/enumeration definition
-            if (self.CLASS_PATTERN.match(line) or
-                self.PRIMITIVE_PATTERN.match(line) or
-                self.ENUMERATION_PATTERN.match(line)):
+            if self._is_new_type_definition(line):
                 # Check if this is a valid new type definition
-                # A valid class definition must be followed by a Package line
+                # A valid type definition must be followed by a Package line
                 # If not, it's likely a continuation header (e.g., multi-page table)
-                is_valid_new_definition = False
-                if self.CLASS_PATTERN.match(line):
-                    # Check for Package line within 3 lines
-                    for j in range(i + 1, min(i + 4, len(lines))):
-                        next_line = lines[j].strip()
-                        if next_line.startswith("Package "):
-                            is_valid_new_definition = True
-                            break
-                        if next_line and not next_line.startswith("Note "):
-                            # Found a non-package, non-note line - invalid
-                            break
-                elif self.PRIMITIVE_PATTERN.match(line) or self.ENUMERATION_PATTERN.match(line):
-                    # For primitives and enumerations, also check for Package line
-                    for j in range(i + 1, min(i + 4, len(lines))):
-                        next_line = lines[j].strip()
-                        if next_line.startswith("Package "):
-                            is_valid_new_definition = True
-                            break
-                        if next_line and not next_line.startswith("Note "):
-                            # Found a non-package, non-note line - invalid
-                            break
+                is_valid_new_definition = self._is_valid_type_definition(lines, i)
 
                 if is_valid_new_definition:
                     # New type definition - finalize and return
@@ -335,7 +254,7 @@ class AutosarClassParser(AbstractTypeParser):
                     continue
 
             # Check for table or enumeration (end of class)
-            if line.startswith("Table ") or line.startswith("Enumeration "):
+            if self._is_table_marker(line) or line.startswith("Enumeration "):
                 self._finalize_pending_class_lists(current_model)
                 self._finalize_pending_attribute(current_model)
                 return i, True
@@ -599,7 +518,7 @@ class AutosarClassParser(AbstractTypeParser):
         }
 
         # Check if this line ends the attribute section
-        if line.startswith("Table ") or line.startswith("Enumeration "):
+        if self._is_table_marker(line) or line.startswith("Enumeration "):
             self._add_attribute_if_valid(
                 current_model.attributes,
                 pending_attr_name, pending_attr_type,

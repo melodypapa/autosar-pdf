@@ -18,7 +18,6 @@ from typing import List, Optional, Tuple
 from autosar_pdf2txt.models import (
     AutosarEnumeration,
     AutosarEnumLiteral,
-    AutosarDocumentSource,
 )
 from autosar_pdf2txt.parser.base_parser import AbstractTypeParser, AutosarType
 
@@ -103,7 +102,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
         atp_type, enum_name = self._validate_atp_markers(raw_enum_name)
 
         # Check if this is a valid enumeration definition (followed by package path)
-        if not self._is_valid_enumeration_definition(lines, line_index):
+        if not self._is_valid_type_definition(lines, line_index):
             return None
 
         # Extract package path
@@ -112,19 +111,9 @@ class AutosarEnumerationParser(AbstractTypeParser):
             return None
 
         # Create source location
-        source = None
-        if pdf_filename:
-            # SWR_PARSER_00030: Use page_number directly (no default fallback)
-            # Page boundary markers now ensure accurate page tracking in two-phase parsing
-            # page_number should always be provided by the main loop, but check for None for safety
-            if page_number is None:
-                page_number = 1
-            source = AutosarDocumentSource(
-                pdf_file=pdf_filename,
-                page_number=page_number,
-                autosar_standard=autosar_standard,
-                standard_release=standard_release,
-            )
+        source = self._create_source_location(
+            pdf_filename, page_number, autosar_standard, standard_release
+        )
 
         # Create AutosarEnumeration directly (no intermediate ClassDefinition)
         return AutosarEnumeration(
@@ -132,54 +121,6 @@ class AutosarEnumerationParser(AbstractTypeParser):
             package=package_path,
             source=source,
         )
-
-    def _is_valid_enumeration_definition(self, lines: List[str], start_index: int) -> bool:
-        """Check if this is a valid enumeration definition.
-
-        A valid enumeration definition must be followed by a Package line within 3 lines.
-
-        Requirements:
-            SWR_PARSER_00004: Class Definition Pattern Recognition
-
-        Args:
-            lines: List of text lines from the PDF.
-            start_index: Starting line index.
-
-        Returns:
-            True if valid, False otherwise.
-        """
-        for i in range(start_index + 1, min(start_index + 4, len(lines))):
-            line = lines[i].strip()
-            if line.startswith("Package "):
-                return True
-            if line and not line.startswith("Note "):
-                # Found a non-package, non-note line - invalid
-                return False
-        return False
-
-    def _extract_package_path(self, lines: List[str], start_index: int) -> Optional[str]:
-        """Extract package path from lines following enumeration definition.
-
-        Requirements:
-            SWR_PARSER_00006: Package Hierarchy Building
-
-        Args:
-            lines: List of text lines from the PDF.
-            start_index: Starting line index.
-
-        Returns:
-            The package path, or None if not found.
-        """
-        for i in range(start_index + 1, min(start_index + 4, len(lines))):
-            line = lines[i].strip()
-            package_match = self.PACKAGE_PATTERN.match(line)
-            if package_match:
-                # Remove M2:: prefix if present
-                package_path = package_match.group(2)
-                if package_match.group(1):  # M2:: was present
-                    package_path = "M2::" + package_path
-                return package_path
-        return None
 
     def continue_parsing(
         self,
@@ -222,14 +163,12 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 continue
 
             # Check for new class/primitive/enumeration definition
-            if (self.CLASS_PATTERN.match(line) or
-                self.PRIMITIVE_PATTERN.match(line) or
-                self.ENUMERATION_PATTERN.match(line)):
+            if self._is_new_type_definition(line):
                 # New type definition - return
                 return i, True
 
             # Check for table (end of enumeration)
-            if line.startswith("Table "):
+            if self._is_table_marker(line):
                 return i, True
 
             # Process enumeration literal section

@@ -20,6 +20,7 @@ from autosar_pdf2txt.models import (
     AttributeKind,
     AutosarAttribute,
     AutosarClass,
+    AutosarDocumentSource,
     AutosarEnumeration,
     AutosarPrimitive,
 )
@@ -320,6 +321,118 @@ class AbstractTypeParser(ABC):
                     pending_attr_note or ""
                 )
                 attributes[pending_attr_name] = attr
+
+    def _is_valid_type_definition(self, lines: List[str], start_index: int) -> bool:
+        """Check if this is a valid type definition.
+
+        A valid type definition must be followed by a Package line within 3 lines.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Args:
+            lines: List of text lines from the PDF.
+            start_index: Starting line index.
+
+        Returns:
+            True if valid, False otherwise.
+        """
+        for i in range(start_index + 1, min(start_index + 4, len(lines))):
+            line = lines[i].strip()
+            if line.startswith("Package "):
+                return True
+            if line and not line.startswith("Note "):
+                return False
+        return False
+
+    def _extract_package_path(self, lines: List[str], start_index: int) -> Optional[str]:
+        """Extract package path from lines following type definition.
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+
+        Args:
+            lines: List of text lines from the PDF.
+            start_index: Starting line index.
+
+        Returns:
+            Package path string, or None if not found.
+        """
+        for i in range(start_index + 1, min(start_index + 4, len(lines))):
+            line = lines[i].strip()
+            package_match = self.PACKAGE_PATTERN.match(line)
+            if package_match:
+                package_path = package_match.group(2)
+                if package_match.group(1):  # M2:: was present
+                    package_path = "M2::" + package_path
+                return package_path
+        return None
+
+    def _create_source_location(
+        self,
+        pdf_filename: Optional[str],
+        page_number: Optional[int],
+        autosar_standard: Optional[str],
+        standard_release: Optional[str],
+    ) -> Optional[AutosarDocumentSource]:
+        """Create source location for a type definition.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_PARSER_00022: PDF Source Location Extraction
+
+        Args:
+            pdf_filename: PDF filename.
+            page_number: Page number where type was defined.
+            autosar_standard: Optional AUTOSAR standard identifier.
+            standard_release: Optional AUTOSAR standard release.
+
+        Returns:
+            AutosarDocumentSource object, or None if pdf_filename is not provided.
+        """
+        if pdf_filename:
+            if page_number is None:
+                page_number = 1
+            return AutosarDocumentSource(
+                pdf_file=pdf_filename,
+                page_number=page_number,
+                autosar_standard=autosar_standard,
+                standard_release=standard_release,
+            )
+        return None
+
+    def _is_new_type_definition(self, line: str) -> bool:
+        """Check if line represents a new type definition.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00013: Recognition of Primitive and Enumeration Class Definition Patterns
+
+        Args:
+            line: The line to check.
+
+        Returns:
+            True if line matches a new type definition pattern, False otherwise.
+        """
+        return (
+            self.CLASS_PATTERN.match(line) is not None or
+            self.PRIMITIVE_PATTERN.match(line) is not None or
+            self.ENUMERATION_PATTERN.match(line) is not None
+        )
+
+    def _is_table_marker(self, line: str) -> bool:
+        """Check if line is a table marker.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Args:
+            line: The line to check.
+
+        Returns:
+            True if line starts with "Table ", False otherwise.
+        """
+        return line.startswith("Table ")
 
     @abstractmethod
     def parse_definition(

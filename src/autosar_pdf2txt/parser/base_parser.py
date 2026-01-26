@@ -326,7 +326,6 @@ class AbstractTypeParser(ABC):
         """Check if this is a valid type definition.
 
         A valid type definition must be followed by a Package line within 3 lines.
-        For classes, valid sections after the header include: Package, Note, Base, Subclasses, Aggregated by.
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
@@ -340,9 +339,7 @@ class AbstractTypeParser(ABC):
         """
         for i in range(start_index + 1, min(start_index + 4, len(lines))):
             line = lines[i].strip()
-            # Check for valid section markers (Package, Base, Subclasses, Aggregated by)
-            if line.startswith("Package ") or line.startswith("Base ") or \
-               line.startswith("Subclasses ") or line.startswith("Aggregated by"):
+            if line.startswith("Package "):
                 return True
             # Allow empty lines or Note lines, but reject anything else
             if line and not line.startswith("Note "):

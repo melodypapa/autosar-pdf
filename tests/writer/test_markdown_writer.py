@@ -1696,3 +1696,82 @@ class TestMarkdownWriterFiles:
         assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
         assert "|----------|------|------------------|------------------|" in content
         assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | Classic Platform | R23-11 |" in content
+
+    def test_write_enumeration_literal_with_tags_to_file(self, tmp_path: Path) -> None:
+        """Test write_packages_to_files correctly handles enumeration literals with tags.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that tags are written in table format in enumeration files.
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
+        enum.enumeration_literals = [
+            AutosarEnumLiteral(
+                name="VALUE1",
+                index=0,
+                description="ISO 11992-4 DTC format",
+                tags={"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"}
+            ),
+            AutosarEnumLiteral(
+                name="VALUE2",
+                index=1,
+                description="ISO 14229-1 DTC format",
+                tags={"atp.EnumerationLiteralIndex": "1", "xml.name": "ISO-14229-1"}
+            ),
+        ]
+        pkg.add_type(enum)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        enum_file = tmp_path / "TestPackage" / "TestEnum.md"
+        content = enum_file.read_text(encoding="utf-8")
+
+        # Verify Tags section is present
+        assert "## Enumeration Literals\n\n" in content
+        assert "* VALUE1 (index=0)\n" in content
+        assert "* VALUE2 (index=1)\n" in content
+        assert "  * ISO 11992-4 DTC format\n" in content
+        assert "  * ISO 14229-1 DTC format\n" in content
+        assert "  * **Tags**:\n" in content
+        assert "    | Tag | Value |\n" in content
+        assert "    |-----|-------|\n" in content
+        assert "    | atp.EnumerationLiteralIndex | 0 |\n" in content
+        assert "    | xml.name | ISO-11992-4 |\n" in content
+        assert "    | atp.EnumerationLiteralIndex | 1 |\n" in content
+        assert "    | xml.name | ISO-14229-1 |\n" in content
+
+    def test_write_enumeration_literal_without_tags_to_file(self, tmp_path: Path) -> None:
+        """Test write_packages_to_files correctly handles enumeration literals without tags.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+
+        This test verifies that literals without tags don't show Tags section.
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
+        enum.enumeration_literals = [
+            AutosarEnumLiteral(
+                name="VALUE1",
+                index=0,
+                description="Description without tags"
+            ),
+        ]
+        pkg.add_type(enum)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        enum_file = tmp_path / "TestPackage" / "TestEnum.md"
+        content = enum_file.read_text(encoding="utf-8")
+
+        # Verify Tags section is NOT present when no tags exist
+        assert "## Enumeration Literals\n\n" in content
+        assert "* VALUE1 (index=0)\n" in content
+        assert "  * Description without tags\n" in content
+        assert "**Tags**:" not in content
+        assert "| Tag | Value |" not in content

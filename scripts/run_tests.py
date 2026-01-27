@@ -80,8 +80,11 @@ def run_all_tests() -> int:
     return result.returncode
 
 
-def run_integration_tests() -> int:
+def run_integration_tests(test_case_id: Optional[str] = None) -> int:
     """Run integration tests only.
+
+    Args:
+        test_case_id: Optional test case ID to run (e.g., SWIT_00001)
 
     Returns:
         Exit code from pytest.
@@ -96,6 +99,12 @@ def run_integration_tests() -> int:
         "--cov-report=term",
         "--cov-report=json:cov_report.json"
     ]
+
+    # If test_case_id is provided, add -k flag to filter tests
+    if test_case_id:
+        cmd.extend(["-k", test_case_id])
+        print(f"Running integration tests matching: {test_case_id}")
+
     result = run_command(cmd, capture=False, env=env)
     return result.returncode
 
@@ -284,6 +293,10 @@ Examples:
   # Run only unit tests
   python scripts/run_tests.py --unit
 
+  # Run integration tests matching a specific test case ID
+  python scripts/run_tests.py --integration --test-id SWIT_00007
+  python scripts/run_tests.py --test-id SWIT_00007
+
 Note: Coverage report is automatically generated after tests complete
 and saved to scripts/report/coverage.md
         """
@@ -307,6 +320,12 @@ and saved to scripts/report/coverage.md
         help="Run unit tests only with coverage"
     )
 
+    parser.add_argument(
+        "--test-id",
+        type=str,
+        help="Run integration tests matching this test case ID (e.g., SWIT_00001)"
+    )
+
     args = parser.parse_args()
 
     # Ensure we're in the project root directory
@@ -320,7 +339,13 @@ and saved to scripts/report/coverage.md
         parser.print_help()
         return 1
 
-    if not any([args.all, args.integration, args.unit]):
+    # --test-id can only be used with --integration or alone
+    if args.test_id and args.unit:
+        print("Error: --test-id can only be used with --integration or alone.")
+        parser.print_help()
+        return 1
+
+    if not any([args.all, args.integration, args.unit, args.test_id]):
         parser.print_help()
         return 0
 
@@ -328,9 +353,12 @@ and saved to scripts/report/coverage.md
     if args.all:
         exit_code = run_all_tests()
     elif args.integration:
-        exit_code = run_integration_tests()
+        exit_code = run_integration_tests(test_case_id=args.test_id)
     elif args.unit:
         exit_code = run_unit_tests()
+    elif args.test_id:
+        # If only --test-id is provided, run integration tests with that ID
+        exit_code = run_integration_tests(test_case_id=args.test_id)
     else:
         exit_code = 0
 

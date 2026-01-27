@@ -8,6 +8,7 @@ results shared across all tests that need them.
 """
 
 import os
+from typing import Optional
 
 import pytest
 
@@ -20,6 +21,23 @@ from tests.integration.conftest import (
 )
 
 
+def find_enumeration_by_name(doc: AutosarDoc, name: str) -> Optional[AutosarEnumeration]:
+    """Find an enumeration by name in the document.
+
+    Args:
+        doc: The AutosarDoc to search.
+        name: The enumeration name to find.
+
+    Returns:
+        The AutosarEnumeration if found, None otherwise.
+    """
+    for pkg in doc.packages:
+        enum = pkg.get_enumeration(name)
+        if enum:
+            return enum
+    return None
+
+
 class TestPdfIntegration:
     """Integration tests using real AUTOSAR PDF files.
 
@@ -30,25 +48,34 @@ class TestPdfIntegration:
     def test_parse_real_autosar_pdf_and_verify_autosar_and_sw_component_type(
         self, generic_structure_template_pdf: AutosarDoc, generic_structure_sw_component_type: AutosarClass
     ) -> None:
-        """Test parsing real AUTOSAR PDF files and verify AUTOSAR and SwComponentType classes.
+        """Test Parsing Real AUTOSAR PDF and Verifying AUTOSAR, SwComponentType, and ARElement Classes.
 
-        SWIT_00001: Test Parsing Real AUTOSAR PDF and Verifying AUTOSAR and SwComponentType Classes
+        Test Case ID: SWIT_00001
 
         Requirements:
+            SWR_PARSER_00001: PDF Parser Initialization
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00005: Class Definition Data Model
             SWR_PARSER_00006: Package Hierarchy Building
-            SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_PARSER_00010: Attribute Extraction from PDF
-            SWR_PARSER_00022: PDF Source Location Extraction
-            SWR_MODEL_00001: AUTOSAR Class Representation
-            SWR_MODEL_00010: AUTOSAR Attribute Representation
-            SWR_MODEL_00023: AUTOSAR Document Model
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
             SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_PARSER_00022: PDF Source Location Extraction
+
+        This test verifies three classes from the GenericStructureTemplate PDF:
+        1. The AUTOSAR class (root metamodel class)
+        2. The SwComponentType class (including attributes, attribute kinds, and note support)
+        3. The ARElement class and its subclasses (inheritance hierarchy)
 
         Args:
-            generic_structure_template_pdf: Cached parsed GenericStructureTemplate PDF data (AutosarDoc).
-            generic_structure_sw_component_type: Cached SwComponentType class from GenericStructureTemplate PDF.
+            generic_structure_template_pdf: Parsed GenericStructureTemplate PDF data.
+            generic_structure_sw_component_type: Cached SwComponentType class.
+
+        This test is divided into three parts:
+        - Part 1: Verify AUTOSAR class
+        - Part 2: Verify SwComponentType class
+        - Part 3: Verify ARElement class and subclasses
         """
         # ========== Verify AUTOSAR class from GenericStructureTemplate PDF ==========
         packages = generic_structure_template_pdf.packages
@@ -554,3 +581,240 @@ class TestPdfIntegration:
             print(f"    - {lit.name}: {desc_preview}")
         print("  Immutability: VERIFIED (tuple type)")
         print("  Multi-line description parsing: VERIFIED")
+
+    def test_enumeration_literal_tags_extraction_from_real_pdf_swit_00005(
+        self, diagnostic_extract_template_pdf: AutosarDoc
+    ) -> None:
+        """Test Enumeration Literal Tags Extraction from Real PDF (enum1.jpg scenario).
+
+        Test Case ID: SWIT_00005
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that tags are correctly extracted from enumeration literal
+        descriptions using DiagnosticTypeOfDtcSupportedEnum from enum1.jpg example.
+
+        Tags tested:
+        - atp.EnumerationLiteralIndex: The index value of the literal
+        - xml.name: The XML name for the literal
+
+        Args:
+            diagnostic_extract_template_pdf: Cached parsed DiagnosticExtractTemplate PDF data (AutosarDoc).
+        """
+        # Find DiagnosticTypeOfDtcSupportedEnum enumeration (from enum1.jpg)
+        enum = find_enumeration_by_name(
+            diagnostic_extract_template_pdf,
+            "DiagnosticTypeOfDtcSupportedEnum"
+        )
+        if enum is None:
+            pytest.skip("DiagnosticTypeOfDtcSupportedEnum not found in PDF - may not exist or be in different location")
+
+        # SWIT_00005 Step 1: Verify enumeration has literals
+        assert len(enum.enumeration_literals) > 0, "Enumeration must have literals"
+
+        # SWIT_00005 Step 2: Verify tags are extracted for literals
+        literals_with_tags = [lit for lit in enum.enumeration_literals if lit.tags]
+        assert len(literals_with_tags) > 0, "At least one literal should have tags"
+
+        # SWIT_00005 Step 3: Verify expected tags are present
+        for literal in enum.enumeration_literals:
+            # Check that tags dictionary exists
+            assert hasattr(literal, 'tags'), "Literal must have tags attribute"
+            assert isinstance(literal.tags, dict), "Tags must be a dictionary"
+
+            # If tags are present, verify they are structured correctly
+            if literal.tags:
+                print(f"\n=== Literal: {literal.name} ===")
+                print(f"  Description: {literal.description}")
+                print(f"  Index: {literal.index}")
+                print(f"  Tags: {literal.tags}")
+
+                # Verify atp.EnumerationLiteralIndex tag
+                if "atp.EnumerationLiteralIndex" in literal.tags:
+                    assert literal.tags["atp.EnumerationLiteralIndex"].isdigit(), \
+                        "atp.EnumerationLiteralIndex value must be numeric string"
+                    # Verify index field matches tag value
+                    assert literal.index == int(literal.tags["atp.EnumerationLiteralIndex"]), \
+                        f"Index field ({literal.index}) must match atp.EnumerationLiteralIndex tag ({literal.tags['atp.EnumerationLiteralIndex']})"
+
+                # Verify xml.name tag if present
+                if "xml.name" in literal.tags:
+                    assert literal.tags["xml.name"], "xml.name value must not be empty"
+
+                # Verify tags are removed from description
+                if literal.description:
+                    assert "atp.EnumerationLiteralIndex" not in literal.description, \
+                        "Tags should be removed from description"
+                    assert "xml.name" not in literal.description, \
+                        "Tags should be removed from description"
+
+        print("\n=== Enumeration Literal Tags Extraction verified ===")
+        print(f"  Total literals: {len(enum.enumeration_literals)}")
+        print(f"  Literals with tags: {len(literals_with_tags)}")
+        print("  Tags extraction: VERIFIED")
+        print("  Description cleaning: VERIFIED")
+
+    def test_multipage_enumeration_literal_list_from_real_pdf_swit_00006(
+        self, diagnostic_extract_template_pdf: AutosarDoc
+    ) -> None:
+        """Test Multi-page Enumeration Literal List from Real PDF.
+
+        Test Case ID: SWIT_00006
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00032: Multi-page Enumeration Literal List Support
+            SWR_MODEL_00014: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+
+        This test verifies that enumeration literal lists spanning multiple pages
+        are parsed correctly using DiagnosticExtractTemplate.pdf (from enum2.jpg example).
+
+        Args:
+            diagnostic_extract_template_pdf: Cached parsed DiagnosticExtractTemplate PDF data (AutosarDoc).
+        """
+        # Find ByteOrderEnum enumeration (from enum2.jpg - spans multiple pages)
+        enum = find_enumeration_by_name(
+            diagnostic_extract_template_pdf,
+            "ByteOrderEnum"
+        )
+        if enum is None:
+            pytest.skip("ByteOrderEnum not found in PDF - may not exist or be in different location")
+
+        # SWIT_00006 Step 1: Verify enumeration has literals
+        assert len(enum.enumeration_literals) > 0, "Enumeration must have literals"
+
+        # SWIT_00006 Step 2: Verify expected literals are present
+        literal_names = [lit.name for lit in enum.enumeration_literals]
+        expected_literals = ["mostSignificantByteFirst", "mostSignificantByteLast", "opaque"]
+        for expected in expected_literals:
+            assert expected in literal_names, f"Expected literal '{expected}' not found. Found: {literal_names}"
+
+        # SWIT_00006 Step 3: Verify each literal has proper structure
+        for literal in enum.enumeration_literals:
+            assert literal.name, "Literal name must not be empty"
+            assert hasattr(literal, 'description'), "Literal must have description attribute"
+            assert hasattr(literal, 'index'), "Literal must have index attribute"
+            assert hasattr(literal, 'tags'), "Literal must have tags attribute"
+
+            # If description exists, verify it's clean (no tag patterns)
+            if literal.description:
+                assert "atp.EnumerationLiteralIndex" not in literal.description, \
+                    f"Tags should be removed from description for literal '{literal.name}'"
+
+            # Print literal details for verification
+            print(f"\n=== Literal: {literal.name} ===")
+            print(f"  Description: {literal.description}")
+            print(f"  Index: {literal.index}")
+            print(f"  Tags: {literal.tags}")
+
+        # SWIT_00006 Step 4: Verify source location tracking
+        assert enum.sources, "Enumeration should have source location"
+        assert len(enum.sources) > 0, "Enumeration should have at least one source"
+        source = enum.sources[0]
+        assert source.pdf_file, "Source PDF file must be specified"
+        assert source.page_number, "Source page number must be specified"
+
+        print("\n=== Multi-page Enumeration Literal List verified ===")
+        print(f"  Name: {enum.name}")
+        print(f"  Package: {enum.package}")
+        print(f"  Total literals: {len(enum.enumeration_literals)}")
+        print(f"  Source: {source.pdf_file}, Page {source.page_number}")
+        print("  Multi-page parsing: VERIFIED")
+        print("  Literal structure: VERIFIED")
+
+    def test_diagnostic_event_combination_reporting_behavior_enum_swit_00007(
+        self, diagnostic_extract_template_pdf: AutosarDoc
+    ) -> None:
+        """Test DiagnosticEventCombinationReportingBehaviorEnum enum3.png scenario.
+
+        Test Case ID: SWIT_00007
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies the enum3.png scenario where two literals
+        (reportingInChronologicalOrder and OldestFirst) appear on separate lines
+        in the same table cell, sharing the same description and tags.
+
+        The parser recognizes this and creates two separate literals:
+        1. reportingInChronologicalOrder with full description and tags
+        2. OldestFirst sharing the same description and tags from the first literal
+
+        Args:
+            diagnostic_extract_template_pdf: Cached parsed DiagnosticExtractTemplate PDF data (AutosarDoc).
+        """
+        # Find DiagnosticEventCombinationReportingBehaviorEnum enumeration
+        enum = find_enumeration_by_name(
+            diagnostic_extract_template_pdf,
+            "DiagnosticEventCombinationReportingBehaviorEnum"
+        )
+        if enum is None:
+            pytest.skip("DiagnosticEventCombinationReportingBehaviorEnum not found in PDF")
+
+        # Step 1: Verify enumeration has exactly two literals
+        assert len(enum.enumeration_literals) == 2, \
+            f"Expected 2 literals, found {len(enum.enumeration_literals)}"
+
+        # Step 2: Verify first literal
+        first_literal = enum.enumeration_literals[0]
+        assert first_literal.name == "reportingInChronologicalOrder", \
+            f"Expected first literal name 'reportingInChronologicalOrder', got '{first_literal.name}'"
+
+        # Step 3: Verify first literal has proper structure
+        assert first_literal.description is not None, "First literal must have description"
+        assert first_literal.index is not None, "First literal must have index"
+        assert first_literal.tags is not None, "First literal must have tags attribute"
+
+        # Step 4: Verify first literal description contains expected content
+        assert "chronological" in first_literal.description.lower(), \
+            f"First literal description should contain 'chronological': {first_literal.description}"
+
+        # Step 5: Verify first literal tags are present
+        assert "atp.EnumerationLiteralIndex" in first_literal.tags, \
+            "First literal should have atp.EnumerationLiteralIndex tag"
+
+        # Step 6: Verify second literal
+        second_literal = enum.enumeration_literals[1]
+        assert second_literal.name == "OldestFirst", \
+            f"Expected second literal name 'OldestFirst', got '{second_literal.name}'"
+
+        # Step 7: Verify second literal shares description and tags with first literal
+        assert second_literal.description is not None, "Second literal must have description"
+        assert second_literal.description == first_literal.description, \
+            "Second literal should share description with first literal"
+        assert second_literal.tags == first_literal.tags, \
+            "Second literal should share tags with first literal"
+
+        # Step 8: Verify descriptions are clean (no tag patterns)
+        assert "atp.EnumerationLiteralIndex" not in first_literal.description, \
+            f"Tags should be removed from first literal description: {first_literal.description}"
+        assert "atp.EnumerationLiteralIndex" not in second_literal.description, \
+            f"Tags should be removed from second literal description: {second_literal.description}"
+
+        # Print literal details for verification
+        print("\n=== DiagnosticEventCombinationReportingBehaviorEnum ===")
+        print(f"  Name: {enum.name}")
+        print(f"  Package: {enum.package}")
+        print(f"  Total literals: {len(enum.enumeration_literals)}")
+        print(f"\n=== First Literal: {first_literal.name} ===")
+        print(f"  Description: {first_literal.description}")
+        print(f"  Index: {first_literal.index}")
+        print(f"  Tags: {first_literal.tags}")
+        print(f"\n=== Second Literal: {second_literal.name} ===")
+        print(f"  Description: {second_literal.description}")
+        print(f"  Index: {second_literal.index}")
+        print(f"  Tags: {second_literal.tags}")
+
+        if enum.sources:
+            source = enum.sources[0]
+            print(f"\n  Source: {source.pdf_file}, Page {source.page_number}")
+
+        print("\n=== enum3.png scenario verified ===")
+        print("  Two literals in same cell detected")
+        print("  First literal: reportingInChronologicalOrder (with description and tags)")
+        print("  Second literal: OldestFirst (sharing description and tags)")
+        print("  Description and tags: VERIFIED")

@@ -349,3 +349,34 @@ def generic_structure_diagnostic_debounce_enum(
         pytest.skip("DiagnosticDebounceBehaviorEnum not found")
 
     return debounce_enum
+
+
+@pytest.fixture(scope="session")
+def diagnostic_extract_template_pdf(parser: PdfParser) -> AutosarDoc:
+    """Parse and cache the DiagnosticExtractTemplate PDF.
+
+    This fixture parses the PDF once per session and caches the result.
+    This PDF contains enumeration literals with tags (atp.EnumerationLiteralIndex, xml.name)
+    and multi-page enumeration literal lists.
+
+    Args:
+        parser: Shared PdfParser instance.
+
+    Returns:
+        AutosarDoc containing parsed packages and root classes.
+
+    Skips:
+        If the PDF file is not found.
+    """
+    pdf_path = "examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf"
+
+    if not os.path.exists(pdf_path):
+        pytest.skip(f"PDF file not found: {pdf_path}")
+
+    doc = parser.parse_pdf(pdf_path)
+
+    print("\n=== DiagnosticExtractTemplate PDF parsed ===")
+    print(f"  Packages: {len(doc.packages)}")
+    print(f"  Root classes: {len(doc.root_classes)}")
+
+    return doc

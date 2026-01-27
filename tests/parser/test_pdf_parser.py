@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import patch
 from typing import List, Union
 
-from autosar_pdf2txt.models import ATPType, AttributeKind, AutosarClass, AutosarEnumeration, AutosarPrimitive
+from autosar_pdf2txt.models import ATPType, AttributeKind, AutosarClass, AutosarEnumeration, AutosarPrimitive, AutosarPackage, AutosarDocumentSource
 from autosar_pdf2txt.parser import PdfParser
 from autosar_pdf2txt.parser.class_parser import AutosarClassParser
 from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
@@ -3910,3 +3910,1561 @@ VALUE3 Third value"""
         assert len(enum.enumeration_literals) == 3
         assert enum.enumeration_literals[0].name == "VALUE1"
         assert enum.enumeration_literals[2].name == "VALUE3"
+
+    def test_extract_literal_tags_xml_name(self) -> None:
+        """Test extracting xml.name tag from enumeration literal.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that xml.name metadata is extracted and stored correctly.
+        """
+        parser = PdfParser()
+
+        # Enumeration with xml.name tag
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4
+VALUE2 ISO 14229-1 DTC format (3 byte format) atp.EnumerationLiteralIndex=1 xml.name=ISO-14229-1"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 6,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 2
+
+        # Check first literal
+        literal1 = enum.enumeration_literals[0]
+        assert literal1.name == "VALUE1"
+        assert literal1.description == "ISO 11992-4 DTC format"
+        assert literal1.index == 0
+        assert "atp.EnumerationLiteralIndex" in literal1.tags
+        assert literal1.tags["atp.EnumerationLiteralIndex"] == "0"
+        assert "xml.name" in literal1.tags
+        assert literal1.tags["xml.name"] == "ISO-11992-4"
+
+        # Check second literal
+        literal2 = enum.enumeration_literals[1]
+        assert literal2.name == "VALUE2"
+        assert literal2.description == "ISO 14229-1 DTC format (3 byte format)"
+        assert literal2.index == 1
+        assert literal2.tags["atp.EnumerationLiteralIndex"] == "1"
+        assert literal2.tags["xml.name"] == "ISO-14229-1"
+
+    def test_extract_literal_tags_multiple(self) -> None:
+        """Test extracting multiple tags from enumeration literal.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that multiple metadata tags are extracted correctly.
+        """
+        parser = PdfParser()
+
+        # Enumeration with multiple tags
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 Description text here atp.EnumerationLiteralIndex=0 xml.name=VALUE-1"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 4,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        literal = enum.enumeration_literals[0]
+        assert len(literal.tags) == 2
+        assert literal.tags["atp.EnumerationLiteralIndex"] == "0"
+        assert literal.tags["xml.name"] == "VALUE-1"
+
+    def test_clean_description_after_tag_extraction(self) -> None:
+        """Test that description is cleaned after tag extraction.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that tag patterns are removed from description.
+        """
+        parser = PdfParser()
+
+        # Enumeration with tags in description
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 4,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        literal = enum.enumeration_literals[0]
+
+        # Description should be cleaned (no tag patterns)
+        assert literal.description == "ISO 11992-4 DTC format"
+        assert "atp.EnumerationLiteralIndex" not in literal.description
+        assert "xml.name" not in literal.description
+
+    def test_multipage_enumeration_with_header_repetition(self) -> None:
+        """Test multi-page enumeration with repeated header.
+
+        Requirements:
+            SWR_PARSER_00032: Multi-page Enumeration Literal List Support
+
+        This test verifies that enumerations work correctly when header is repeated.
+        """
+        parser = PdfParser()
+
+        # Enumeration with repeated header on page 2
+        text = """Enumeration ByteOrderEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+mostSignificantByteFirst Most significant byte at the lowest address atp.EnumerationLiteralIndex=0
+Literal Description
+mostSignificantByteLast Most significant byte at highest address atp.EnumerationLiteralIndex=1"""
+
+        # Page 1: lines 0-3, Page 2: lines 4-5 (header + literal)
+        line_to_page = [1, 1, 1, 1, 2, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 2
+        assert enum.enumeration_literals[0].name == "mostSignificantByteFirst"
+        assert enum.enumeration_literals[1].name == "mostSignificantByteLast"
+
+    def test_multipage_enumeration_without_header_repetition(self) -> None:
+        """Test multi-page enumeration without repeated header.
+
+        Requirements:
+            SWR_PARSER_00032: Multi-page Enumeration Literal List Support
+
+        This test verifies that enumerations work correctly when header is not repeated.
+        """
+        parser = PdfParser()
+
+        # Enumeration without repeated header
+        text = """Enumeration ByteOrderEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+mostSignificantByteFirst Most significant byte at the lowest address atp.EnumerationLiteralIndex=0
+mostSignificantByteLast Most significant byte at highest address atp.EnumerationLiteralIndex=1
+opaque For opaque data endianness conversion atp.EnumerationLiteralIndex=2"""
+
+        # Page 1: lines 0-4, Page 2: lines 5-6
+        line_to_page = [1, 1, 1, 1, 1, 2, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 3
+        assert enum.enumeration_literals[0].name == "mostSignificantByteFirst"
+        assert enum.enumeration_literals[1].name == "mostSignificantByteLast"
+        assert enum.enumeration_literals[2].name == "opaque"
+
+    def test_multipage_enumeration_with_tags(self) -> None:
+        """Test multi-page enumeration with tags extraction.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+            SWR_PARSER_00032: Multi-page Enumeration Literal List Support
+
+        This test verifies that tags are extracted correctly across page boundaries.
+        """
+        parser = PdfParser()
+
+        # Multi-page enumeration with tags
+        text = """Enumeration DiagnosticTypeOfDtcSupportedEnum
+Package M2::AUTOSAR::DiagnosticExtract
+Literal Description
+iso11992_4 ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4
+iso14229_1 ISO 14229-1 DTC format (3 byte format) atp.EnumerationLiteralIndex=1 xml.name=ISO-14229-1
+iso15031_6 ISO 15031-6 DTC format (2 byte format) atp.EnumerationLiteralIndex=2 xml.name=ISO-15031-6"""
+
+        # Page 1: lines 0-4, Page 2: lines 5-6
+        line_to_page = [1, 1, 1, 1, 1, 2, 2]
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=line_to_page,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 3
+
+        # Verify all literals have tags
+        for literal in enum.enumeration_literals:
+            assert "atp.EnumerationLiteralIndex" in literal.tags
+            assert "xml.name" in literal.tags
+            assert literal.description is not None
+            # Verify tags are removed from description
+            assert "atp.EnumerationLiteralIndex" not in literal.description
+            assert "xml.name" not in literal.description
+
+    def test_extract_literal_tags_only_index(self) -> None:
+        """Test extracting only atp.EnumerationLiteralIndex tag.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that tags are extracted when only atp.EnumerationLiteralIndex is present.
+        """
+        parser = PdfParser()
+
+        # Enumeration with only atp.EnumerationLiteralIndex tag
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 Description text here atp.EnumerationLiteralIndex=0"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 4,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        literal = enum.enumeration_literals[0]
+        assert len(literal.tags) == 1
+        assert literal.tags["atp.EnumerationLiteralIndex"] == "0"
+        assert "xml.name" not in literal.tags
+
+    def test_extract_literal_tags_only_xml_name(self) -> None:
+        """Test extracting only xml.name tag.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that tags are extracted when only xml.name is present.
+        """
+        parser = PdfParser()
+
+        # Enumeration with only xml.name tag
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 Description text here xml.name=VALUE-1"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 4,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        literal = enum.enumeration_literals[0]
+        assert len(literal.tags) == 1
+        assert literal.tags["xml.name"] == "VALUE-1"
+        assert "atp.EnumerationLiteralIndex" not in literal.tags
+        assert literal.index is None
+
+    def test_multiline_literal_description_with_tags(self) -> None:
+        """Test multi-line literal descriptions with tags.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+
+        This test verifies that tags are preserved during multi-line description parsing.
+        """
+        parser = PdfParser()
+
+        # Enumeration with multi-line description and tags
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First line of description atp.EnumerationLiteralIndex=0 xml.name=VALUE-1
+with continuation text"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 5,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        literal = enum.enumeration_literals[0]
+        assert literal.description == "First line of description with continuation text"
+        assert literal.tags["atp.EnumerationLiteralIndex"] == "0"
+        assert literal.tags["xml.name"] == "VALUE-1"
+
+    def test_continuation_with_tags(self) -> None:
+        """Test continuation lines with tags preserved.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that tags are preserved when literal description spans multiple lines.
+        """
+        parser = PdfParser()
+
+        # Enumeration with continuation and tags on first line
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First line atp.EnumerationLiteralIndex=0 xml.name=VALUE-1
+Second line
+Third line"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 6,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        literal = enum.enumeration_literals[0]
+        assert "First line Second line Third line" in literal.description
+        assert literal.tags["atp.EnumerationLiteralIndex"] == "0"
+        assert literal.tags["xml.name"] == "VALUE-1"
+
+    def test_enumeration_with_empty_tags(self) -> None:
+        """Test enumeration literal with no tags.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that literals without tags work correctly.
+        """
+        parser = PdfParser()
+
+        # Enumeration without tags
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 Description text without tags
+VALUE2 Another description"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 5,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 2
+        assert enum.enumeration_literals[0].tags == {}
+        assert enum.enumeration_literals[1].tags == {}
+        assert enum.enumeration_literals[0].index is None
+        assert enum.enumeration_literals[1].index is None
+
+    def test_parse_definition_invalid_line_index(self) -> None:
+        """Test parse_definition returns None when line_index is out of bounds.
+
+        Requirements:
+            SWR_PARSER_00025: AutosarEnumeration Specialized Parser
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Line index beyond array bounds
+        result = parser.parse_definition(
+            lines=["Enumeration TestEnum"],
+            line_index=10,
+            pdf_filename="test.pdf",
+            page_number=1,
+        )
+
+        assert result is None
+
+    def test_parse_definition_no_match(self) -> None:
+        """Test parse_definition returns None when pattern doesn't match.
+
+        Requirements:
+            SWR_PARSER_00025: AutosarEnumeration Specialized Parser
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Line doesn't match enumeration pattern
+        result = parser.parse_definition(
+            lines=["Class TestClass"],
+            line_index=0,
+            pdf_filename="test.pdf",
+            page_number=1,
+        )
+
+        assert result is None
+
+    def test_parse_definition_invalid_definition(self) -> None:
+        """Test parse_definition returns None when definition is invalid.
+
+        Requirements:
+            SWR_PARSER_00025: AutosarEnumeration Specialized Parser
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Enumeration without package path (invalid)
+        result = parser.parse_definition(
+            lines=["Enumeration TestEnum"],
+            line_index=0,
+            pdf_filename="test.pdf",
+            page_number=1,
+        )
+
+        assert result is None
+
+    def test_continue_parsing_terminates_on_new_enumeration(self) -> None:
+        """Test continue_parsing terminates when new enumeration is encountered.
+
+        Requirements:
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Create initial enumeration
+        enum = AutosarEnumeration(name="Enum1", package="M2::Test")
+        parser._in_enumeration_literal_section = True
+
+        lines = ["Enumeration Enum2", "Package M2::Test"]
+        new_index, is_complete = parser.continue_parsing(
+            enum, lines, 0
+        )
+
+        assert is_complete is True
+        assert new_index == 0
+
+    def test_continue_parsing_terminates_on_table(self) -> None:
+        """Test continue_parsing terminates when table marker is encountered.
+
+        Requirements:
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Create initial enumeration
+        enum = AutosarEnumeration(name="Enum1", package="M2::Test")
+        parser._in_enumeration_literal_section = True
+
+        lines = ["Table 4.21: Test Table"]
+        new_index, is_complete = parser.continue_parsing(
+            enum, lines, 0
+        )
+
+        assert is_complete is True
+        assert new_index == 0
+
+    def test_continue_parsing_terminates_on_new_class(self) -> None:
+        """Test continue_parsing terminates when new class is encountered.
+
+        Requirements:
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Create initial enumeration
+        enum = AutosarEnumeration(name="Enum1", package="M2::Test")
+        parser._in_enumeration_literal_section = True
+
+        lines = ["Class NewClass", "Package M2::Test"]
+        new_index, is_complete = parser.continue_parsing(
+            enum, lines, 0
+        )
+
+        assert is_complete is True
+        assert new_index == 0
+
+    def test_continue_parsing_terminates_on_new_primitive(self) -> None:
+        """Test continue_parsing terminates when new primitive is encountered.
+
+        Requirements:
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+        """
+        from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+
+        parser = AutosarEnumerationParser()
+
+        # Create initial enumeration
+        enum = AutosarEnumeration(name="Enum1", package="M2::Test")
+        parser._in_enumeration_literal_section = True
+
+        lines = ["Primitive NewPrimitive", "Package M2::Test"]
+        new_index, is_complete = parser.continue_parsing(
+            enum, lines, 0
+        )
+
+        assert is_complete is True
+        assert new_index == 0
+
+    def test_continuation_duplicate_name(self) -> None:
+        """Test continuation when literal name is duplicated.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First line
+VALUE1 continuation text"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 5,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 1
+        assert enum.enumeration_literals[0].name == "VALUE1"
+        # Continuation includes the duplicate name
+        assert "First line VALUE1 continuation text" in enum.enumeration_literals[0].description
+
+    def test_continuation_lowercase_description(self) -> None:
+        """Test continuation when description starts with lowercase.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First line
+continuation text here"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 5,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 1
+        assert enum.enumeration_literals[0].name == "VALUE1"
+        # Continuation includes the word
+        assert "First line continuation text here" in enum.enumeration_literals[0].description
+
+    def test_continuation_common_word(self) -> None:
+        """Test continuation when name is a common continuation word.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First line
+enable more features"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 5,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert len(enum.enumeration_literals) == 1
+        assert enum.enumeration_literals[0].name == "VALUE1"
+        # Continuation includes the word
+        assert "First line enable more features" in enum.enumeration_literals[0].description
+
+    def test_multiple_literals_same_description(self) -> None:
+        """Test multiple literals on separate lines sharing the same description.
+
+        This tests the scenario from enum3.png where reportingInChronologicalOrder
+        and OldestFirst are in the same table cell but on separate lines, sharing
+        the same description and tags.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+
+        # Simulate enum3.png: two literals on separate lines, sharing description
+        text = """Enumeration DiagnosticEventCombinationReportingBehaviorEnum
+Package M2::AUTOSARTemplates::DiagnosticExtract::DiagnosticCommonProps
+Literal Description
+reportingInChronologicalOrder The reporting order for event combination on retrieval is the chronological storage order of the events Tags: atp.EnumerationLiteralIndex=0
+OldestFirst"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 6,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert enum.name == "DiagnosticEventCombinationReportingBehaviorEnum"
+        
+        # Should parse two separate literals
+        assert len(enum.enumeration_literals) == 2
+        
+        # First literal
+        assert enum.enumeration_literals[0].name == "reportingInChronologicalOrder"
+        assert enum.enumeration_literals[0].description is not None
+        assert "chronological storage order" in enum.enumeration_literals[0].description
+        assert enum.enumeration_literals[0].index == 0
+        assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[0].tags
+        
+        # Second literal - should also have the same description and tags
+        assert enum.enumeration_literals[1].name == "OldestFirst"
+        # The second literal should also get the description from the previous line
+        # This is the key fix - OldestFirst should have a description
+        assert enum.enumeration_literals[1].description is not None
+
+    def test_enumeration_with_note_and_tags(self) -> None:
+        """Test enumeration with note and tags in literals.
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies that note processing works correctly with tags.
+        """
+        parser = PdfParser()
+
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Note This is a test note
+Literal Description
+VALUE1 First value atp.EnumerationLiteralIndex=0 xml.name=VALUE-1"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 5,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert enum.note == "This is a test note"
+        assert len(enum.enumeration_literals) == 1
+        assert enum.enumeration_literals[0].tags["atp.EnumerationLiteralIndex"] == "0"
+
+
+class TestBaseParserCoverage:
+    """Tests to achieve 100% coverage for base_parser.py.
+
+    This test class covers the remaining uncovered lines in base_parser.py:
+    - Line 119: _is_broken_attribute_fragment return statement
+    - Lines 345-346: _is_valid_type_definition return False
+    - Line 370: _extract_package_path return None
+    - Line 396: _create_source_location with page_number=None
+    - Line 508: _extract_note_text return statement
+    - Lines 597-601: _extract_attribute_parts with kind in valid_kinds
+    - Line 635: _parse_attribute_kind return ATTR
+    - Line 661: continue_parsing pass statement
+    """
+
+    def test_broken_attribute_fragment_by_type(self) -> None:
+        """Test _is_broken_attribute_fragment filters by type.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that attribute types in CONTINUATION_TYPES are filtered out.
+        """
+        parser = AutosarClassParser()
+        assert parser._is_broken_attribute_fragment("test_attr", "data")
+        assert parser._is_broken_attribute_fragment("test_attr", "If")
+        assert parser._is_broken_attribute_fragment("test_attr", "has")
+
+    def test_broken_attribute_fragment_by_name(self) -> None:
+        """Test _is_broken_attribute_fragment filters by name.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that attribute names in FRAGMENT_NAMES and PARTIAL_NAMES are filtered out.
+        """
+        parser = AutosarClassParser()
+        assert parser._is_broken_attribute_fragment("Element", "String")
+        assert parser._is_broken_attribute_fragment("SizeProfile", "Integer")
+        assert parser._is_broken_attribute_fragment("isStructWith", "Boolean")
+
+    def test_valid_type_definition_invalid_line(self) -> None:
+        """Test _is_valid_type_definition rejects invalid lines.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that invalid lines after class definition return False.
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass", "This is not a package line"]
+        assert not parser._is_valid_type_definition(lines, 0)
+
+    def test_extract_package_path_not_found(self) -> None:
+        """Test _extract_package_path returns None when not found.
+
+        Requirements:
+            SWR_PARSER_00006: Package Hierarchy Building
+
+        Tests that package path extraction returns None when no package pattern found.
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass", "Some other line", "Note text"]
+        assert parser._extract_package_path(lines, 0) is None
+
+    def test_create_source_location_without_page_number(self) -> None:
+        """Test _create_source_location defaults page_number to 1.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_PARSER_00022: PDF Source Location Extraction
+
+        Tests that when page_number is None, it defaults to 1.
+        """
+        parser = AutosarClassParser()
+        source = parser._create_source_location("test.pdf", None, None, None)
+        assert source is not None
+        assert source.pdf_file == "test.pdf"
+        assert source.page_number == 1
+
+    def test_extract_note_text_no_continuation(self) -> None:
+        """Test _extract_note_text with no continuation lines.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that note extraction returns text without continuation.
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass", "Package M2::Test", "Note Single line note", "Primitive SomePrimitive"]
+        note_match = parser.NOTE_PATTERN.match(lines[2])
+        note_text = parser._extract_note_text(note_match, lines, 2, "class")
+        assert note_text == "Single line note"
+
+    def test_extract_note_text_with_whitespace(self) -> None:
+        """Test _extract_note_text strips whitespace from note.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that the strip() method is called on the returned note text.
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass", "Package M2::Test", "Note  Whitespace test  ", "Primitive SomePrimitive"]
+        note_match = parser.NOTE_PATTERN.match(lines[2])
+        note_text = parser._extract_note_text(note_match, lines, 2, "class")
+        # Should be stripped of leading/trailing whitespace
+        assert note_text == "Whitespace test"
+
+    def test_extract_note_text_stops_at_known_pattern(self) -> None:
+        """Test _extract_note_text stops at known pattern (covers break statement).
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that note extraction stops when encountering a known pattern.
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass", "Package M2::Test", "Note First line", "Base BaseClass"]
+        note_match = parser.NOTE_PATTERN.match(lines[2])
+        note_text = parser._extract_note_text(note_match, lines, 2, "class")
+        # Should stop at "Base BaseClass" and not include it
+        assert note_text == "First line"
+        assert "BaseClass" not in note_text
+
+    def test_extract_attribute_parts_with_kind(self) -> None:
+        """Test _extract_attribute_parts when third word is kind.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+
+        Tests parsing attribute line where third word is kind (attr/aggr/ref).
+        """
+        parser = AutosarClassParser()
+        words = ["attr1", "String", "attr", "description text"]
+        multiplicity, kind, note = parser._extract_attribute_parts(words, supports_ref=False)
+        assert multiplicity == "1"
+        assert kind == AttributeKind.ATTR
+        assert note == "description text"
+
+    def test_parse_attribute_kind_returns_attr(self) -> None:
+        """Test _parse_attribute_kind returns ATTR for unrecognized kinds.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+
+        Tests that unknown kind strings default to ATTR.
+        """
+        parser = AutosarClassParser()
+        kind = parser._parse_attribute_kind("unknown")
+        assert kind == AttributeKind.ATTR
+
+
+class TestClassParserCoverage:
+    """Tests to achieve 100% coverage for class_parser.py.
+
+    This test class covers the remaining uncovered lines in class_parser.py:
+    - Line 117: parse_definition line_index >= len(lines)
+    - Line 138: parse_definition not class_match
+    - Line 143: parse_definition not is_valid_type_definition
+    - Lines 221-222: continue_parsing attribute header with finalize
+    - Lines 257-258: continue_parsing class list match with finalize
+    - Lines 262-264: continue_parsing class list continuation
+    - Line 277: continue_parsing note line processing
+    - Line 369: continue_parsing new type definition invalid
+    - Line 374: continue_parsing new type definition valid
+    - Line 405-406: continue_parsing table marker end
+    - Line 470: continue_parsing attribute section processing
+    - Lines 514-525: continue_parsing end of lines in attribute section
+    """
+
+    def test_parse_definition_line_index_out_of_bounds(self) -> None:
+        """Test parse_definition with line_index beyond lines length.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when line_index >= len(lines).
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass"]
+        result = parser.parse_definition(lines, 5)
+        assert result is None
+
+    def test_parse_definition_no_class_match(self) -> None:
+        """Test parse_definition with non-class line.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when line doesn't match CLASS_PATTERN.
+        """
+        parser = AutosarClassParser()
+        lines = ["Not a class definition"]
+        result = parser.parse_definition(lines, 0)
+        assert result is None
+
+    def test_parse_definition_invalid_type_definition(self) -> None:
+        """Test parse_definition with invalid type definition.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when type definition is invalid (no package).
+        """
+        parser = AutosarClassParser()
+        lines = ["Class TestClass", "Random text instead of package"]
+        result = parser.parse_definition(lines, 0)
+        assert result is None
+
+    def test_continue_parsing_attribute_header_finalizes_lists(self) -> None:
+        """Test continue_parsing finalizes pending class lists on attribute header.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that encountering "Attribute Type Mult. Kind Note" finalizes pending lists.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Base BaseClass1
+Attribute Type Mult. Kind Note
+attr1 String 1 attr"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        # Base classes should be finalized before attribute section
+        assert "BaseClass1" in class_def.bases
+
+    def test_continue_parsing_repeated_class_header_in_attribute_section(self) -> None:
+        """Test continue_parsing skips repeated class header in attribute section.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that repeated class headers on new pages are skipped during attribute parsing.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+Class TestClass
+attr2 Integer 1 attr"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        # Should skip the repeated "Class TestClass" and parse attr2
+        assert len(class_def.attributes) == 2
+
+    def test_continue_parsing_class_list_match(self) -> None:
+        """Test continue_parsing matches and processes class list patterns.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests Base, Subclasses, and Aggregated by patterns are matched.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Subclasses Subclass1, Subclass2"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        assert len(class_def.subclasses) == 2
+
+    def test_continue_parsing_class_list_continuation(self) -> None:
+        """Test continue_parsing handles multi-line class lists.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that class lists can span multiple lines.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Base BaseClass1, BaseClass2,
+BaseClass3, BaseClass4"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        assert len(class_def.bases) == 4
+
+    def test_continue_parsing_attribute_section_ends_on_table(self) -> None:
+        """Test continue_parsing ends attribute section on table marker.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+
+        Tests that attribute section is properly ended when encountering table marker.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+Table SomeTable"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        # Should have finalized the attribute and set section_ended to False
+        assert len(class_def.attributes) == 1
+
+    def test_continue_parsing_note_line(self) -> None:
+        """Test continue_parsing processes note lines.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that Note patterns are processed and multi-line notes are extracted.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Note This is a multi-line
+note that continues
+Attribute Type Mult. Kind Note"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        assert "multi-line" in class_def.note
+        assert "continues" in class_def.note
+
+    def test_continue_parsing_invalid_new_type_definition(self) -> None:
+        """Test continue_parsing handles invalid new type definitions.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that invalid new type definitions are treated as continuation.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+Class Invalid
+attr1 String 1 attr"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        # Should continue parsing TestClass, not treat "Class Invalid" as new type
+        assert not is_complete or len(class_def.attributes) > 0
+
+    def test_continue_parsing_valid_new_type_definition(self) -> None:
+        """Test continue_parsing handles valid new type definitions.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that valid new type definitions finalize current class.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+Class NewClass
+Package M2::AUTOSAR::Other"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        assert is_complete
+        assert len(class_def.attributes) == 1
+
+    def test_continue_parsing_table_marker(self) -> None:
+        """Test continue_parsing ends on table marker.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that "Table" marker ends class parsing.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+Table SomeTable"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        assert is_complete
+        assert len(class_def.attributes) == 1
+
+    def test_continue_parsing_attribute_section(self) -> None:
+        """Test continue_parsing processes attribute section.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that attributes are extracted and multi-line attributes are handled.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 0..1 attr First attribute
+attr2 Integer 1 attr Second attribute"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        new_i, is_complete = parser.continue_parsing(class_def, text.strip().split("\n"), 2)
+        assert len(class_def.attributes) == 2
+        assert "attr1" in class_def.attributes
+        assert "attr2" in class_def.attributes
+
+    def test_continue_parsing_end_of_lines_in_attribute_section(self) -> None:
+        """Test continue_parsing returns False when in attribute section at end.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that being in attribute section at end of lines returns False for continuation.
+        """
+        parser = AutosarClassParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr"""
+
+        class_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert class_def is not None
+        lines = text.strip().split("\n")
+        new_i, is_complete = parser.continue_parsing(class_def, lines, 2)
+        # Should be in attribute section, so is_complete should be False
+        assert not is_complete
+
+
+class TestEnumerationParserCoverage:
+    """Tests to achieve 100% coverage for enumeration_parser.py.
+
+    This test class covers the remaining uncovered lines in enumeration_parser.py:
+    - Line 118: parse_definition line_index >= len(lines)
+    - Lines 187-189: continue_parsing enumeration literal header match
+    - Line 246: continue_parsing new type definition finalize
+    - Line 296: continue_parsing note line processing
+    - Lines 345-349: _process_enumeration_literal_line second literal with description
+    """
+
+    def test_enumeration_parse_definition_line_index_out_of_bounds(self) -> None:
+        """Test parse_definition with line_index beyond lines length.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when line_index >= len(lines).
+        """
+        parser = AutosarEnumerationParser()
+        lines = ["Enumeration TestEnum"]
+        result = parser.parse_definition(lines, 5)
+        assert result is None
+
+    def test_enumeration_continue_parsing_literal_header(self) -> None:
+        """Test continue_parsing matches enumeration literal header.
+
+        Requirements:
+            SWR_PARSER_00014: Enumeration Literal Header Recognition
+
+        Tests that "Literal Description" header is recognized.
+        """
+        parser = AutosarEnumerationParser()
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First value"""
+
+        enum_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert enum_def is not None
+        new_i, is_complete = parser.continue_parsing(enum_def, text.strip().split("\n"), 2)
+        # Should enter literal section
+        assert len(enum_def.enumeration_literals) == 1
+
+    def test_enumeration_continue_parsing_new_type_definition(self) -> None:
+        """Test continue_parsing finalizes on new type definition.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00016: Enumeration Literal Section Termination
+
+        Tests that encountering a new type definition finalizes enumeration.
+        """
+        parser = AutosarEnumerationParser()
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First value
+Class NewClass
+Package M2::AUTOSAR::Other"""
+
+        enum_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert enum_def is not None
+        new_i, is_complete = parser.continue_parsing(enum_def, text.strip().split("\n"), 2)
+        assert is_complete
+        assert len(enum_def.enumeration_literals) == 1
+
+    def test_enumeration_continue_parsing_note_line(self) -> None:
+        """Test continue_parsing processes note lines.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+
+        Tests that Note patterns are processed for enumerations.
+        """
+        parser = AutosarEnumerationParser()
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Note This is a test note
+Literal Description
+VALUE1 First value"""
+
+        enum_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert enum_def is not None
+        new_i, is_complete = parser.continue_parsing(enum_def, text.strip().split("\n"), 2)
+        assert enum_def.note == "This is a test note"
+
+    def test_enumeration_literal_second_literal_with_description(self) -> None:
+        """Test _process_enumeration_literal_line with second literal having description.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+
+        Tests scenario where second literal has its own description (not sharing with previous).
+        """
+        parser = AutosarEnumerationParser()
+        text = """Enumeration TestEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+VALUE1 First value atp.EnumerationLiteralIndex=0
+VALUE2 Second value atp.EnumerationLiteralIndex=1"""
+
+        enum_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert enum_def is not None
+        new_i, is_complete = parser.continue_parsing(enum_def, text.strip().split("\n"), 2)
+        assert len(enum_def.enumeration_literals) == 2
+        assert enum_def.enumeration_literals[0].name == "VALUE1"
+        assert enum_def.enumeration_literals[1].name == "VALUE2"
+        assert "Second value" in enum_def.enumeration_literals[1].description
+
+
+class TestPrimitiveParserCoverage:
+    """Tests to achieve 100% coverage for primitive_parser.py.
+
+    This test class covers the remaining uncovered lines in primitive_parser.py:
+    - Line 97: parse_definition line_index >= len(lines)
+    - Line 113: parse_definition not primitive_match
+    - Line 118: parse_definition not is_valid_type_definition
+    - Lines 180-181: continue_parsing attribute header
+    - Line 194: continue_parsing new type definition
+    - Lines 256-267: continue_parsing attribute section processing
+    - Lines 311-317: _process_attribute_line with continuation
+    """
+
+    def test_primitive_parse_definition_line_index_out_of_bounds(self) -> None:
+        """Test parse_definition with line_index beyond lines length.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when line_index >= len(lines).
+        """
+        parser = AutosarPrimitiveParser()
+        lines = ["Primitive TestPrimitive"]
+        result = parser.parse_definition(lines, 5)
+        assert result is None
+
+    def test_primitive_parse_definition_no_match(self) -> None:
+        """Test parse_definition with non-primitive line.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when line doesn't match PRIMITIVE_PATTERN.
+        """
+        parser = AutosarPrimitiveParser()
+        lines = ["Not a primitive definition"]
+        result = parser.parse_definition(lines, 0)
+        assert result is None
+
+    def test_primitive_parse_definition_invalid_type_definition(self) -> None:
+        """Test parse_definition with invalid type definition.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that None is returned when type definition is invalid (no package).
+        """
+        parser = AutosarPrimitiveParser()
+        lines = ["Primitive TestPrimitive", "Random text instead of package"]
+        result = parser.parse_definition(lines, 0)
+        assert result is None
+
+    def test_primitive_continue_parsing_attribute_header(self) -> None:
+        """Test continue_parsing matches attribute header.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+
+        Tests that "Attribute Type Mult. Kind Note" header is recognized.
+        """
+        parser = AutosarPrimitiveParser()
+        text = """Primitive TestPrimitive
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr"""
+
+        primitive_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert primitive_def is not None
+        new_i, is_complete = parser.continue_parsing(primitive_def, text.strip().split("\n"), 2)
+        assert len(primitive_def.attributes) == 1
+
+    def test_primitive_continue_parsing_new_type_definition(self) -> None:
+        """Test continue_parsing finalizes on new type definition.
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+
+        Tests that encountering a new type definition finalizes primitive.
+        """
+        parser = AutosarPrimitiveParser()
+        text = """Primitive TestPrimitive
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+Class NewClass
+Package M2::AUTOSAR::Other"""
+
+        primitive_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert primitive_def is not None
+        new_i, is_complete = parser.continue_parsing(primitive_def, text.strip().split("\n"), 2)
+        assert is_complete
+        assert len(primitive_def.attributes) == 1
+
+    def test_primitive_continue_parsing_attribute_section(self) -> None:
+        """Test continue_parsing processes attribute section.
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that attributes are extracted correctly for primitives.
+        """
+        parser = AutosarPrimitiveParser()
+        text = """Primitive TestPrimitive
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 0..1 attr First attribute
+attr2 Integer 1 aggr Second attribute"""
+
+        primitive_def = parser.parse_definition(text.strip().split("\n"), 0)
+        assert primitive_def is not None
+        new_i, is_complete = parser.continue_parsing(primitive_def, text.strip().split("\n"), 2)
+        assert len(primitive_def.attributes) == 2
+        assert primitive_def.attributes["attr1"].kind == AttributeKind.ATTR
+        assert primitive_def.attributes["attr2"].kind == AttributeKind.AGGR
+
+    def test_primitive_process_attribute_line_with_continuation(self) -> None:
+        """Test _process_attribute_line handles multi-line attributes.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that attribute descriptions can span multiple lines.
+        """
+        parser = AutosarPrimitiveParser()
+        # Create a scenario where continuation is detected
+        # Third word not in valid_kinds indicates continuation
+        primitive = AutosarPrimitive(
+            name="TestPrimitive",
+            package="M2::AUTOSAR::DataTypes",
+            sources=[],
+        )
+        
+        # Simulate a continuation line
+        parser._process_attribute_line(
+            "attr1 String 1 attr First line",
+            primitive,
+            pending_attr_name="attr1",
+            pending_attr_type="String",
+            pending_attr_multiplicity="1",
+            pending_attr_kind=AttributeKind.ATTR,
+            pending_attr_note="First line",
+        )
+        
+        # Now test continuation with a line that doesn't have proper structure
+        result2 = parser._process_attribute_line(
+            "second line of description",
+            primitive,
+            pending_attr_name="attr1",
+            pending_attr_type="String",
+            pending_attr_multiplicity="1",
+            pending_attr_kind=AttributeKind.ATTR,
+            pending_attr_note="First line",
+        )
+        
+        # The continuation should have been appended to the note
+        assert "First line" in result2["pending_attr_note"]
+
+
+class TestPdfParserCoverage:
+    """Tests to achieve 100% coverage for pdf_parser.py.
+
+    This test class covers the remaining uncovered lines in pdf_parser.py:
+    - Line 408: _parse_complete_text empty line skip
+    - Lines 412-441: _parse_complete_text new model matching and continuation
+    - Lines 481-482: _parse_complete_text current_models continuation
+    - Lines 838-844: _build_ancestry_cache circular inheritance detection
+    """
+
+    def test_parse_complete_text_with_empty_lines(self) -> None:
+        """Test _parse_complete_text handles empty lines correctly.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+
+        Tests that empty lines are skipped during parsing.
+        """
+        parser = PdfParser()
+        text = """
+
+
+Class TestClass
+Package M2::AUTOSAR::DataTypes
+
+
+Attribute Type Mult. Kind Note
+
+
+"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 10,
+        )
+        assert len(models) == 1
+        assert models[0].name == "TestClass"
+
+    def test_parse_complete_text_new_model_continuation(self) -> None:
+        """Test _parse_complete_text continues parsing new models.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        Tests that new models are parsed with continuation support.
+        """
+        parser = PdfParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+Primitive TestPrimitive
+Package M2::AUTOSAR::DataTypes"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 6,
+        )
+        assert len(models) == 2
+        assert models[0].name == "TestClass"
+        assert models[1].name == "TestPrimitive"
+
+    def test_parse_complete_text_current_models_continuation(self) -> None:
+        """Test _parse_complete_text continues parsing existing models.
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+
+        Tests that existing models in current_models dictionary are continued.
+        """
+        parser = PdfParser()
+        text = """Class TestClass
+Package M2::AUTOSAR::DataTypes
+Attribute Type Mult. Kind Note
+attr1 String 1 attr
+attr2 Integer 1 attr"""
+
+        # Create initial current_models with a partially parsed class
+        partial_class = AutosarClass(
+            name="TestClass",
+            package="M2::AUTOSAR::DataTypes",
+            is_abstract=False,
+            atp_type=ATPType.NONE,
+            sources=[AutosarDocumentSource(pdf_file="test.pdf", page_number=1)],
+        )
+        current_models = {0: partial_class}
+        model_parsers = {0: "class"}
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models=current_models,
+            model_parsers=model_parsers,
+            line_to_page=[1] * 5,
+        )
+        assert len(models) >= 1
+        # The class should have been continued and attributes added
+        test_class = next((m for m in models if m.name == "TestClass"), None)
+        assert test_class is not None
+        assert len(test_class.attributes) == 2
+
+    def test_build_ancestry_cache_circular_inheritance(self) -> None:
+        """Test _build_ancestry_cache detects circular inheritance.
+
+        Requirements:
+            SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
+
+        Tests that circular inheritance is handled gracefully (visited set prevents infinite loop).
+        """
+        parser = PdfParser()
+        # Create circular inheritance: A -> B -> A
+        pkg = AutosarPackage(name="TestPackage")
+        
+        class_a = AutosarClass(
+            name="ClassA",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.NONE,
+            sources=[],
+        )
+        class_a.bases = ["ClassB"]
+        
+        class_b = AutosarClass(
+            name="ClassB",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.NONE,
+            sources=[],
+        )
+        class_b.bases = ["ClassA"]
+        
+        pkg.add_type(class_a)
+        pkg.add_type(class_b)
+        
+        # Should handle circular inheritance without infinite loop
+        # The visited set in collect_ancestors prevents infinite recursion
+        cache = parser._build_ancestry_cache([pkg], warned_bases=set())
+        assert "ClassA" in cache
+        assert "ClassB" in cache

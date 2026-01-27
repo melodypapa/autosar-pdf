@@ -505,6 +505,14 @@ class MarkdownWriter:
                 output.write(f"* {literal.name}{index_suffix}\n")
                 if literal.description:
                     output.write(f"  * {literal.description}\n")
+                # Write Tags table if tags exist
+                # Requirements: SWR_PARSER_00031: Enumeration Literal Tags Extraction
+                if literal.tags:
+                    output.write("  * **Tags**:\n")
+                    output.write("    | Tag | Value |\n")
+                    output.write("    |-----|-------|\n")
+                    for tag_key, tag_value in sorted(literal.tags.items()):
+                        output.write(f"    | {tag_key} | {tag_value} |\n")
             output.write("\n")
 
         # Write to file with sanitized filename

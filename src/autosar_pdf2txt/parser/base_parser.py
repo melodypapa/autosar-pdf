@@ -61,7 +61,7 @@ class AbstractTypeParser(ABC):
     NOTE_PATTERN = re.compile(r"^Note\s+(.+)$")
     ATTRIBUTE_HEADER_PATTERN = re.compile(r"^Attribute\s+Type\s+Mult\.\s+Kind\s+Note$")
     ENUMERATION_LITERAL_HEADER_PATTERN = re.compile(r"^Literal\s+Description$")
-    ENUMERATION_LITERAL_PATTERN = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\s+(.*)$")
+    ENUMERATION_LITERAL_PATTERN = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)(?:\s+(.*))?$")
     ATTRIBUTE_PATTERN = re.compile(r"^(\S+)\s+(\S+)\s+.*$")
     ATP_MIXED_STRING_PATTERN = re.compile(r"<<atpMixedString>>")
     ATP_VARIATION_PATTERN = re.compile(r"<<atpVariation>>")

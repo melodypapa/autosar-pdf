@@ -216,3 +216,146 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 - PDF: examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
 - Enumeration: DiagnosticDebounceBehaviorEnum
 - Expected literals: freeze, reset (2 literals total with multi-line descriptions)
+
+---
+
+#### SWIT_00005
+**Title**: Test Enumeration Literal Tags Extraction from Real PDF
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies enumeration literal tags (atp.EnumerationLiteralIndex, xml.name) are extracted correctly from real AUTOSAR PDF files using DiagnosticExtractTemplate.pdf.
+
+**Precondition**: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+2. Find the DiagnosticTypeOfDtcSupportedEnum enumeration in the extracted packages
+3. Verify enumeration has literals
+4. Verify at least one literal has tags
+5. For each literal with tags:
+   - Verify tags attribute exists and is a dictionary
+   - Verify atp.EnumerationLiteralIndex tag exists (if present)
+   - Verify atp.EnumerationLiteralIndex value is numeric string
+   - Verify index field matches atp.EnumerationLiteralIndex tag value
+   - Verify xml.name tag exists (if present)
+   - Verify xml.name value is not empty
+   - Verify tags are removed from description (no tag patterns in description text)
+6. Verify total count of literals with tags
+
+**Expected Result**:
+- DiagnosticTypeOfDtcSupportedEnum enumeration found
+- Multiple literals have tags extracted
+- All tags are structured correctly (key-value pairs)
+- Index field matches atp.EnumerationLiteralIndex tag value
+- xml.name tags are present for relevant literals
+- Descriptions are clean of all tag patterns
+- Tags extraction works correctly on real AUTOSAR PDF
+
+**Requirements Coverage**: SWR_PARSER_00031, SWR_MODEL_00014
+
+**Test Data**:
+- PDF: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+- Enumeration: DiagnosticTypeOfDtcSupportedEnum
+- Expected: Multiple literals with tags (atp.EnumerationLiteralIndex, xml.name)
+
+---
+
+#### SWIT_00006
+**Title**: Test Multi-page Enumeration Literal List from Real PDF
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies enumeration literal lists spanning multiple pages are parsed correctly using DiagnosticExtractTemplate.pdf (from enum2.jpg example).
+
+**Precondition**: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+2. Find the ByteOrderEnum enumeration in the extracted packages
+3. Verify enumeration has literals
+4. Verify expected literals are present:
+   - mostSignificantByteFirst
+   - mostSignificantByteLast
+   - opaque
+5. For each literal:
+   - Verify literal name is not empty
+   - Verify description attribute exists
+   - Verify index attribute exists
+   - Verify tags attribute exists
+   - If description exists, verify it's clean (no tag patterns)
+6. Verify source location tracking:
+   - Verify enumeration has source information
+   - Verify source pdf_file is specified
+   - Verify source page_number is specified
+7. Verify all literals are extracted (none missing due to page boundaries)
+
+**Expected Result**:
+- ByteOrderEnum enumeration found
+- All 3 expected literals are present (mostSignificantByteFirst, mostSignificantByteLast, opaque)
+- All literals have proper structure (name, description, index, tags)
+- Descriptions are clean of tag patterns
+- Source location is tracked correctly
+- Multi-page parsing works correctly on real AUTOSAR PDF
+- No literals are lost due to page boundaries
+
+**Requirements Coverage**: SWR_PARSER_00032, SWR_MODEL_00014, SWR_MODEL_00027
+
+**Test Data**:
+- PDF: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+- Enumeration: ByteOrderEnum
+- Expected literals: mostSignificantByteFirst, mostSignificantByteLast, opaque (3 literals total)
+- Multi-page scenario: Enumeration literal list spans multiple pages
+
+
+#### SWIT_00007
+**Title**: Test enum3.png Scenario - Multiple Literals in Single Table Cell
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies the enum3.png scenario where two literals (reportingInChronologicalOrder and OldestFirst) appear on separate lines in the same table cell, sharing the same description and tags. The parser recognizes this and creates two separate literals where the second literal shares the description and tags from the first literal.
+
+**Precondition**: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+2. Find the DiagnosticEventCombinationReportingBehaviorEnum enumeration in the extracted packages
+3. Verify enumeration has exactly two literals
+4. Verify first literal name is "reportingInChronologicalOrder"
+5. Verify first literal has proper structure:
+   - Verify description is not None
+   - Verify index is not None
+   - Verify tags attribute exists
+6. Verify first literal description contains expected content (e.g., "chronological")
+7. Verify first literal tags are present (atp.EnumerationLiteralIndex)
+8. Verify second literal name is "OldestFirst"
+9. Verify second literal shares description and tags with first literal
+10. Verify descriptions are clean (no tag patterns like "atp.EnumerationLiteralIndex")
+11. Verify source location tracking if available
+
+**Expected Result**:
+- DiagnosticEventCombinationReportingBehaviorEnum enumeration found
+- Exactly 2 literals present (not 1 combined literal)
+- First literal name: reportingInChronologicalOrder (with full description and tags)
+- Second literal name: OldestFirst (sharing description and tags from first literal)
+- Both literals have the same description containing "chronological"
+- First literal has index attribute
+- Both literals have the same tags (atp.EnumerationLiteralIndex)
+- Descriptions are clean of tag patterns
+- enum3.png scenario correctly handled (two literals in same cell, second shares description and tags)
+
+**Requirements Coverage**: SWR_PARSER_00015, SWR_PARSER_00031
+
+**Test Data**:
+- PDF: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+- Enumeration: DiagnosticEventCombinationReportingBehaviorEnum
+- Source literals (enum3.png): reportingInChronologicalOrder, OldestFirst
+- Expected result: 2 literals total
+  - reportingInChronologicalOrder (with description and tags)
+  - OldestFirst (sharing description and tags from first literal)
+- Scenario: Two literals on separate lines in same table cell, sharing description and tags
+
+**Test Implementation**:
+- Test method: `test_diagnostic_event_combination_reporting_behavior_enum`
+- Test file: `tests/integration/test_pdf_integration.py`
+- Fixture: `diagnostic_extract_template_pdf` (session-scoped)

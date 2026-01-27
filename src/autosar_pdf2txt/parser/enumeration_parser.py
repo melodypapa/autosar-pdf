@@ -14,7 +14,7 @@ Requirements:
 """
 
 import re
-from typing import List, Match, Optional, Tuple
+from typing import Dict, List, Match, Optional, Tuple
 
 from autosar_pdf2txt.models import (
     AutosarEnumeration,
@@ -201,7 +201,13 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
         # End of lines - finalize and return
         self._finalize_enumeration(current_model)
-        return i, True
+
+        # If in enumeration literal section, return False to allow multi-page continuation
+        # Requirements: SWR_PARSER_00032: Multi-page Enumeration Literal List Support
+        if self._in_enumeration_literal_section:
+            return i, False  # More literals expected on next page
+        else:
+            return i, True   # Complete
 
     def _finalize_enumeration(self, current_model: AutosarEnumeration) -> None:
         """Finalize the enumeration by converting pending literals to tuple.
@@ -226,6 +232,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
         Requirements:
             SWR_PARSER_00015: Enumeration Literal Extraction from PDF
             SWR_PARSER_00016: Enumeration Literal Section Termination
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
 
         Args:
             line: The literal line.
@@ -242,7 +249,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
         literal_match = self.ENUMERATION_LITERAL_PATTERN.match(line)
         if literal_match:
             literal_name = literal_match.group(1)
-            literal_description = literal_match.group(2).strip()
+            literal_description = literal_match.group(2).strip() if literal_match.group(2) else ""
 
             # Common continuation words that indicate multi-line descriptions
             # These are fragments that should be appended to the previous literal
@@ -263,6 +270,23 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 # Check if description starts with lowercase (indicates continuation)
                 elif literal_description and literal_description[0].islower():
                     is_continuation = True
+                # Check if this is a second literal with no description but previous literal has complete description
+                # This handles the enum3.png scenario where multiple literals share the same description
+                elif not literal_description and self._pending_literals[-1].description:
+                    prev_literal = self._pending_literals[-1]
+                    # Check if previous literal has tags (indicates complete definition)
+                    if prev_literal.tags:
+                        # This is a second literal sharing the same description
+                        is_continuation = False
+                        # Create a new literal with shared description and tags
+                        literal = AutosarEnumLiteral(
+                            name=literal_name,
+                            description=prev_literal.description,
+                            index=None,  # Second literal doesn't get its own index
+                            tags=prev_literal.tags.copy(),
+                        )
+                        self._pending_literals.append(literal)
+                        return False  # Don't continue with the rest of the logic
 
             if is_continuation and self._pending_literals:
                 # Append to previous literal's description
@@ -278,18 +302,28 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 previous_literal.description += continuation_text
             else:
                 # This is a new literal - create it
-                # Extract index from description if present
-                index = self._extract_literal_index(literal_description)
+                # Extract tags from description
+                tags = self._extract_literal_tags(literal_description)
 
-                # Clean description by removing ATP marker
-                if index is not None:
-                    literal_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", literal_description).strip()
+                # Extract index from tags (backward compatible)
+                index = None
+                if "atp.EnumerationLiteralIndex" in tags:
+                    index = int(tags["atp.EnumerationLiteralIndex"])
+
+                # Clean description by removing all tag patterns
+                clean_description = literal_description
+                if "atp.EnumerationLiteralIndex" in tags:
+                    clean_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", clean_description)
+                if "xml.name" in tags:
+                    clean_description = re.sub(r"\s*xml\.name=[^\s,]+", "", clean_description)
+                clean_description = clean_description.strip()
 
                 # Create and add the literal to pending list
                 literal = AutosarEnumLiteral(
                     name=literal_name,
-                    description=literal_description,
+                    description=clean_description if clean_description else None,
                     index=index,
+                    tags=tags,
                 )
                 self._pending_literals.append(literal)
 
@@ -313,6 +347,38 @@ class AutosarEnumerationParser(AbstractTypeParser):
         if match:
             return int(match.group(1))
         return None
+
+    def _extract_literal_tags(self, description: str) -> Dict[str, str]:
+        """Extract all metadata tags from description.
+
+        Extracts patterns like:
+        - atp.EnumerationLiteralIndex=0
+        - xml.name=ISO-11992-4
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        Args:
+            description: The literal description.
+
+        Returns:
+            Dictionary of tag keys to tag values.
+        """
+        tags = {}
+
+        # Extract atp.EnumerationLiteralIndex
+        index_pattern = re.compile(r"atp\.EnumerationLiteralIndex=(\d+)")
+        index_match = index_pattern.search(description)
+        if index_match:
+            tags["atp.EnumerationLiteralIndex"] = index_match.group(1)
+
+        # Extract xml.name
+        xml_pattern = re.compile(r"xml\.name=([^\s,]+)")
+        xml_match = xml_pattern.search(description)
+        if xml_match:
+            tags["xml.name"] = xml_match.group(1)
+
+        return tags
 
     def _process_note_line(
         self, note_match: Match, lines: List[str], line_index: int, current_model: AutosarEnumeration

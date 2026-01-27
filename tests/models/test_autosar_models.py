@@ -155,6 +155,100 @@ class TestAutosarEnumLiteral:
         assert literal.index == 0
         assert str(literal) == "FirstValue (index=0)"
 
+    def test_init_with_tags(self) -> None:
+        """Test initialization with tags dictionary.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        tags = {
+            "atp.EnumerationLiteralIndex": "0",
+            "xml.name": "ISO-11992-4"
+        }
+        literal = AutosarEnumLiteral(
+            name="iso11992_4",
+            description="ISO 11992-4 DTC format",
+            index=0,
+            tags=tags
+        )
+        assert literal.name == "iso11992_4"
+        assert literal.description == "ISO 11992-4 DTC format"
+        assert literal.index == 0
+        assert literal.tags == tags
+        assert len(literal.tags) == 2
+
+    def test_tags_dictionary_initialization(self) -> None:
+        """Test that tags dictionary is initialized as empty dict by default.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="TestLiteral")
+        assert literal.tags == {}
+        assert isinstance(literal.tags, dict)
+
+    def test_tags_with_index(self) -> None:
+        """Test that tags work correctly with index field (hybrid approach).
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        tags = {
+            "atp.EnumerationLiteralIndex": "1",
+            "xml.name": "ISO-14229-1"
+        }
+        literal = AutosarEnumLiteral(
+            name="iso14229_1",
+            description="ISO 14229-1 DTC format",
+            index=1,
+            tags=tags
+        )
+        assert literal.index == 1
+        assert literal.tags["atp.EnumerationLiteralIndex"] == "1"
+        assert literal.tags["xml.name"] == "ISO-14229-1"
+
+    def test_str_with_tags(self) -> None:
+        """Test string representation includes tags count.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        tags = {"xml.name": "ISO-11992-4"}
+        literal = AutosarEnumLiteral(name="iso11992_4", index=0, tags=tags)
+        assert str(literal) == "iso11992_4 (index=0) [tags: 1]"
+
+    def test_str_without_tags(self) -> None:
+        """Test string representation without tags.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="iso11992_4", index=0)
+        assert str(literal) == "iso11992_4 (index=0)"
+
+    def test_repr_with_tags(self) -> None:
+        """Test debug representation includes tags count.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        tags = {"xml.name": "ISO-11992-4"}
+        literal = AutosarEnumLiteral(name="TestLiteral", index=0, tags=tags)
+        result = repr(literal)
+        assert "tags=1" in result
+
+    def test_tags_mutation(self) -> None:
+        """Test that tags dictionary can be mutated after creation.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="TestLiteral")
+        assert literal.tags == {}
+        literal.tags["new_tag"] = "value"
+        assert literal.tags == {"new_tag": "value"}
+        assert len(literal.tags) == 1
+
 
 class TestAutosarAttribute:
     """Tests for AutosarAttribute class.

@@ -272,18 +272,29 @@ The system shall:
 **Description**: The system shall extract enumeration literals from PDF files and convert them to AutosarEnumLiteral objects.
 
 The system shall:
-1. Parse enumeration literal lines with the format: `<literal_name> <description>`
+1. Parse enumeration literal lines with the format: `<literal_name> <description>` or `<literal_name>` (for literals without description)
 2. Extract the literal name (must start with a letter and contain alphanumeric characters or underscores)
 3. Extract the literal description (free-form text after the literal name)
 4. Extract enumeration literal indices from description tags (e.g., "atp.EnumerationLiteralIndex=0")
-5. Create AutosarEnumLiteral objects with the extracted name, index, and description
-6. Store enumeration literals in a list in the ClassDefinition
-7. Transfer enumeration literals to the AutosarClass object during package hierarchy building
+5. Handle multi-line literal descriptions where continuation lines are detected by:
+   - Duplicate literal names (indicates continuation of previous literal)
+   - Common continuation words: "enable", "qualification", "the", "condition", "conditions", "of", "or", "and", "with", "will", "after", "related", "all"
+   - Lowercase first letter in description (indicates continuation)
+   - Second literals on separate lines with no description but previous literal has complete description with tags (enum3.png scenario)
+6. Support multiple literals on separate lines sharing the same description (e.g., "reportingInChronologicalOrder" and "OldestFirst" in same table cell)
+7. Create AutosarEnumLiteral objects with the extracted name, index, description, and tags
+8. Store enumeration literals in a list in the ClassDefinition
+9. Transfer enumeration literals to the AutosarClass object during package hierarchy building
 
-This requirement ensures that enumeration literals are properly extracted for enumeration classes like `EcucDestinationUriNestingContractEnum` from AUTOSAR CP TPS ECUConfiguration, which contains literals such as:
-- `leafOfTargetContainer` (index=0, description="EcucDestinationUriPolicy describes elements directly owned by the target container")
-- `targetContainer` (index=1, description="EcucDestinationUriPolicy describes the target container of EcucUriReferenceDef")
-- `vertexOfTargetContainer` (index=2, description="EcucDestinationUriPolicy describes elements of the target container which can be defined in arbitrary nested subContainer structure")
+This requirement ensures that enumeration literals are properly extracted for enumeration classes like `DiagnosticEventCombinationReportingBehaviorEnum` from AUTOSAR CP TPS DiagnosticExtractTemplate, which contains literals such as:
+- `reportingInChronologicalOrder` (index=0, description="The reporting order for event combination on retrieval is the chronological storage order of the events", tags={"atp.EnumerationLiteralIndex": "0"})
+- `OldestFirst` (description="The reporting order for event combination on retrieval is the chronological storage order of the events", tags={"atp.EnumerationLiteralIndex": "0"})
+
+**Multi-line Support**:
+- Detects continuation lines by checking for duplicate names, common continuation words, lowercase descriptions
+- Appends continuation text to previous literal's description
+- Handles enum3.png scenario where multiple literals in same cell share description
+- Prevents partial fragments from being treated as separate literals
 
 ---
 
@@ -874,4 +885,122 @@ Parse Phase Processing:
 Result:
 - ARObject.source.page_number = 1
 - Identifiable.source.page_number = 2
+```
+
+---
+
+### SWR_PARSER_00031
+**Title**: Enumeration Literal Tags Extraction
+
+**Maturity**: accept
+
+**Description**: The enumeration parser shall extract metadata tags from enumeration literal descriptions and store them in a structured format. The parser shall:
+- Extract `atp.EnumerationLiteralIndex=N` patterns and store the numeric value in the literal's `index` field
+- Extract `xml.name=VALUE` patterns and store in the literal's `tags` dictionary
+- Support future tag patterns like `atp.*` and `xml.*` through extensible extraction logic
+- Remove all tag patterns from the description field to keep it clean
+- Store tags in a `Dict[str, str]` field for flexible metadata handling
+- Maintain backward compatibility by keeping the `index` field separate (hybrid approach)
+
+The tag extraction shall:
+- Use regex patterns to identify metadata tags in the description text
+- Extract tag key-value pairs (e.g., "atp.EnumerationLiteralIndex" -> "0", "xml.name" -> "ISO-11992-4")
+- Clean the description by removing all matched tag patterns
+- Preserve the semantic meaning of the description without tag metadata
+- Support multiple tags per literal
+
+**Rationale**:
+- AUTOSAR PDFs include metadata tags (e.g., `xml.name`) that provide XML serialization information
+- Tag extraction enables structured access to metadata without parsing it from description text
+- Clean descriptions improve readability and downstream processing
+- Hybrid approach (index field + tags dictionary) maintains backward compatibility
+- Extensible design supports future metadata types without model changes
+
+**Implementation**:
+- Add `_extract_literal_tags(description: str) -> Dict[str, str]` method to `AutosarEnumerationParser`
+- Add `tags: Dict[str, str]` field to `AutosarEnumLiteral` dataclass with `default_factory=dict`
+- Update `_process_enumeration_literal_line()` to:
+  - Call `_extract_literal_tags()` to get all metadata tags
+  - Extract `index` from tags if `atp.EnumerationLiteralIndex` is present
+  - Clean description by removing all tag patterns using regex substitution
+  - Create `AutosarEnumLiteral` with cleaned description and tags dictionary
+- Update `__str__()` and `__repr__()` methods to include tags information
+
+**Example**:
+```
+Input: "ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4"
+
+Extracted Tags:
+{
+  "atp.EnumerationLiteralIndex": "0",
+  "xml.name": "ISO-11992-4"
+}
+
+Cleaned Description:
+"ISO 11992-4 DTC format"
+
+AutosarEnumLiteral:
+- name: "iso11992_4"
+- index: 0
+- description: "ISO 11992-4 DTC format"
+- tags: {"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"}
+```
+
+---
+
+### SWR_PARSER_00032
+**Title**: Multi-page Enumeration Literal List Support
+
+**Maturity**: accept
+
+**Description**: The enumeration parser shall correctly handle enumeration literal lists that span multiple pages. The parser shall:
+- Continue parsing enumeration literals across page boundaries
+- Support both repeated and non-repeated "Literal Description" headers on subsequent pages
+- Return `False` from `continue_parsing()` when in enumeration literal section to indicate more content is expected
+- Maintain parsing state (`_in_enumeration_literal_section`) across page transitions
+- Detect and handle continuation lines correctly on new pages
+- Finalize enumeration only when encountering a new type definition or table marker
+
+The multi-page handling shall:
+- Use the existing two-phase parsing architecture with `current_models` and `model_parsers` state management
+- Check `_in_enumeration_literal_section` flag at end of text to determine if more content is expected
+- Allow literal continuation detection on new pages (duplicate names, lowercase descriptions, continuation words)
+- Handle header repetition by resetting `_in_enumeration_literal_section` when "Literal Description" is detected
+
+**Rationale**:
+- AUTOSAR PDFs often have enumeration literal lists that span multiple pages
+- Page breaks can occur in the middle of a literal list without header repetition
+- Some PDFs repeat the "Literal Description" header on each page for clarity
+- Without multi-page support, literals on subsequent pages are lost or incorrectly parsed
+- State management across page boundaries is essential for complete enumeration extraction
+
+**Implementation**:
+- Update `continue_parsing()` in `AutosarEnumerationParser` to:
+  - Check `_in_enumeration_literal_section` flag at end of lines
+  - Return `(i, False)` if in enumeration literal section to indicate more content expected
+  - Return `(i, True)` if not in enumeration literal section to indicate completion
+- Ensure `_in_enumeration_literal_section` is maintained across page boundaries
+- Support header repetition by detecting "Literal Description" pattern and setting flag to True
+- Use existing state management dictionaries (`current_models`, `model_parsers`) for continuation
+
+**Example**:
+```
+Page 1:
+Enumeration ByteOrderEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+mostSignificantByteFirst Most significant byte at the lowest address atp.EnumerationLiteralIndex=0
+
+Page 2 (without header repetition):
+mostSignificantByteLast Most significant byte at highest address atp.EnumerationLiteralIndex=1
+opaque For opaque data endianness conversion atp.EnumerationLiteralIndex=2
+
+Parsing Flow:
+- Page 1: Parse enumeration header, set _in_enumeration_literal_section = True, parse first literal
+- Page 2: Continue parsing (_in_enumeration_literal_section still True), parse remaining literals
+- End of text: Return False to allow more content if needed
+
+Result:
+- ByteOrderEnum has 3 literals (mostSignificantByteFirst, mostSignificantByteLast, opaque)
+- All literals have correct indices (0, 1, 2)
 ```

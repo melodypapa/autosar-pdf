@@ -39,7 +39,7 @@ The parser requirements define how AUTOSAR models are extracted from PDF specifi
 
 **Document**: [requirements_parser.md](requirements_parser.md)
 
-**Requirements**: SWR_PARSER_00001 - SWR_PARSER_00029
+**Requirements**: SWR_PARSER_00001 - SWR_PARSER_00032
 
 **Key Areas**:
 - PDF Parser Initialization
@@ -121,7 +121,7 @@ The package requirements define the Python package configuration and metadata.
 | Component | Document | Requirement IDs |
 |-----------|----------|-----------------|
 | Model | [requirements_model.md](requirements_model.md) | SWR_MODEL_00001 - SWR_MODEL_00027 |
-| Parser | [requirements_parser.md](requirements_parser.md) | SWR_PARSER_00001 - SWR_PARSER_00029 |
+| Parser | [requirements_parser.md](requirements_parser.md) | SWR_PARSER_00001 - SWR_PARSER_00032 |
 | Writer | [requirements_writer.md](requirements_writer.md) | SWR_WRITER_00001 - SWR_WRITER_00008 |
 | CLI | [requirements_cli.md](requirements_cli.md) | SWR_CLI_00001 - SWR_CLI_00014 |
 | Package | [requirements_package.md](requirements_package.md) | SWR_PACKAGE_00001 - SWR_PACKAGE_00003 |

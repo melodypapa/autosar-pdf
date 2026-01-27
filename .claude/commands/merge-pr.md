@@ -24,8 +24,8 @@ Check pull request status, merge it, and return to master branch.
 - Verify CI checks are passing
 
 ### 2. Merge PR via GitHub
-- Use `gh pr merge` to merge the PR directly through GitHub
-- This automatically closes the PR and updates the master branch on GitHub
+- Use `gh pr merge --delete-branch` to merge the PR and delete the remote branch
+- This automatically closes the PR, updates the master branch, and deletes the remote feature branch
 - Supports merge methods: merge, squash, rebase
 
 ### 3. Switch to Master
@@ -37,9 +37,9 @@ Check pull request status, merge it, and return to master branch.
 - This updates local master with the merged changes from GitHub
 
 ### 5. Cleanup (Optional)
+- Remote branch is deleted via `--delete-branch` flag during merge
 - Ask if you want to delete the local feature branch
 - Delete local branch: `git branch -d <feature-branch>`
-- Remote branch is automatically deleted by GitHub when PR is merged
 
 ## Arguments
 
@@ -64,9 +64,9 @@ Use `$ARGUMENTS` to accept:
 
 - Always confirms before destructive operations (merge, delete)
 - Shows progress updates at each step
-- Uses `gh pr merge` to merge via GitHub API (cleaner than local merge)
+- Uses `gh pr merge --delete-branch` to merge via GitHub API and delete the remote branch
 - GitHub automatically closes the PR when merged
-- Remote branch is automatically deleted by GitHub after merge
+- Remote branch is deleted with the `--delete-branch` flag
 - Reports any merge conflicts if they occur
 - Provides links to the merged PR
 - Updates the todo list to track progress

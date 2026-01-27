@@ -10,8 +10,8 @@ Requirements:
     SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
 """
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Dict, Optional
 
 from autosar_pdf2txt.models.enums import AttributeKind
 
@@ -27,15 +27,18 @@ class AutosarEnumLiteral:
         name: The name of the enumeration literal.
         index: The optional index of the literal (e.g., atp.EnumerationLiteralIndex=0).
         description: Optional description of the literal.
+        tags: Optional dictionary of metadata tags (e.g., xml.name, atp.*).
 
     Examples:
         >>> literal = AutosarEnumLiteral("leafOfTargetContainer", 0, "Elements directly owned by target container")
         >>> literal_no_index = AutosarEnumLiteral("targetContainer", description="Target container")
+        >>> literal_with_tags = AutosarEnumLiteral("iso11992_4", description="ISO 11992-4 DTC format", tags={"xml.name": "ISO-11992-4"})
     """
 
     name: str
     index: Optional[int] = None
     description: Optional[str] = None
+    tags: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate the literal fields.
@@ -59,7 +62,8 @@ class AutosarEnumLiteral:
             Literal name with index suffix if present.
         """
         suffix = f" (index={self.index})" if self.index is not None else ""
-        return f"{self.name}{suffix}"
+        tags_suffix = f" [tags: {len(self.tags)}]" if self.tags else ""
+        return f"{self.name}{suffix}{tags_suffix}"
 
     def __repr__(self) -> str:
         """Return detailed representation for debugging.
@@ -69,7 +73,8 @@ class AutosarEnumLiteral:
         """
         return (
             f"AutosarEnumLiteral(name='{self.name}', "
-            f"index={self.index}, description={self.description is not None})"
+            f"index={self.index}, description={self.description is not None}, "
+            f"tags={len(self.tags)})"
         )
 
 

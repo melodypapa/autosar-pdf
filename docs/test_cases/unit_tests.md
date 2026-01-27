@@ -4667,3 +4667,332 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00074
+**Title**: Test Enumeration Literal Tags Extraction
+
+**Maturity**: accept
+
+**Description**: Verify that tags (atp.EnumerationLiteralIndex, xml.name) are extracted from enumeration literal descriptions and stored correctly.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Prepare text with enumeration containing tags in literal descriptions:
+   ```
+   Enumeration TestEnum
+   Package M2::AUTOSAR::DataTypes
+   Literal Description
+   VALUE1 ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4
+   VALUE2 ISO 14229-1 DTC format (3 byte format) atp.EnumerationLiteralIndex=1 xml.name=ISO-14229-1
+   ```
+3. Call _parse_complete_text with the text
+4. Verify enumeration is parsed with 2 literals
+5. Verify first literal has:
+   - name: "VALUE1"
+   - description: "ISO 11992-4 DTC format" (tags removed)
+   - index: 0
+   - tags: {"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"}
+6. Verify second literal has:
+   - name: "VALUE2"
+   - description: "ISO 14229-1 DTC format (3 byte format)" (tags removed)
+   - index: 1
+   - tags: {"atp.EnumerationLiteralIndex": "1", "xml.name": "ISO-14229-1"}
+7. Verify descriptions do not contain tag patterns
+
+**Expected Result**:
+- Both literals are parsed with correct names and descriptions
+- Tags are extracted and stored in the tags dictionary
+- Descriptions are cleaned of all tag patterns
+- Index field matches atp.EnumerationLiteralIndex tag value
+
+**Requirements Coverage**: SWR_PARSER_00031
+
+---
+
+#### SWUT_PARSER_00075
+**Title**: Test Clean Description After Tag Extraction
+
+**Maturity**: accept
+
+**Description**: Verify that tag patterns are completely removed from enumeration literal descriptions after extraction.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Prepare text with enumeration containing tags:
+   ```
+   Enumeration TestEnum
+   Package M2::AUTOSAR::DataTypes
+   Literal Description
+   VALUE1 ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4
+   ```
+3. Call _parse_complete_text with the text
+4. Verify enumeration literal has description "ISO 11992-4 DTC format"
+5. Verify description does not contain "atp.EnumerationLiteralIndex"
+6. Verify description does not contain "xml.name"
+7. Verify tags dictionary contains both extracted tags
+
+**Expected Result**:
+- Description is cleaned of all tag patterns
+- Tags are preserved in the tags dictionary
+- Semantic meaning of description is maintained
+
+**Requirements Coverage**: SWR_PARSER_00031
+
+---
+
+#### SWUT_PARSER_00076
+**Title**: Test Multi-page Enumeration With Header Repetition
+
+**Maturity**: accept
+
+**Description**: Verify that enumeration literal lists are correctly parsed when the "Literal Description" header is repeated on subsequent pages.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Prepare text with enumeration spanning 2 pages with header repetition:
+   ```
+   Enumeration ByteOrderEnum
+   Package M2::AUTOSAR::DataTypes
+   Literal Description
+   mostSignificantByteFirst Most significant byte at the lowest address atp.EnumerationLiteralIndex=0
+   Literal Description
+   mostSignificantByteLast Most significant byte at highest address atp.EnumerationLiteralIndex=1
+   ```
+3. Set line_to_page mapping: [1, 1, 1, 1, 2, 2] (header + literal on page 2)
+4. Call _parse_complete_text with the text and line_to_page
+5. Verify enumeration is parsed with 2 literals
+6. Verify first literal is "mostSignificantByteFirst" from page 1
+7. Verify second literal is "mostSignificantByteLast" from page 2
+8. Verify both literals have correct indices and descriptions
+
+**Expected Result**:
+- Enumeration literal list is correctly parsed across pages
+- Header repetition on page 2 is handled gracefully
+- All literals are extracted with correct metadata
+
+**Requirements Coverage**: SWR_PARSER_00032
+
+---
+
+#### SWUT_PARSER_00077
+**Title**: Test Multi-page Enumeration Without Header Repetition
+
+**Maturity**: accept
+
+**Description**: Verify that enumeration literal lists are correctly parsed when the "Literal Description" header is NOT repeated on subsequent pages.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Prepare text with enumeration spanning 2 pages without header repetition:
+   ```
+   Enumeration ByteOrderEnum
+   Package M2::AUTOSAR::DataTypes
+   Literal Description
+   mostSignificantByteFirst Most significant byte at the lowest address atp.EnumerationLiteralIndex=0
+   mostSignificantByteLast Most significant byte at highest address atp.EnumerationLiteralIndex=1
+   opaque For opaque data endianness conversion atp.EnumerationLiteralIndex=2
+   ```
+3. Set line_to_page mapping: [1, 1, 1, 1, 1, 2, 2] (literals on page 2)
+4. Call _parse_complete_text with the text and line_to_page
+5. Verify enumeration is parsed with 3 literals
+6. Verify all literals are extracted correctly
+7. Verify continue_parsing returns False to allow multi-page continuation
+
+**Expected Result**:
+- Enumeration literal list is correctly parsed across pages without header repetition
+- All 3 literals are extracted from pages 1 and 2
+- Parser correctly continues parsing across page boundaries
+
+**Requirements Coverage**: SWR_PARSER_00032
+
+---
+
+#### SWUT_PARSER_00078
+**Title**: Test Multi-page Enumeration With Tags
+
+**Maturity**: accept
+
+**Description**: Verify that tags are correctly extracted from enumeration literals spanning multiple pages.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Prepare text with multi-page enumeration containing tags:
+   ```
+   Enumeration DiagnosticTypeOfDtcSupportedEnum
+   Package M2::AUTOSAR::DiagnosticExtract
+   Literal Description
+   iso11992_4 ISO 11992-4 DTC format atp.EnumerationLiteralIndex=0 xml.name=ISO-11992-4
+   iso14229_1 ISO 14229-1 DTC format (3 byte format) atp.EnumerationLiteralIndex=1 xml.name=ISO-14229-1
+   iso15031_6 ISO 15031-6 DTC format (2 byte format) atp.EnumerationLiteralIndex=2 xml.name=ISO-15031-6
+   ```
+3. Set line_to_page mapping: [1, 1, 1, 1, 1, 2, 2] (literals on page 2)
+4. Call _parse_complete_text with the text and line_to_page
+5. Verify enumeration is parsed with 3 literals
+6. Verify all literals have tags dictionary with both atp.EnumerationLiteralIndex and xml.name
+7. Verify all descriptions are cleaned of tag patterns
+8. Verify index field matches atp.EnumerationLiteralIndex tag value for each literal
+
+**Expected Result**:
+- All literals are parsed correctly across pages
+- Tags are extracted for all literals regardless of page
+- Descriptions are cleaned for all literals
+- Index values are correctly extracted from tags
+
+**Requirements Coverage**: SWR_PARSER_00031, SWR_PARSER_00032
+
+---
+
+#### SWUT_MODEL_00018
+**Title**: Test AutosarEnumLiteral With Tags Initialization
+
+**Maturity**: accept
+
+**Description**: Verify that AutosarEnumLiteral can be initialized with a tags dictionary.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="iso11992_4"
+2. Set description="ISO 11992-4 DTC format"
+3. Set index=0
+4. Set tags={"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"}
+5. Verify name is "iso11992_4"
+6. Verify description is "ISO 11992-4 DTC format"
+7. Verify index is 0
+8. Verify tags dictionary has 2 entries
+9. Verify tags["atp.EnumerationLiteralIndex"] == "0"
+10. Verify tags["xml.name"] == "ISO-11992-4"
+
+**Expected Result**: AutosarEnumLiteral is created with all fields including tags
+
+**Requirements Coverage**: SWR_MODEL_00014
+
+---
+
+#### SWUT_MODEL_00019
+**Title**: Test AutosarEnumLiteral Tags Dictionary Default Initialization
+
+**Maturity**: accept
+
+**Description**: Verify that tags dictionary is initialized as empty dict by default.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with only name="TestLiteral"
+2. Verify tags attribute exists
+3. Verify tags is an empty dictionary
+4. Verify isinstance(tags, dict)
+
+**Expected Result**: Tags dictionary is initialized as empty dict by default
+
+**Requirements Coverage**: SWR_MODEL_00014
+
+---
+
+#### SWUT_MODEL_00020
+**Title**: Test AutosarEnumLiteral Hybrid Approach With Index And Tags
+
+**Maturity**: accept
+
+**Description**: Verify that hybrid approach works correctly with both index field and tags dictionary.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with:
+   - name="iso14229_1"
+   - description="ISO 14229-1 DTC format"
+   - index=1
+   - tags={"atp.EnumerationLiteralIndex": "1", "xml.name": "ISO-14229-1"}
+2. Verify index field is 1
+3. Verify tags["atp.EnumerationLiteralIndex"] == "1"
+4. Verify tags["xml.name"] == "ISO-14229-1"
+5. Verify both index and tags coexist correctly
+
+**Expected Result**: Hybrid approach maintains backward compatibility while supporting tags
+
+**Requirements Coverage**: SWR_MODEL_00014
+
+---
+
+#### SWUT_MODEL_00021
+**Title**: Test AutosarEnumLiteral String Representation With Tags
+
+**Maturity**: accept
+
+**Description**: Verify that __str__ method includes tags count in the string representation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="iso11992_4", index=0
+2. Set tags={"xml.name": "ISO-11992-4"}
+3. Call str(literal)
+4. Verify result contains "iso11992_4 (index=0) [tags: 1]"
+5. Create another AutosarEnumLiteral with name="test" and no tags
+6. Call str(literal)
+7. Verify result does not contain "[tags:]" suffix
+
+**Expected Result**: String representation includes tags count when tags are present
+
+**Requirements Coverage**: SWR_MODEL_00016
+
+---
+
+#### SWUT_MODEL_00022
+**Title**: Test AutosarEnumLiteral Debug Representation With Tags
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ method includes tags count in the debug representation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="TestLiteral", index=0
+2. Set tags={"xml.name": "ISO-11992-4"}
+3. Call repr(literal)
+4. Verify result contains "tags=1"
+5. Verify result contains "AutosarEnumLiteral"
+6. Verify result contains "name='TestLiteral'"
+
+**Expected Result**: Debug representation includes tags count
+
+**Requirements Coverage**: SWR_MODEL_00016
+
+---
+
+#### SWUT_MODEL_00023
+**Title**: Test AutosarEnumLiteral Tags Dictionary Mutation
+
+**Maturity**: accept
+
+**Description**: Verify that tags dictionary can be mutated after literal creation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="TestLiteral"
+2. Verify tags is empty dictionary
+3. Add a tag: literal.tags["new_tag"] = "value"
+4. Verify tags dictionary now contains {"new_tag": "value"}
+5. Verify len(tags) == 1
+6. Modify existing tag: literal.tags["new_tag"] = "updated_value"
+7. Verify tags["new_tag"] == "updated_value"
+
+**Expected Result**: Tags dictionary can be mutated after creation
+
+**Requirements Coverage**: SWR_MODEL_00014
+
+---
+

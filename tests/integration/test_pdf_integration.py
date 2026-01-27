@@ -736,13 +736,12 @@ class TestPdfIntegration:
             SWR_PARSER_00015: Enumeration Literal Extraction from PDF
             SWR_PARSER_00031: Enumeration Literal Tags Extraction
 
-        This test verifies the enum3.png scenario where two literals
-        (reportingInChronologicalOrder and OldestFirst) appear on separate lines
-        in the same table cell, sharing the same description and tags.
+        This test verifies the enum3.png scenario where three literal names
+        (reportingIn, ChronlogicalOrder, and OldestFirst) are stacked vertically
+        in one cell, sharing the same description and tags.
 
-        The parser recognizes this and creates two separate literals:
-        1. reportingInChronologicalOrder with full description and tags
-        2. OldestFirst sharing the same description and tags from the first literal
+        The parser recognizes this and creates one combined literal:
+        - reportingInChronlogicalOrderOldestFirst with the full description and tags
 
         Args:
             diagnostic_extract_template_pdf: Cached parsed DiagnosticExtractTemplate PDF data (AutosarDoc).
@@ -755,66 +754,47 @@ class TestPdfIntegration:
         if enum is None:
             pytest.skip("DiagnosticEventCombinationReportingBehaviorEnum not found in PDF")
 
-        # Step 1: Verify enumeration has exactly two literals
-        assert len(enum.enumeration_literals) == 2, \
-            f"Expected 2 literals, found {len(enum.enumeration_literals)}"
+        # Step 1: Verify enumeration has exactly one literal
+        assert len(enum.enumeration_literals) == 1, \
+            f"Expected 1 literal, found {len(enum.enumeration_literals)}"
 
-        # Step 2: Verify first literal
-        first_literal = enum.enumeration_literals[0]
-        assert first_literal.name == "reportingInChronologicalOrder", \
-            f"Expected first literal name 'reportingInChronologicalOrder', got '{first_literal.name}'"
+        # Step 2: Verify the literal
+        literal = enum.enumeration_literals[0]
+        assert literal.name == "reportingInChronlogicalOrderOldestFirst", \
+            f"Expected literal name 'reportingInChronlogicalOrderOldestFirst', got '{literal.name}'"
 
-        # Step 3: Verify first literal has proper structure
-        assert first_literal.description is not None, "First literal must have description"
-        assert first_literal.index is not None, "First literal must have index"
-        assert first_literal.tags is not None, "First literal must have tags attribute"
+        # Step 3: Verify literal has proper structure
+        assert literal.description is not None, "Literal must have description"
+        assert literal.index is not None, "Literal must have index"
+        assert literal.tags is not None, "Literal must have tags attribute"
 
-        # Step 4: Verify first literal description contains expected content
-        assert "chronological" in first_literal.description.lower(), \
-            f"First literal description should contain 'chronological': {first_literal.description}"
+        # Step 4: Verify literal description contains expected content
+        assert "chronological" in literal.description.lower(), \
+            f"Literal description should contain 'chronological': {literal.description}"
 
-        # Step 5: Verify first literal tags are present
-        assert "atp.EnumerationLiteralIndex" in first_literal.tags, \
-            "First literal should have atp.EnumerationLiteralIndex tag"
+        # Step 5: Verify literal tags are present
+        assert "atp.EnumerationLiteralIndex" in literal.tags, \
+            "Literal should have atp.EnumerationLiteralIndex tag"
 
-        # Step 6: Verify second literal
-        second_literal = enum.enumeration_literals[1]
-        assert second_literal.name == "OldestFirst", \
-            f"Expected second literal name 'OldestFirst', got '{second_literal.name}'"
-
-        # Step 7: Verify second literal shares description and tags with first literal
-        assert second_literal.description is not None, "Second literal must have description"
-        assert second_literal.description == first_literal.description, \
-            "Second literal should share description with first literal"
-        assert second_literal.tags == first_literal.tags, \
-            "Second literal should share tags with first literal"
-
-        # Step 8: Verify descriptions are clean (no tag patterns)
-        assert "atp.EnumerationLiteralIndex" not in first_literal.description, \
-            f"Tags should be removed from first literal description: {first_literal.description}"
-        assert "atp.EnumerationLiteralIndex" not in second_literal.description, \
-            f"Tags should be removed from second literal description: {second_literal.description}"
+        # Step 6: Verify description is clean (no tag patterns)
+        assert "atp.EnumerationLiteralIndex" not in literal.description, \
+            f"Tags should be removed from literal description: {literal.description}"
 
         # Print literal details for verification
         print("\n=== DiagnosticEventCombinationReportingBehaviorEnum ===")
         print(f"  Name: {enum.name}")
         print(f"  Package: {enum.package}")
         print(f"  Total literals: {len(enum.enumeration_literals)}")
-        print(f"\n=== First Literal: {first_literal.name} ===")
-        print(f"  Description: {first_literal.description}")
-        print(f"  Index: {first_literal.index}")
-        print(f"  Tags: {first_literal.tags}")
-        print(f"\n=== Second Literal: {second_literal.name} ===")
-        print(f"  Description: {second_literal.description}")
-        print(f"  Index: {second_literal.index}")
-        print(f"  Tags: {second_literal.tags}")
+        print(f"\n=== Literal: {literal.name} ===")
+        print(f"  Description: {literal.description}")
+        print(f"  Index: {literal.index}")
+        print(f"  Tags: {literal.tags}")
 
         if enum.sources:
             source = enum.sources[0]
             print(f"\n  Source: {source.pdf_file}, Page {source.page_number}")
 
         print("\n=== enum3.png scenario verified ===")
-        print("  Two literals in same cell detected")
-        print("  First literal: reportingInChronologicalOrder (with description and tags)")
-        print("  Second literal: OldestFirst (sharing description and tags)")
+        print("  Three literal names stacked in one cell")
+        print("  Combined literal name: reportingInChronlogicalOrderOldestFirst")
         print("  Description and tags: VERIFIED")

@@ -258,7 +258,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 "of", "or", "and", "with", "will", "after", "related", "all"
             }
 
-            # Check if this is a continuation line (multi-line description)
+            # Check if this is a continuation line (multi-line description or multi-line literal name)
             is_continuation = False
             if self._pending_literals:
                 # Check if this is the same literal name (duplicate indicates continuation)
@@ -270,23 +270,22 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 # Check if description starts with lowercase (indicates continuation)
                 elif literal_description and literal_description[0].islower():
                     is_continuation = True
-                # Check if this is a second literal with no description but previous literal has complete description
-                # This handles the enum3.png scenario where multiple literals share the same description
-                elif not literal_description and self._pending_literals[-1].description:
-                    prev_literal = self._pending_literals[-1]
-                    # Check if previous literal has tags (indicates complete definition)
-                    if prev_literal.tags:
-                        # This is a second literal sharing the same description
-                        is_continuation = False
-                        # Create a new literal with shared description and tags
-                        literal = AutosarEnumLiteral(
-                            name=literal_name,
-                            description=prev_literal.description,
-                            index=None,  # Second literal doesn't get its own index
-                            tags=prev_literal.tags.copy(),
-                        )
-                        self._pending_literals.append(literal)
-                        return False  # Don't continue with the rest of the logic
+                # Check if description starts with "Tags:" or is empty
+                # This indicates the current literal name is a CONTINUATION of the previous literal name
+                # (multi-line literal name scenario where multiple lines in the literal column belong to one literal)
+                elif (not literal_description or literal_description.startswith("Tags:")):
+                    # Append to previous literal's name (not description)
+                    # This handles literal names split across multiple lines
+                    self._pending_literals[-1].name += literal_name
+                    # If this line has "Tags:", process them
+                    if literal_description.startswith("Tags:"):
+                        tags = self._extract_literal_tags(literal_description)
+                        index = None
+                        if "atp.EnumerationLiteralIndex" in tags:
+                            index = int(tags["atp.EnumerationLiteralIndex"])
+                        self._pending_literals[-1].index = index
+                        self._pending_literals[-1].tags = tags
+                    return False  # Don't continue with the rest of the logic
 
             if is_continuation and self._pending_literals:
                 # Append to previous literal's description

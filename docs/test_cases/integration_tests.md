@@ -309,53 +309,49 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 
 
 #### SWIT_00007
-**Title**: Test enum3.png Scenario - Multiple Literals in Single Table Cell
+**Title**: Test enum3.png Scenario - Multiple Literal Names Stacked in Single Table Cell
 
 **Maturity**: accept
 
-**Description**: Integration test that verifies the enum3.png scenario where two literals (reportingInChronologicalOrder and OldestFirst) appear on separate lines in the same table cell, sharing the same description and tags. The parser recognizes this and creates two separate literals where the second literal shares the description and tags from the first literal.
+**Description**: Integration test that verifies the enum3.png scenario where three literal names (reportingIn, ChronlogicalOrder, and OldestFirst) are stacked vertically in one table cell, sharing the same description and tags. The parser recognizes this and creates one combined literal with the name formed by concatenating all three literal names.
 
 **Precondition**: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf exists
 
 **Test Steps**:
 1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
 2. Find the DiagnosticEventCombinationReportingBehaviorEnum enumeration in the extracted packages
-3. Verify enumeration has exactly two literals
-4. Verify first literal name is "reportingInChronologicalOrder"
-5. Verify first literal has proper structure:
+3. Verify enumeration has exactly one literal
+4. Verify literal name is "reportingInChronlogicalOrderOldestFirst"
+5. Verify literal has proper structure:
    - Verify description is not None
    - Verify index is not None
    - Verify tags attribute exists
-6. Verify first literal description contains expected content (e.g., "chronological")
-7. Verify first literal tags are present (atp.EnumerationLiteralIndex)
-8. Verify second literal name is "OldestFirst"
-9. Verify second literal shares description and tags with first literal
-10. Verify descriptions are clean (no tag patterns like "atp.EnumerationLiteralIndex")
-11. Verify source location tracking if available
+6. Verify literal description contains expected content (e.g., "chronological")
+7. Verify literal tags are present (atp.EnumerationLiteralIndex)
+8. Verify description is clean (no tag patterns like "atp.EnumerationLiteralIndex")
+9. Verify source location tracking if available
 
 **Expected Result**:
 - DiagnosticEventCombinationReportingBehaviorEnum enumeration found
-- Exactly 2 literals present (not 1 combined literal)
-- First literal name: reportingInChronologicalOrder (with full description and tags)
-- Second literal name: OldestFirst (sharing description and tags from first literal)
-- Both literals have the same description containing "chronological"
-- First literal has index attribute
-- Both literals have the same tags (atp.EnumerationLiteralIndex)
-- Descriptions are clean of tag patterns
-- enum3.png scenario correctly handled (two literals in same cell, second shares description and tags)
+- Exactly 1 literal present (combined from three stacked names)
+- Literal name: reportingInChronlogicalOrderOldestFirst (with full description and tags)
+- Literal has description containing "chronological"
+- Literal has index attribute
+- Literal has tags (atp.EnumerationLiteralIndex)
+- Description is clean of tag patterns
+- enum3.png scenario correctly handled (three literal names stacked in same cell, combined into one literal)
 
 **Requirements Coverage**: SWR_PARSER_00015, SWR_PARSER_00031
 
 **Test Data**:
 - PDF: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
 - Enumeration: DiagnosticEventCombinationReportingBehaviorEnum
-- Source literals (enum3.png): reportingInChronologicalOrder, OldestFirst
-- Expected result: 2 literals total
-  - reportingInChronologicalOrder (with description and tags)
-  - OldestFirst (sharing description and tags from first literal)
-- Scenario: Two literals on separate lines in same table cell, sharing description and tags
+- Source literal names (enum3.png): reportingIn, ChronlogicalOrder, OldestFirst
+- Expected result: 1 literal total
+  - reportingInChronlogicalOrderOldestFirst (with description and tags)
+- Scenario: Three literal names stacked vertically in same table cell, sharing description and tags
 
 **Test Implementation**:
-- Test method: `test_diagnostic_event_combination_reporting_behavior_enum`
+- Test method: `test_diagnostic_event_combination_reporting_behavior_enum_swit_00007`
 - Test file: `tests/integration/test_pdf_integration.py`
 - Fixture: `diagnostic_extract_template_pdf` (session-scoped)

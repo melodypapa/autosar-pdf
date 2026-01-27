@@ -4533,23 +4533,24 @@ enable more features"""
         # Continuation includes the word
         assert "First line enable more features" in enum.enumeration_literals[0].description
 
-    def test_multiple_literals_same_description(self) -> None:
-        """Test multiple literals on separate lines sharing the same description.
+    def test_multiple_literal_names_one_cell(self) -> None:
+        """Test multiple literal names stacked in one cell sharing the same description.
 
-        This tests the scenario from enum3.png where reportingInChronologicalOrder
-        and OldestFirst are in the same table cell but on separate lines, sharing
-        the same description and tags.
+        This tests the scenario from enum3.png where reportingIn, ChronologicalOrder,
+        and OldestFirst are stacked vertically in one cell, sharing the same description
+        and tags. The parser should combine them into a single literal.
 
         Requirements:
             SWR_PARSER_00015: Enumeration Literal Extraction from PDF
         """
         parser = PdfParser()
 
-        # Simulate enum3.png: two literals on separate lines, sharing description
+        # Simulate enum3.png: three literal names stacked in one cell, sharing description
         text = """Enumeration DiagnosticEventCombinationReportingBehaviorEnum
 Package M2::AUTOSARTemplates::DiagnosticExtract::DiagnosticCommonProps
 Literal Description
-reportingInChronologicalOrder The reporting order for event combination on retrieval is the chronological storage order of the events Tags: atp.EnumerationLiteralIndex=0
+reportingIn The reporting order for event combination on retrieval is the chronological storage order of the events
+ChronologicalOrder Tags: atp.EnumerationLiteralIndex=0
 OldestFirst"""
 
         models = parser._parse_complete_text(
@@ -4564,21 +4565,15 @@ OldestFirst"""
         enum = models[0]
         assert enum.name == "DiagnosticEventCombinationReportingBehaviorEnum"
         
-        # Should parse two separate literals
-        assert len(enum.enumeration_literals) == 2
+        # Should parse one literal with combined name
+        assert len(enum.enumeration_literals) == 1
         
-        # First literal
-        assert enum.enumeration_literals[0].name == "reportingInChronologicalOrder"
+        # The literal should have the combined name from all three lines
+        assert enum.enumeration_literals[0].name == "reportingInChronologicalOrderOldestFirst"
         assert enum.enumeration_literals[0].description is not None
         assert "chronological storage order" in enum.enumeration_literals[0].description
         assert enum.enumeration_literals[0].index == 0
         assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[0].tags
-        
-        # Second literal - should also have the same description and tags
-        assert enum.enumeration_literals[1].name == "OldestFirst"
-        # The second literal should also get the description from the previous line
-        # This is the key fix - OldestFirst should have a description
-        assert enum.enumeration_literals[1].description is not None
 
     def test_enumeration_with_note_and_tags(self) -> None:
         """Test enumeration with note and tags in literals.

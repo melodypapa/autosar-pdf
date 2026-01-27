@@ -4667,7 +4667,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_PARSER_00074
+#### SWUT_PARSER_00095
 **Title**: Test Enumeration Literal Tags Extraction
 
 **Maturity**: accept
@@ -4851,7 +4851,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00018
+#### SWUT_MODEL_00089
 **Title**: Test AutosarEnumLiteral With Tags Initialization
 
 **Maturity**: accept
@@ -4878,7 +4878,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00019
+#### SWUT_MODEL_00090
 **Title**: Test AutosarEnumLiteral Tags Dictionary Default Initialization
 
 **Maturity**: accept
@@ -4899,7 +4899,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00020
+#### SWUT_MODEL_00091
 **Title**: Test AutosarEnumLiteral Hybrid Approach With Index And Tags
 
 **Maturity**: accept
@@ -4925,7 +4925,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00021
+#### SWUT_MODEL_00092
 **Title**: Test AutosarEnumLiteral String Representation With Tags
 
 **Maturity**: accept
@@ -4949,7 +4949,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00022
+#### SWUT_MODEL_00093
 **Title**: Test AutosarEnumLiteral Debug Representation With Tags
 
 **Maturity**: accept
@@ -4972,7 +4972,7 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
-#### SWUT_MODEL_00023
+#### SWUT_MODEL_00094
 **Title**: Test AutosarEnumLiteral Tags Dictionary Mutation
 
 **Maturity**: accept

@@ -1,6 +1,6 @@
 """AUTOSAR package and class hierarchy management with markdown output."""
 
-__version__ = "0.20.0"
+__version__ = "0.20.1"
 
 from autosar_pdf2txt.models import (
     AttributeKind,

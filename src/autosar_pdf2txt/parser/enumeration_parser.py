@@ -47,6 +47,8 @@ class AutosarEnumerationParser(AbstractTypeParser):
         super().__init__()
         # Parsing state
         self._in_enumeration_literal_section: bool = False
+        # Temporary list to collect literals during parsing (converted to tuple at end)
+        self._pending_literals: List[AutosarEnumLiteral] = []
 
     def _reset_state(self) -> None:
         """Reset parser state for a new enumeration definition.
@@ -58,6 +60,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
             SWR_PARSER_00025: AutosarEnumeration Specialized Parser
         """
         self._in_enumeration_literal_section = False
+        self._pending_literals = []
 
     def parse_definition(
         self,
@@ -87,6 +90,9 @@ class AutosarEnumerationParser(AbstractTypeParser):
         Returns:
             The parsed AutosarEnumeration object, or None if parsing failed.
         """
+        # Reset state for new enumeration
+        self._pending_literals = []
+
         if line_index >= len(lines):
             return None
 
@@ -165,11 +171,13 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
             # Check for new class/primitive/enumeration definition
             if self._is_new_type_definition(line):
-                # New type definition - return
+                # New type definition - finalize and return
+                self._finalize_enumeration(current_model)
                 return i, True
 
             # Check for table (end of enumeration)
             if self._is_table_marker(line):
+                self._finalize_enumeration(current_model)
                 return i, True
 
             # Process enumeration literal section
@@ -177,6 +185,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 enum_section_ended = self._process_enumeration_literal_line(line, current_model)
                 if enum_section_ended:
                     self._in_enumeration_literal_section = False
+                    self._finalize_enumeration(current_model)
                     return i, True
                 i += 1
                 continue
@@ -190,8 +199,26 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
             i += 1
 
-        # End of lines - return
+        # End of lines - finalize and return
+        self._finalize_enumeration(current_model)
         return i, True
+
+    def _finalize_enumeration(self, current_model: AutosarEnumeration) -> None:
+        """Finalize the enumeration by converting pending literals to tuple.
+
+        This method is called when enumeration parsing is complete to convert
+        the temporarily collected literals into an immutable tuple.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+
+        Args:
+            current_model: The current AutosarEnumeration being parsed.
+        """
+        # Convert pending literals to immutable tuple
+        current_model.enumeration_literals = tuple(self._pending_literals)
+        self._pending_literals = []
 
     def _process_enumeration_literal_line(self, line: str, current_model: AutosarEnumeration) -> bool:
         """Process an enumeration literal line.
@@ -224,13 +251,13 @@ class AutosarEnumerationParser(AbstractTypeParser):
             if index is not None:
                 literal_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", literal_description).strip()
 
-            # Create and add the literal
+            # Create and add the literal to pending list
             literal = AutosarEnumLiteral(
                 name=literal_name,
                 description=literal_description,
                 index=index,
             )
-            current_model.enumeration_literals.append(literal)
+            self._pending_literals.append(literal)
 
         return False
 

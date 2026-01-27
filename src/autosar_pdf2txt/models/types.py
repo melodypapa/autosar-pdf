@@ -13,7 +13,7 @@ Requirements:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from autosar_pdf2txt.models.attributes import AutosarAttribute, AutosarEnumLiteral
 from autosar_pdf2txt.models.base import AbstractAutosarBase, AutosarDocumentSource
@@ -166,7 +166,7 @@ class AutosarEnumeration(AbstractAutosarBase):
     Attributes:
         name: The name of the enumeration (inherited from AbstractAutosarBase).
         package: The full package path (inherited from AbstractAutosarBase).
-        enumeration_literals: List of enumeration literal values.
+        enumeration_literals: Immutable tuple of enumeration literal values.
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
     Examples:
@@ -181,7 +181,7 @@ class AutosarEnumeration(AbstractAutosarBase):
         ... )
     """
 
-    enumeration_literals: List[AutosarEnumLiteral] = field(default_factory=list)
+    enumeration_literals: Tuple[AutosarEnumLiteral, ...] = field(default_factory=tuple)
 
     def __init__(
         self,
@@ -201,7 +201,7 @@ class AutosarEnumeration(AbstractAutosarBase):
         Args:
             name: The name of the enumeration.
             package: The full package path.
-            enumeration_literals: List of enumeration literal values.
+            enumeration_literals: List of enumeration literal values (converted to immutable tuple).
             note: Optional documentation.
             sources: Optional list of source locations for this enumeration definition.
 
@@ -209,7 +209,8 @@ class AutosarEnumeration(AbstractAutosarBase):
             ValueError: If name is empty or contains only whitespace.
         """
         super().__init__(name, package, note, sources)
-        self.enumeration_literals = enumeration_literals or []
+        # Convert to tuple for immutability
+        self.enumeration_literals = tuple(enumeration_literals) if enumeration_literals else ()
 
     def __str__(self) -> str:
         """Return string representation of the enumeration.

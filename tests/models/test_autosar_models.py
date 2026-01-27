@@ -981,7 +981,8 @@ class TestAutosarEnumeration:
         """
         enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         assert enum.name == "MyEnum"
-        assert enum.enumeration_literals == []
+        assert enum.enumeration_literals == ()
+        assert isinstance(enum.enumeration_literals, tuple)
 
     def test_init_abstract_enumeration(self) -> None:
         """Test creating an abstract enumeration.
@@ -1101,16 +1102,28 @@ class TestAutosarEnumeration:
         assert "note=True" in result
 
     def test_literals_mutation(self) -> None:
-        """Test that enumeration_literals list can be mutated.
+        """Test that enumeration_literals tuple is immutable.
 
         Requirements:
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
         """
-        enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
-        enum.enumeration_literals.append(AutosarEnumLiteral("VALUE1", 0))
-        assert len(enum.enumeration_literals) == 1
-        enum.enumeration_literals.append(AutosarEnumLiteral("VALUE2", 1))
-        assert len(enum.enumeration_literals) == 2
+        literals = [
+            AutosarEnumLiteral("VALUE1", 0),
+            AutosarEnumLiteral("VALUE2", 1),
+        ]
+        enum_with_literals = AutosarEnumeration(
+            name="MyEnum", package="M2::Test", enumeration_literals=literals
+        )
+        # Verify enumeration_literals is a tuple
+        assert isinstance(enum_with_literals.enumeration_literals, tuple)
+        assert len(enum_with_literals.enumeration_literals) == 2
+
+        # Verify immutability - cannot append to tuple
+        assert not hasattr(enum_with_literals.enumeration_literals, "append")
+
+        # Verify immutability - cannot modify tuple elements
+        with pytest.raises(TypeError):
+            enum_with_literals.enumeration_literals[0] = AutosarEnumLiteral("VALUE3", 2)
 
     def test_inheritance_from_abstract_autosar_base(self) -> None:
         """Test that AutosarEnumeration inherits from AbstractAutosarBase.

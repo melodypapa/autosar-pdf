@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="autosar-pdf2txt",
-    version="0.20.0",
+    version="0.20.1",
     author="Melodypapa",
     author_email="melodypapa@outlook.com",
     description="A Python package to extract AUTOSAR model from PDF files to markdown",

@@ -14,7 +14,7 @@ from typing import List, Optional, Tuple
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarClass, AutosarDoc, AutosarPackage
+from autosar_pdf2txt.models import AutosarClass, AutosarDoc, AutosarEnumeration, AutosarPackage
 from autosar_pdf2txt.parser import PdfParser
 
 
@@ -302,3 +302,50 @@ def find_class_by_name(packages: List[AutosarPackage], class_name: str) -> Optio
             return result
 
     return None
+
+
+@pytest.fixture(scope="session")
+def generic_structure_diagnostic_debounce_enum(
+    generic_structure_template_pdf: AutosarDoc
+) -> AutosarEnumeration:
+    """Cache the DiagnosticDebounceBehaviorEnum from GenericStructureTemplate PDF.
+
+    This fixture pre-fetches and caches the DiagnosticDebounceBehaviorEnum,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        generic_structure_template_pdf: Parsed GenericStructureTemplate PDF data.
+
+    Returns:
+        The DiagnosticDebounceBehaviorEnum AutosarEnumeration.
+
+    Skips:
+        If DiagnosticDebounceBehaviorEnum is not found.
+    """
+    # Find M2 package (root metamodel package)
+    m2 = generic_structure_template_pdf.get_package("M2")
+    if not m2:
+        pytest.skip("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> DiagnosticExtract -> Dem -> DiagnosticDebouncingAlgorithm
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        pytest.skip("AUTOSARTemplates package not found")
+
+    diagnostic_extract = autosar_templates.get_subpackage("DiagnosticExtract")
+    if not diagnostic_extract:
+        pytest.skip("DiagnosticExtract package not found")
+
+    dem = diagnostic_extract.get_subpackage("Dem")
+    if not dem:
+        pytest.skip("Dem package not found")
+
+    diagnostic_debouncing_algorithm = dem.get_subpackage("DiagnosticDebouncingAlgorithm")
+    if not diagnostic_debouncing_algorithm:
+        pytest.skip("DiagnosticDebouncingAlgorithm package not found")
+
+    debounce_enum = diagnostic_debouncing_algorithm.get_enumeration("DiagnosticDebounceBehaviorEnum")
+    if not debounce_enum:
+        pytest.skip("DiagnosticDebounceBehaviorEnum not found")
+
+    return debounce_enum

@@ -11,7 +11,7 @@ import os
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarClass, AutosarDoc
+from autosar_pdf2txt.models import AutosarClass, AutosarDoc, AutosarEnumeration
 
 
 # Import helper functions from conftest
@@ -469,3 +469,75 @@ class TestPdfIntegration:
         print(f"  Abstract: {atomic_sw_component_type.is_abstract}")
         print(f"  Bases ({len(atomic_sw_component_type.bases)}): {', '.join(sorted(atomic_sw_component_type.bases))}")
         print("  SwComponentType in bases: YES")
+
+    def test_parse_real_autosar_pdf_and_verify_diagnostic_debounce_enum(
+        self, generic_structure_diagnostic_debounce_enum: AutosarEnumeration
+    ) -> None:
+        """Test parsing real AUTOSAR PDF and verify DiagnosticDebounceBehaviorEnum.
+
+        SWIT_00003: Verify DiagnosticDebounceBehaviorEnum from GenericStructureTemplate PDF
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00013: Enumeration Pattern Recognition
+            SWR_PARSER_00014: Enumeration Literal Extraction
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+
+        Args:
+            generic_structure_diagnostic_debounce_enum: Cached DiagnosticDebounceBehaviorEnum.
+        """
+        enum = generic_structure_diagnostic_debounce_enum
+
+        # Verify enumeration name
+        assert enum.name == "DiagnosticDebounceBehaviorEnum", \
+            f"Expected name 'DiagnosticDebounceBehaviorEnum', got '{enum.name}'"
+
+        # Verify package
+        expected_package = "M2::AUTOSARTemplates::DiagnosticExtract::Dem::DiagnosticDebouncingAlgorithm"
+        assert enum.package == expected_package, \
+            f"Expected package '{expected_package}', got '{enum.package}'"
+
+        # Verify enumeration_literals is a tuple (immutable)
+        assert isinstance(enum.enumeration_literals, tuple), \
+            f"enumeration_literals should be tuple for immutability, got {type(enum.enumeration_literals)}"
+
+        # Verify literal count (7 total)
+        assert len(enum.enumeration_literals) == 7, \
+            f"Expected 7 literals, got {len(enum.enumeration_literals)}"
+
+        # Verify immutability - attempt to modify should raise TypeError
+        with pytest.raises(TypeError):
+            enum.enumeration_literals[0] = enum.enumeration_literals[0]
+
+        # Verify .append() is not available
+        assert not hasattr(enum.enumeration_literals, "append") or \
+               not callable(getattr(enum.enumeration_literals, "append", None)), \
+               "enumeration_literals should not have append method"
+
+        # Verify expected literal names
+        literal_names = [lit.name for lit in enum.enumeration_literals]
+        expected_literals = ["freeze", "enable", "qualification", "reset",
+                            "ControlDTCSetting", "the"]
+        for expected in expected_literals:
+            assert expected in literal_names, \
+                f"Expected literal '{expected}' not found. Got: {literal_names}"
+
+        # Verify freeze literal exists (this is the key literal from the requirement)
+        freeze_literal = next((lit for lit in enum.enumeration_literals
+                             if lit.name == "freeze"), None)
+        assert freeze_literal is not None, "freeze literal must exist"
+
+        # Verify reset literal exists
+        reset_literal = next((lit for lit in enum.enumeration_literals
+                            if lit.name == "reset"), None)
+        assert reset_literal is not None, "reset literal must exist"
+
+        # Print enumeration information for verification
+        print("\n=== DiagnosticDebounceBehaviorEnum verified ===")
+        print(f"  Name: {enum.name}")
+        print(f"  Package: {enum.package}")
+        print(f"  Literals ({len(enum.enumeration_literals)}):")
+        for lit in enum.enumeration_literals:
+            print(f"    - {lit.name}: {lit.description[:50]}..." if lit.description and len(lit.description) > 50
+                  else f"    - {lit.name}: {lit.description or '(no description)'}")
+        print("  Immutability: VERIFIED (tuple type)")

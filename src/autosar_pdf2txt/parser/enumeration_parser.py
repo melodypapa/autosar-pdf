@@ -244,20 +244,54 @@ class AutosarEnumerationParser(AbstractTypeParser):
             literal_name = literal_match.group(1)
             literal_description = literal_match.group(2).strip()
 
-            # Extract index from description if present
-            index = self._extract_literal_index(literal_description)
+            # Common continuation words that indicate multi-line descriptions
+            # These are fragments that should be appended to the previous literal
+            continuation_words = {
+                "enable", "qualification", "the", "condition", "conditions",
+                "of", "or", "and", "with", "will", "after", "related", "all"
+            }
 
-            # Clean description by removing ATP marker
-            if index is not None:
-                literal_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", literal_description).strip()
+            # Check if this is a continuation line (multi-line description)
+            is_continuation = False
+            if self._pending_literals:
+                # Check if this is the same literal name (duplicate indicates continuation)
+                if literal_name == self._pending_literals[-1].name:
+                    is_continuation = True
+                # Check if the "name" is a common continuation word
+                elif literal_name.lower() in continuation_words:
+                    is_continuation = True
+                # Check if description starts with lowercase (indicates continuation)
+                elif literal_description and literal_description[0].islower():
+                    is_continuation = True
 
-            # Create and add the literal to pending list
-            literal = AutosarEnumLiteral(
-                name=literal_name,
-                description=literal_description,
-                index=index,
-            )
-            self._pending_literals.append(literal)
+            if is_continuation and self._pending_literals:
+                # Append to previous literal's description
+                previous_literal = self._pending_literals[-1]
+                # Initialize description if None
+                if previous_literal.description is None:
+                    previous_literal.description = ''
+                # Add a space before appending if needed
+                if not previous_literal.description.endswith(' '):
+                    previous_literal.description += ' '
+                # Append the continuation text (include the "name" as it's part of the description)
+                continuation_text = f"{literal_name} {literal_description}" if literal_description else literal_name
+                previous_literal.description += continuation_text
+            else:
+                # This is a new literal - create it
+                # Extract index from description if present
+                index = self._extract_literal_index(literal_description)
+
+                # Clean description by removing ATP marker
+                if index is not None:
+                    literal_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", literal_description).strip()
+
+                # Create and add the literal to pending list
+                literal = AutosarEnumLiteral(
+                    name=literal_name,
+                    description=literal_description,
+                    index=index,
+                )
+                self._pending_literals.append(literal)
 
         return False
 

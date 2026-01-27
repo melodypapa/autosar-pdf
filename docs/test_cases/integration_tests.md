@@ -179,7 +179,7 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 
 **Maturity**: accept
 
-**Description**: Verify that the DiagnosticDebounceBehaviorEnum enumeration is correctly parsed from the AUTOSAR_FO_TPS_GenericStructureTemplate.pdf and that its enumeration_literals list is immutable (frozen) after creation.
+**Description**: Verify that the DiagnosticDebounceBehaviorEnum enumeration is correctly parsed from the AUTOSAR_FO_TPS_GenericStructureTemplate.pdf with multi-line literal descriptions and that its enumeration_literals list is immutable (frozen) after creation.
 
 **Precondition**: File examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exists
 
@@ -192,10 +192,10 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 6. Verify enumeration_literals is a tuple (immutable type, not list)
 7. Attempt to modify enumeration_literals to verify immutability (should raise TypeError)
 8. Verify .append() method is not available on enumeration_literals
-9. Verify literal count is 7
-10. Verify expected literals exist: freeze, enable, qualification, reset, ControlDTCSetting, the
-11. Verify freeze literal exists (key literal mentioned in requirements)
-12. Verify reset literal exists
+9. Verify literal count is 2 (freeze and reset)
+10. Verify expected literals exist: freeze, reset
+11. Verify freeze literal has full multi-line description
+12. Verify reset literal has full multi-line description
 
 **Expected Result**:
 
@@ -203,15 +203,16 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 - Enumeration name: "DiagnosticDebounceBehaviorEnum"
 - Package: "M2::AUTOSARTemplates::DiagnosticExtract::Dem::DiagnosticDebouncingAlgorithm"
 - enumeration_literals type: tuple (immutable)
-- Literal count: 7
-- All expected literals present: freeze, enable, qualification, reset, ControlDTCSetting, the
+- Literal count: 2
+- Expected literals: freeze, reset
+- Multi-line description parsing: VERIFIED
+- freeze literal description: Full multi-line description with "event debounce counter will be frozen..."
+- reset literal description: Full multi-line description with "event debounce counter will be reset..."
 - Immutability verified: Cannot modify tuple, no .append() method
-- freeze literal exists: YES
-- reset literal exists: YES
 
 **Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00013, SWR_PARSER_00014, SWR_PARSER_00015, SWR_MODEL_00019
 
 **Test Data**:
 - PDF: examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf
 - Enumeration: DiagnosticDebounceBehaviorEnum
-- Expected literals: freeze, enable (x2), qualification, reset, ControlDTCSetting, the
+- Expected literals: freeze, reset (2 literals total with multi-line descriptions)

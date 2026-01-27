@@ -475,12 +475,13 @@ class TestPdfIntegration:
     ) -> None:
         """Test parsing real AUTOSAR PDF and verify DiagnosticDebounceBehaviorEnum.
 
-        SWIT_00003: Verify DiagnosticDebounceBehaviorEnum from GenericStructureTemplate PDF
+        SWIT_00004: Verify DiagnosticDebounceBehaviorEnum from GenericStructureTemplate PDF
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00013: Enumeration Pattern Recognition
             SWR_PARSER_00014: Enumeration Literal Extraction
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
 
         Args:
@@ -501,9 +502,9 @@ class TestPdfIntegration:
         assert isinstance(enum.enumeration_literals, tuple), \
             f"enumeration_literals should be tuple for immutability, got {type(enum.enumeration_literals)}"
 
-        # Verify literal count (7 total)
-        assert len(enum.enumeration_literals) == 7, \
-            f"Expected 7 literals, got {len(enum.enumeration_literals)}"
+        # SWIT_00004 Step 9: Verify literal count is 2 (freeze and reset)
+        assert len(enum.enumeration_literals) == 2, \
+            f"Expected 2 literals (freeze and reset), got {len(enum.enumeration_literals)}. Actual literals: {[lit.name for lit in enum.enumeration_literals]}"
 
         # Verify immutability - attempt to modify should raise TypeError
         with pytest.raises(TypeError):
@@ -514,23 +515,34 @@ class TestPdfIntegration:
                not callable(getattr(enum.enumeration_literals, "append", None)), \
                "enumeration_literals should not have append method"
 
-        # Verify expected literal names
+        # SWIT_00004 Step 10: Verify expected literals exist: freeze, reset
         literal_names = [lit.name for lit in enum.enumeration_literals]
-        expected_literals = ["freeze", "enable", "qualification", "reset",
-                            "ControlDTCSetting", "the"]
+        expected_literals = ["freeze", "reset"]
         for expected in expected_literals:
             assert expected in literal_names, \
                 f"Expected literal '{expected}' not found. Got: {literal_names}"
 
-        # Verify freeze literal exists (this is the key literal from the requirement)
+        # Verify only expected literals exist
+        assert len(literal_names) == 2, \
+            f"Expected exactly 2 literals (freeze, reset), but got {len(literal_names)}: {literal_names}"
+
+        # SWIT_00004 Step 11: Verify freeze literal has full multi-line description
         freeze_literal = next((lit for lit in enum.enumeration_literals
                              if lit.name == "freeze"), None)
         assert freeze_literal is not None, "freeze literal must exist"
+        assert freeze_literal.description is not None, \
+            "freeze literal should have a description"
+        assert "event debounce counter will be frozen" in freeze_literal.description.lower(), \
+            f"freeze literal description should mention 'event debounce counter will be frozen'. Got: {freeze_literal.description}"
 
-        # Verify reset literal exists
+        # SWIT_00004 Step 12: Verify reset literal has full multi-line description
         reset_literal = next((lit for lit in enum.enumeration_literals
                             if lit.name == "reset"), None)
         assert reset_literal is not None, "reset literal must exist"
+        assert reset_literal.description is not None, \
+            "reset literal should have a description"
+        assert "event debounce counter will be reset" in reset_literal.description.lower(), \
+            f"reset literal description should mention 'event debounce counter will be reset'. Got: {reset_literal.description}"
 
         # Print enumeration information for verification
         print("\n=== DiagnosticDebounceBehaviorEnum verified ===")
@@ -538,6 +550,7 @@ class TestPdfIntegration:
         print(f"  Package: {enum.package}")
         print(f"  Literals ({len(enum.enumeration_literals)}):")
         for lit in enum.enumeration_literals:
-            print(f"    - {lit.name}: {lit.description[:50]}..." if lit.description and len(lit.description) > 50
-                  else f"    - {lit.name}: {lit.description or '(no description)'}")
+            desc_preview = lit.description[:100] + "..." if lit.description and len(lit.description) > 100 else lit.description
+            print(f"    - {lit.name}: {desc_preview}")
         print("  Immutability: VERIFIED (tuple type)")
+        print("  Multi-line description parsing: VERIFIED")

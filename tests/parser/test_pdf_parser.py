@@ -4575,6 +4575,123 @@ OldestFirst"""
         assert enum.enumeration_literals[0].index == 0
         assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[0].tags
 
+    def test_enumeration_pattern_2_multiline_suffixes(self) -> None:
+        """Test Pattern 2: Multi-line literal names with suffixes (ByteOrderEnum).
+
+        This tests the scenario where two literals with the same base name
+        but different suffixes (First, Last) are parsed as separate literals.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+
+        # Simulate ByteOrderEnum: two literals with same base name, different suffixes
+        text = """Enumeration ByteOrderEnum
+Package M2::AUTOSAR::DataTypes
+Literal Description
+mostSignificantByte Most significant byte shall come at the lowest address (also known as BigEndian or as
+First Motorola-Format)
+Tags: atp.EnumerationLiteralIndex=0
+mostSignificantByte Most significant byte shall come highest address (also known as LittleEndian or as Intel-Format)
+Last
+Tags: atp.EnumerationLiteralIndex=1
+opaque For opaque data endianness conversion has to be configured to Opaque.
+Tags: atp.EnumerationLiteralIndex=2"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 9,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert enum.name == "ByteOrderEnum"
+        
+        # Should parse three separate literals
+        assert len(enum.enumeration_literals) == 3
+        
+        # First literal: mostSignificantByteFirst
+        assert enum.enumeration_literals[0].name == "mostSignificantByteFirst"
+        assert enum.enumeration_literals[0].description is not None
+        assert "lowest address" in enum.enumeration_literals[0].description
+        assert enum.enumeration_literals[0].index == 0
+        assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[0].tags
+        
+        # Second literal: mostSignificantByteLast
+        assert enum.enumeration_literals[1].name == "mostSignificantByteLast"
+        assert enum.enumeration_literals[1].description is not None
+        assert "highest address" in enum.enumeration_literals[1].description
+        assert enum.enumeration_literals[1].index == 1
+        assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[1].tags
+        
+        # Third literal: opaque
+        assert enum.enumeration_literals[2].name == "opaque"
+        assert enum.enumeration_literals[2].description is not None
+        assert "opaque data" in enum.enumeration_literals[2].description
+        assert enum.enumeration_literals[2].index == 2
+        assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[2].tags
+
+    def test_enumeration_pattern_5_different_suffixes(self) -> None:
+        """Test Pattern 5: Multi-line literal names with different suffixes.
+
+        This tests the scenario where two literals with the same base name
+        but different suffixes (OnRetrieval, OnStorage) are parsed as separate literals.
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+        """
+        parser = PdfParser()
+
+        # Simulate DiagnosticEventCombinationBehaviorEnum: two literals with different suffixes
+        text = """Enumeration DiagnosticEventCombinationBehaviorEnum
+Package M2::AUTOSAR::Diagnostic
+Literal Description
+eventCombination Event combination on retrieval is used to combine events. For each event an individual event memory
+OnRetrieval entry is created, while reporting the data via UDS, the data is combined.
+Tags: atp.EnumerationLiteralIndex=1
+eventCombination Event combination on storage is used to combine events. Only one memory entry exists for each
+OnStorage DTC which is also reported via UDS.
+Tags: atp.EnumerationLiteralIndex=0"""
+
+        models = parser._parse_complete_text(
+            text,
+            pdf_filename="test.pdf",
+            current_models={},
+            model_parsers={},
+            line_to_page=[1] * 7,
+        )
+
+        assert len(models) == 1
+        enum = models[0]
+        assert enum.name == "DiagnosticEventCombinationBehaviorEnum"
+        
+        # Should parse two separate literals
+        assert len(enum.enumeration_literals) == 2
+        
+        # First literal: eventCombinationOnRetrieval (index=1 comes second in text)
+        assert enum.enumeration_literals[0].name in ["eventCombinationOnRetrieval", "eventCombinationOnStorage"]
+        assert enum.enumeration_literals[0].description is not None
+        assert enum.enumeration_literals[0].index is not None
+        assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[0].tags
+        
+        # Second literal: eventCombinationOnStorage
+        assert enum.enumeration_literals[1].name in ["eventCombinationOnRetrieval", "eventCombinationOnStorage"]
+        assert enum.enumeration_literals[1].name != enum.enumeration_literals[0].name
+        assert enum.enumeration_literals[1].description is not None
+        assert enum.enumeration_literals[1].index is not None
+        assert "atp.EnumerationLiteralIndex" in enum.enumeration_literals[1].tags
+        
+        # Verify descriptions match expected content
+        for lit in enum.enumeration_literals:
+            if lit.name == "eventCombinationOnRetrieval":
+                assert "retrieval" in lit.description.lower()
+            elif lit.name == "eventCombinationOnStorage":
+                assert "storage" in lit.description.lower()
+
     def test_enumeration_with_note_and_tags(self) -> None:
         """Test enumeration with note and tags in literals.
 

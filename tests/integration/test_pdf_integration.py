@@ -798,3 +798,101 @@ class TestPdfIntegration:
         print("  Three literal names stacked in one cell")
         print("  Combined literal name: reportingInChronlogicalOrderOldestFirst")
         print("  Description and tags: VERIFIED")
+
+    def test_diagnostic_event_combination_behavior_enum_swit_00008(
+        self, diagnostic_extract_template_pdf: AutosarDoc
+    ) -> None:
+        """Test DiagnosticEventCombinationBehaviorEnum Pattern 5 scenario.
+
+        Test Case ID: SWIT_00008
+
+        Requirements:
+            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+
+        This test verifies the Pattern 5 scenario where two literals with the same
+        base name but different suffixes (eventCombinationOnRetrieval and
+        eventCombinationOnStorage) are parsed as separate literals.
+
+        Args:
+            diagnostic_extract_template_pdf: Cached parsed DiagnosticExtractTemplate PDF data (AutosarDoc).
+        """
+        # Find DiagnosticEventCombinationBehaviorEnum enumeration
+        enum = find_enumeration_by_name(
+            diagnostic_extract_template_pdf,
+            "DiagnosticEventCombinationBehaviorEnum"
+        )
+        if enum is None:
+            pytest.skip("DiagnosticEventCombinationBehaviorEnum not found in PDF")
+
+        # Step 1: Verify enumeration has exactly two literals
+        assert len(enum.enumeration_literals) == 2, \
+            f"Expected 2 literals, found {len(enum.enumeration_literals)}"
+
+        # Step 2: Verify first literal
+        first_literal = enum.enumeration_literals[0]
+        assert first_literal.name in ["eventCombinationOnRetrieval", "eventCombinationOnStorage"], \
+            f"Expected first literal name to be 'eventCombinationOnRetrieval' or 'eventCombinationOnStorage', got '{first_literal.name}'"
+
+        # Step 3: Verify first literal has proper structure
+        assert first_literal.description is not None, "First literal must have description"
+        assert first_literal.index is not None, "First literal must have index"
+        assert first_literal.tags is not None, "First literal must have tags attribute"
+
+        # Step 4: Verify first literal description contains expected content
+        if first_literal.name == "eventCombinationOnRetrieval":
+            assert "retrieval" in first_literal.description.lower(), \
+                f"First literal description should contain 'retrieval': {first_literal.description}"
+        else:
+            assert "storage" in first_literal.description.lower(), \
+                f"First literal description should contain 'storage': {first_literal.description}"
+
+        # Step 5: Verify second literal
+        second_literal = enum.enumeration_literals[1]
+        assert second_literal.name in ["eventCombinationOnRetrieval", "eventCombinationOnStorage"], \
+            f"Expected second literal name to be 'eventCombinationOnRetrieval' or 'eventCombinationOnStorage', got '{second_literal.name}'"
+        assert second_literal.name != first_literal.name, \
+            "Second literal should have different name than first literal"
+
+        # Step 6: Verify second literal has proper structure
+        assert second_literal.description is not None, "Second literal must have description"
+        assert second_literal.index is not None, "Second literal must have index"
+        assert second_literal.tags is not None, "Second literal must have tags attribute"
+
+        # Step 7: Verify second literal description contains expected content
+        if second_literal.name == "eventCombinationOnRetrieval":
+            assert "retrieval" in second_literal.description.lower(), \
+                f"Second literal description should contain 'retrieval': {second_literal.description}"
+        else:
+            assert "storage" in second_literal.description.lower(), \
+                f"Second literal description should contain 'storage': {second_literal.description}"
+
+        # Step 8: Verify descriptions are clean (no tag patterns)
+        assert "atp.EnumerationLiteralIndex" not in first_literal.description, \
+            f"Tags should be removed from first literal description: {first_literal.description}"
+        assert "atp.EnumerationLiteralIndex" not in second_literal.description, \
+            f"Tags should be removed from second literal description: {second_literal.description}"
+
+        # Print literal details for verification
+        print("\n=== DiagnosticEventCombinationBehaviorEnum ===")
+        print(f"  Name: {enum.name}")
+        print(f"  Package: {enum.package}")
+        print(f"  Total literals: {len(enum.enumeration_literals)}")
+        print(f"\n=== First Literal: {first_literal.name} ===")
+        print(f"  Description: {first_literal.description}")
+        print(f"  Index: {first_literal.index}")
+        print(f"  Tags: {first_literal.tags}")
+        print(f"\n=== Second Literal: {second_literal.name} ===")
+        print(f"  Description: {second_literal.description}")
+        print(f"  Index: {second_literal.index}")
+        print(f"  Tags: {second_literal.tags}")
+
+        if enum.sources:
+            source = enum.sources[0]
+            print(f"\n  Source: {source.pdf_file}, Page {source.page_number}")
+
+        print("\n=== Pattern 5 scenario verified ===")
+        print("  Two separate literals with same base name, different suffixes")
+        print("  First literal: eventCombinationOnRetrieval (with description and tags)")
+        print("  Second literal: eventCombinationOnStorage (with description and tags)")
+        print("  Description and tags: VERIFIED")

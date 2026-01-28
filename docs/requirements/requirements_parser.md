@@ -269,32 +269,104 @@ The system shall:
 
 **Maturity**: accept
 
-**Description**: The system shall extract enumeration literals from PDF files and convert them to AutosarEnumLiteral objects.
+**Description**: The system shall extract enumeration literals from PDF files and convert them to AutosarEnumLiteral objects, supporting 5 distinct enumeration literal patterns.
 
 The system shall:
 1. Parse enumeration literal lines with the format: `<literal_name> <description>` or `<literal_name>` (for literals without description)
 2. Extract the literal name (must start with a letter and contain alphanumeric characters or underscores)
 3. Extract the literal description (free-form text after the literal name)
 4. Extract enumeration literal indices from description tags (e.g., "atp.EnumerationLiteralIndex=0")
-5. Handle multi-line literal descriptions where continuation lines are detected by:
-   - Duplicate literal names (indicates continuation of previous literal)
+5. Support the following enumeration literal patterns:
+   
+   **Pattern 1: Standard Single-Line Literals**
+   - Format: `<name> <description> Tags: atp.EnumerationLiteralIndex=<index>`
+   - All components on single line
+   - Example: `fixedSize This means that the ApplicationArrayDataType will always have a fixed number of elements. Tags: atp.EnumerationLiteralIndex=0`
+   
+   **Pattern 2: Multi-Line Literal Names with Suffixes**
+   - Format: Literal name split across lines with different suffixes creating separate literals
+   - Base name repeated on first line, suffix on second line
+   - Separate literals created for each suffix variant
+   - Example (ByteOrderEnum):
+     ```
+     mostSignificantByte Most significant byte shall come at the lowest address (also known as BigEndian or as
+     First Motorola-Format)
+     Tags: atp.EnumerationLiteralIndex=0
+     ```
+     → Creates literal: `mostSignificantByteFirst` (separate literal)
+   
+   **Pattern 3: Multiple Literal Names in One Cell (Combined)**
+   - Format: Multiple literal names stacked vertically in one table cell, sharing same description and tags
+   - Names concatenated into single literal
+   - Detection: Description contains "Tags:" on subsequent line, previous literal has tags
+   - Example (DiagnosticEventCombinationReportingBehaviorEnum):
+     ```
+     reportingIn The reporting order for event combination on retrieval is the chronological storage order of the events
+     ChronlogicalOrder
+     Tags: atp.EnumerationLiteralIndex=0
+     OldestFirst
+     ```
+     → Creates literal: `reportingInChronlogicalOrderOldestFirst` (combined into one literal)
+   
+   **Pattern 4: Multi-Line Tags**
+   - Format: Tags span multiple lines after description
+   - All tags extracted correctly regardless of line breaks
+   - Example (DiagnosticTypeOfDtcSupportedEnum):
+     ```
+     iso11992_4 ISO11992-4 DTC format
+     Tags:
+     atp.EnumerationLiteralIndex=0
+     xml.name=ISO-11992–4
+     ```
+   
+   **Pattern 5: Multi-Line Literal Names with Different Suffixes**
+   - Format: Same base name with different suffixes on separate lines, each with own description and tags
+   - Separate literals created (not combined like Pattern 3)
+   - Detection: Each literal has complete description with tags
+   - Example (DiagnosticEventCombinationBehaviorEnum):
+     ```
+     eventCombination Event combination on retrieval is used to combine events. For each event an individual event memory
+     OnRetrieval entry is created, while reporting the data via UDS, the data is combined.
+     Tags: atp.EnumerationLiteralIndex=1
+     eventCombination Event combination on storage is used to combine events. Only one memory entry exists for each
+     OnStorage DTC which is also reported via UDS.
+     Tags: atp.EnumerationLiteralIndex=0
+     ```
+     → Creates two separate literals: `eventCombinationOnRetrieval` and `eventCombinationOnStorage`
+
+6. Handle multi-line literal descriptions where continuation lines are detected by:
+   - Duplicate literal names (indicates continuation of previous literal description)
    - Common continuation words: "enable", "qualification", "the", "condition", "conditions", "of", "or", "and", "with", "will", "after", "related", "all"
    - Lowercase first letter in description (indicates continuation)
-   - Second literals on separate lines with no description but previous literal has complete description with tags (enum3.png scenario)
-6. Support multiple literals on separate lines sharing the same description (e.g., "reportingInChronologicalOrder" and "OldestFirst" in same table cell)
-7. Create AutosarEnumLiteral objects with the extracted name, index, description, and tags
-8. Store enumeration literals in a list in the ClassDefinition
-9. Transfer enumeration literals to the AutosarClass object during package hierarchy building
 
-This requirement ensures that enumeration literals are properly extracted for enumeration classes like `DiagnosticEventCombinationReportingBehaviorEnum` from AUTOSAR CP TPS DiagnosticExtractTemplate, which contains literals such as:
-- `reportingInChronologicalOrder` (index=0, description="The reporting order for event combination on retrieval is the chronological storage order of the events", tags={"atp.EnumerationLiteralIndex": "0"})
-- `OldestFirst` (description="The reporting order for event combination on retrieval is the chronological storage order of the events", tags={"atp.EnumerationLiteralIndex": "0"})
+7. Distinguish between Pattern 2/5 (separate literals) and Pattern 3 (combined names) by:
+   - Checking if description contains "Tags:" on the second line (indicates separate literal with suffix)
+   - Checking if first word of literal name differs from previous literal (indicates combined names)
+   - Verifying previous literal has complete tags before creating new literal
+
+8. Create AutosarEnumLiteral objects with the extracted name, index, description, and tags
+9. Store enumeration literals in an immutable tuple in the AutosarEnumeration object
+10. Transfer enumeration literals to the AutosarEnumeration object during package hierarchy building
+
+This requirement ensures that enumeration literals are properly extracted for enumeration classes from AUTOSAR PDFs, handling various PDF formatting patterns including:
+- `ByteOrderEnum`: Pattern 2 - Three separate literals (mostSignificantByteFirst, mostSignificantByteLast, opaque)
+- `DiagnosticEventCombinationReportingBehaviorEnum`: Pattern 3 - One combined literal (reportingInChronlogicalOrderOldestFirst)
+- `DiagnosticEventCombinationBehaviorEnum`: Pattern 5 - Two separate literals (eventCombinationOnRetrieval, eventCombinationOnStorage)
+- `DiagnosticTypeOfDtcSupportedEnum`: Pattern 4 - Six literals with multi-line tags
 
 **Multi-line Support**:
 - Detects continuation lines by checking for duplicate names, common continuation words, lowercase descriptions
+- Distinguishes between separate literals (Pattern 2/5) and combined names (Pattern 3)
 - Appends continuation text to previous literal's description
-- Handles enum3.png scenario where multiple literals in same cell share description
-- Prevents partial fragments from being treated as separate literals
+- Handles multiple scenarios: standard literals, suffix variants, combined names, multi-line tags
+
+**Requirements Coverage**:
+- SWR_PARSER_00015: Enumeration Literal Extraction from PDF
+- SWR_PARSER_00031: Enumeration Literal Tags Extraction
+- SWIT_00005: Test Enumeration Literal Tags Extraction from Real PDF (Pattern 4)
+- SWIT_00006: Test Multi-page Enumeration Literal List from Real PDF (Pattern 2)
+- SWIT_00007: Test enum3.png Scenario - Multiple Literal Names Stacked in Single Table Cell (Pattern 3)
+- SWIT_00008: Test Pattern 5 - Multi-Line Literal Names with Different Suffixes (Pattern 5)
 
 ---
 

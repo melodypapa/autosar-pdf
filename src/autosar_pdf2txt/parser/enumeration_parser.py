@@ -227,16 +227,15 @@ class AutosarEnumerationParser(AbstractTypeParser):
         self._pending_literals = []
 
     def _process_enumeration_literal_line(self, line: str, current_model: AutosarEnumeration) -> bool:
-        """Process an enumeration literal line.
+        """Process a line in the enumeration literal section.
 
-        Requirements:
-            SWR_PARSER_00015: Enumeration Literal Extraction from PDF
-            SWR_PARSER_00016: Enumeration Literal Section Termination
-            SWR_PARSER_00031: Enumeration Literal Tags Extraction
+        This method handles the parsing of enumeration literal lines, including
+        multi-line names, descriptions, and tags. It supports 5 different patterns
+        of enumeration literal formatting found in AUTOSAR PDF specifications.
 
         Args:
-            line: The literal line.
-            current_model: The current AutosarEnumeration being parsed.
+            line: The line to process.
+            current_model: The current enumeration model being built.
 
         Returns:
             True if the enumeration literal section ended, False otherwise.
@@ -245,56 +244,178 @@ class AutosarEnumerationParser(AbstractTypeParser):
         if line.startswith("Table ") or line.startswith("Class ") or line.startswith("Primitive ") or line.startswith("Enumeration "):
             return True
 
+        # Special handling for "Tags:" lines
+        # These lines contain tag information like "atp.EnumerationLiteralIndex=0"
+        # They don't match the ENUMERATION_LITERAL_PATTERN because they have a colon
+        if line.strip().startswith("Tags:"):
+            if self._pending_literals:
+                # Extract tags from the line
+                tags = self._extract_literal_tags(line)
+                index = None
+                if "atp.EnumerationLiteralIndex" in tags:
+                    index = int(tags["atp.EnumerationLiteralIndex"])
+                # Update the most recent literal with tags and index
+                self._pending_literals[-1].index = index
+                self._pending_literals[-1].tags = tags
+            return False
+
         # Try to match enumeration literal pattern
         literal_match = self.ENUMERATION_LITERAL_PATTERN.match(line)
         if literal_match:
             literal_name = literal_match.group(1)
             literal_description = literal_match.group(2).strip() if literal_match.group(2) else ""
 
+            # Type annotation for previous_literal (used in multiple branches below)
+            previous_literal: Optional[AutosarEnumLiteral]
+
             # Common continuation words that indicate multi-line descriptions
             # These are fragments that should be appended to the previous literal
             continuation_words = {
                 "enable", "qualification", "the", "condition", "conditions",
-                "of", "or", "and", "with", "will", "after", "related", "all"
+                "of", "or", "and", "with", "will", "after", "related", "all",
+                "first", "last", "on", "in", "out", "up", "down"  # Common suffix words for Pattern 2/5
             }
 
             # Check if this is a continuation line (multi-line description or multi-line literal name)
             is_continuation = False
+            append_to_name = False  # Flag to indicate if we should append to name instead of description
             if self._pending_literals:
                 # Check if this is the same literal name (duplicate indicates continuation)
                 if literal_name == self._pending_literals[-1].name:
-                    is_continuation = True
-                # Check if the "name" is a common continuation word
-                elif literal_name.lower() in continuation_words:
-                    is_continuation = True
+                    # Check if previous literal already has tags (index is not None)
+                    # If it does, this is a NEW literal with same base name (Pattern 2/5)
+                    if self._pending_literals[-1].index is not None:
+                        is_continuation = False  # Don't treat as continuation, will create new literal below
+                    else:
+                        is_continuation = True
+                # Check if the "name" is a common continuation word or starts with one
+                elif (literal_name.lower() in continuation_words or
+                      any(literal_name.lower().startswith(word) for word in ["first", "last", "on", "in", "out", "up", "down"])):
+                    # If it's a suffix word (First, Last, On, In, etc.), append to name
+                    if (literal_name.lower() in {"first", "last", "on", "in", "out", "up", "down"} or
+                        any(literal_name.lower().startswith(word) for word in ["first", "last", "on", "in", "out", "up", "down"])):
+                        is_continuation = True
+                        append_to_name = True
+                    else:
+                        is_continuation = True
                 # Check if description starts with lowercase (indicates continuation)
-                elif literal_description and literal_description[0].islower():
+                # EXCEPT if it contains tag patterns (like "atp.EnumerationLiteralIndex")
+                elif (literal_description and
+                      literal_description[0].islower() and
+                      "atp.EnumerationLiteralIndex" not in literal_description and
+                      "xml.name" not in literal_description):
                     is_continuation = True
-                # Check if description starts with "Tags:" or is empty
-                # This indicates the current literal name is a CONTINUATION of the previous literal name
-                # (multi-line literal name scenario where multiple lines in the literal column belong to one literal)
-                elif (not literal_description or literal_description.startswith("Tags:")):
-                    # Append to previous literal's name (not description)
-                    # This handles literal names split across multiple lines
+            
+            if is_continuation and self._pending_literals:
+                if append_to_name:
+                    # Append to previous literal's name (for Pattern 2/5)
                     self._pending_literals[-1].name += literal_name
-                    # If this line has "Tags:", process them
-                    if literal_description.startswith("Tags:"):
-                        tags = self._extract_literal_tags(literal_description)
-                        index = None
-                        if "atp.EnumerationLiteralIndex" in tags:
-                            index = int(tags["atp.EnumerationLiteralIndex"])
-                        self._pending_literals[-1].index = index
-                        self._pending_literals[-1].tags = tags
-                    return False  # Don't continue with the rest of the logic
-                # Check for multi-line literal name scenario (enum3.png):
+                else:
+                    # Append to previous literal's description
+                    previous_literal = self._pending_literals[-1]  # Safe: guarded by self._pending_literals check above
+                    # Initialize description if None
+                    if previous_literal.description is None:
+                        previous_literal.description = ''
+                    # Add a space before appending if needed
+                    if not previous_literal.description.endswith(' '):
+                        previous_literal.description += ' '
+                    # Append the continuation text (include the "name" as it's part of the description)
+                    continuation_text = f"{literal_name} {literal_description}" if literal_description else literal_name
+                    previous_literal.description += continuation_text
+                return False  # Important: return False to prevent further processing
+            else:
+                # Distinguish between Pattern 3 (combined names) and Pattern 2/5 (separate literals)
+                previous_literal = self._pending_literals[-1] if self._pending_literals else None
+
+                # Check for multi-line literal name scenario (enum3.png from master):
                 # When consecutive lines have the same description and the literal name
-                # continues the previous name (e.g., "reportingIn", "ChronlogicalOrder", "OldestFirst")
-                elif (literal_description and self._pending_literals[-1].description and
-                      literal_description == self._pending_literals[-1].description):
+                # continues the previous name (e.g., "reportingIn", "ChronologicalOrder", "OldestFirst")
+                if (literal_description and previous_literal and previous_literal.description and
+                      literal_description == previous_literal.description):
                     # Append to previous literal's name (stacked names with same description)
                     self._pending_literals[-1].name += literal_name
                     # Don't create a new literal, continue processing
                     return False
+
+                # Check if this is Pattern 2/5 (separate literal):
+                # - Previous literal has tags and index (complete)
+                # - Current description is a real description (not just "Tags:")
+                # - Previous literal has index tag
+                # - Current name is NOT a small suffix word (which would be Pattern 3)
+                # - Names are different (or same base name for Pattern 2)
+                # - NOT a continuation line (append_to_name=False)
+                # OR:
+                # - Previous literal exists (with or without tags)
+                # - Current description starts with uppercase (indicates new literal)
+                # - Names are different
+                # - NOT a continuation line (append_to_name=False)
+                # - NOT a continuation word (in continuation_words set)
+                is_new_literal_by_tags = (
+                    previous_literal and
+                    previous_literal.tags and
+                    previous_literal.index is not None and
+                    literal_description and
+                    literal_description != "Tags:" and
+                    "atp.EnumerationLiteralIndex" in previous_literal.tags and
+                    not append_to_name and  # Not a continuation line (append_to_name=False)
+                    # Only treat as Pattern 2/5 if name is NOT a small suffix word (First, Last, etc.)
+                    (len(literal_name) > 5 or literal_name not in {"first", "last", "on", "in", "out", "up", "down"})
+                )
+                is_new_literal_by_uppercase = (
+                    previous_literal and
+                    not is_continuation and  # NOT a continuation line (important!)
+                    not append_to_name and  # Not a continuation line (append_to_name=False)
+                    literal_description and
+                    not literal_description.startswith("Tags:") and  # Not starting with "Tags:" (Pattern 3)
+                    literal_description[0].isupper() and  # Starts with uppercase
+                    literal_name != previous_literal.name and
+                    len(literal_name) > 2  # Not a small word like "of", "in"
+                )
+
+                if is_new_literal_by_tags or is_new_literal_by_uppercase:
+                    # This is Pattern 2/5 (separate literal) - current line is a NEW literal
+                    # For Pattern 2, names are the same (base name) but create separate literals
+                    # For Pattern 5, names are different but create separate literals
+                    # Create a new literal with current name and description
+                    tags = self._extract_literal_tags(literal_description)
+                    index = None
+                    if "atp.EnumerationLiteralIndex" in tags:
+                        index = int(tags["atp.EnumerationLiteralIndex"])
+
+                    # Clean description by removing all tag patterns
+                    clean_description = literal_description
+                    if "atp.EnumerationLiteralIndex" in tags:
+                        clean_description = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", clean_description)
+                    if "xml.name" in tags:
+                        clean_description = re.sub(r"\s*xml\.name=[^\s,]+", "", clean_description)
+                    clean_description = clean_description.strip()
+
+                    # Create new literal with current name and description
+                    literal = AutosarEnumLiteral(
+                        name=literal_name,
+                        description=clean_description if clean_description else None,
+                        index=index,
+                        tags=tags,
+                    )
+                    self._pending_literals.append(literal)
+                    return False  # Pattern 2/5 handled, don't continue
+                else:
+                    # Previous literal doesn't have complete tags yet OR description is only "Tags:" OR names match
+                    # This is Pattern 3 (combined names) or continuation
+                    # Append to previous literal's name (not description)
+                    # This handles literal names split across multiple lines in one cell
+                    if self._pending_literals:
+                        self._pending_literals[-1].name += literal_name
+                        # If this line has "Tags:", process them
+                        if literal_description.startswith("Tags:"):
+                            tags = self._extract_literal_tags(literal_description)
+                            index = None
+                            if "atp.EnumerationLiteralIndex" in tags:
+                                index = int(tags["atp.EnumerationLiteralIndex"])
+                            self._pending_literals[-1].index = index
+                            self._pending_literals[-1].tags = tags
+                        return False  # Pattern 3 handled, don't continue
+                    # If no previous literals, fall through to create new literal below
 
             if is_continuation and self._pending_literals:
                 # Append to previous literal's description

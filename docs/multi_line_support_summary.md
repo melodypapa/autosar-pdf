@@ -41,7 +41,26 @@ Result: Single attribute with complete name "isStructWithOptionalElement" and co
   - Lowercase first letter in description
 - Appends continuation text to previous literal's description
 - Supports multiple literals on separate lines sharing same description (enum3.png scenario)
+- Supports multi-line literal names with suffixes (Pattern 5)
 - Uses regex pattern `^([a-zA-Z_][a-zA-Z0-9_]*)(?:\s+(.*))?$` to match literals with or without description
+
+**Enumeration Literal Patterns**:
+1. **Pattern 1**: Standard single-line literals (name + description + tags)
+2. **Pattern 2**: Multi-line literal names with suffixes (separate literals with same base name, different suffixes)
+   - Example: `mostSignificantByteFirst` and `mostSignificantByteLast` from ByteOrderEnum
+3. **Pattern 3**: Multiple literal names in one cell (combined into one literal)
+   - Example: `reportingInChronlogicalOrderOldestFirst` from DiagnosticEventCombinationReportingBehaviorEnum
+4. **Pattern 4**: Multi-line tags (tags span multiple lines after description)
+   - Example: DiagnosticTypeOfDtcSupportedEnum with tags on separate lines
+5. **Pattern 5**: Multi-line literal names with different suffixes (separate literals)
+   - Example: `eventCombinationOnRetrieval` and `eventCombinationOnStorage` from DiagnosticEventCombinationBehaviorEnum
+
+**Pattern Detection Logic**:
+- **Pattern 2 vs Pattern 3**: Distinguishes between separate literals (Pattern 2/5) and combined names (Pattern 3) by:
+  - Checking if description contains "Tags:" (indicates new literal)
+  - Analyzing suffix variations (First, Last, OnRetrieval, OnStorage)
+  - Determining if names share same base name
+- **Pattern 5**: Creates separate literals when same base name has different suffixes
 
 **Example**:
 ```

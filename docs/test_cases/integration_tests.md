@@ -355,3 +355,49 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 - Test method: `test_diagnostic_event_combination_reporting_behavior_enum_swit_00007`
 - Test file: `tests/integration/test_pdf_integration.py`
 - Fixture: `diagnostic_extract_template_pdf` (session-scoped)
+
+
+#### SWIT_00008
+**Title**: Test Pattern 5 - Multi-Line Literal Names with Different Suffixes
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies the Pattern 5 scenario where two literals with the same base name but different suffixes (eventCombinationOnRetrieval and eventCombinationOnStorage) are parsed as separate literals, each with their own description and tags.
+
+**Precondition**: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+2. Find the DiagnosticEventCombinationBehaviorEnum enumeration in the extracted packages
+3. Verify enumeration has exactly two literals
+4. Verify both literal names are either "eventCombinationOnRetrieval" or "eventCombinationOnStorage"
+5. Verify both literals have different names (one is OnRetrieval, one is OnStorage)
+6. For each literal:
+   - Verify description is not None
+   - Verify index is not None
+   - Verify tags attribute exists
+   - Verify description contains expected content ("retrieval" or "storage")
+7. Verify descriptions are clean (no tag patterns like "atp.EnumerationLiteralIndex")
+
+**Expected Result**:
+- DiagnosticEventCombinationBehaviorEnum enumeration found
+- Exactly 2 literals present (separate literals with same base name, different suffixes)
+- Literal names: eventCombinationOnRetrieval and eventCombinationOnStorage (order may vary)
+- Both literals have proper structure (description, index, tags)
+- Descriptions are clean of tag patterns
+- Pattern 5 correctly handled (two separate literals with same base name, different suffixes)
+
+**Requirements Coverage**: SWR_PARSER_00015, SWR_PARSER_00031
+
+**Test Data**:
+- PDF: examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf
+- Enumeration: DiagnosticEventCombinationBehaviorEnum
+- Expected result: 2 literals total
+  - eventCombinationOnRetrieval (with description and tags, index=1)
+  - eventCombinationOnStorage (with description and tags, index=0)
+- Scenario: Two separate literals with same base name, different suffixes (Pattern 5)
+
+**Test Implementation**:
+- Test method: `test_diagnostic_event_combination_behavior_enum_swit_00008`
+- Test file: `tests/integration/test_pdf_integration.py`
+- Fixture: `diagnostic_extract_template_pdf` (session-scoped)

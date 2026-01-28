@@ -1176,8 +1176,32 @@ class TestMarkdownWriterFiles:
         assert "atpVariation" not in content
         assert "atpMixedString" not in content
 
+    def test_write_class_with_atp_proto_only(self, tmp_path: Path) -> None:
+        """SWUT_WRITER_00044: Test writing class with only atpPrototype type.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00006: Individual Class Markdown File Content
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_PROTO)
+        pkg.add_class(cls)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "MyClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        assert "## ATP Type\n\n" in content
+        assert "* atpPrototype\n" in content
+        # Should not show other ATP markers
+        assert "atpVariation" not in content
+        assert "atpMixedString" not in content
+        assert "atpMixed" not in content
+
     def test_write_class_without_atp_type_no_section(self, tmp_path: Path) -> None:
-        """SWUT_WRITER_00044: Test that class without ATP type doesn't show ATP section.
+        """SWUT_WRITER_00045: Test that class without ATP type doesn't show ATP section.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output

@@ -143,17 +143,25 @@ class TestPdfIntegration:
         assert sw_component_type.note == "Base class for AUTOSAR software components.", \
             f"Expected note 'Base class for AUTOSAR software components.', got '{sw_component_type.note}'"
 
-        # Verify base list
+        # Verify base list - split into regular bases and Atp interfaces
+        # Regular bases (non-Atp)
         expected_bases = [
-            "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier",
-            "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable",
-            "PackageableElement", "Referrable"
+            "ARElement", "ARObject", "CollectableElement", "Identifiable",
+            "MultilanguageReferrable", "PackageableElement", "Referrable"
         ]
         assert len(sw_component_type.bases) == len(expected_bases), \
             f"Expected {len(expected_bases)} base classes, got {len(sw_component_type.bases)}"
         for base in expected_bases:
             assert base in sw_component_type.bases, \
                 f"Expected '{base}' in bases, got {sw_component_type.bases}"
+
+        # Atp interfaces (bases starting with "Atp")
+        expected_implements = ["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType"]
+        assert len(sw_component_type.implements) == len(expected_implements), \
+            f"Expected {len(expected_implements)} interfaces, got {len(sw_component_type.implements)}"
+        for interface in expected_implements:
+            assert interface in sw_component_type.implements, \
+                f"Expected '{interface}' in implements, got {sw_component_type.implements}"
 
         # Verify attribute list
         # Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering
@@ -199,6 +207,7 @@ class TestPdfIntegration:
         print(f"  Package: {sw_component_type.package}")
         print(f"  Abstract: {sw_component_type.is_abstract}")
         print(f"  Bases ({len(sw_component_type.bases)}): {', '.join(sw_component_type.bases)}")
+        print(f"  Implements ({len(sw_component_type.implements)}): {', '.join(sw_component_type.implements)}")
         print(f"  Note: {sw_component_type.note}")
         print(f"  Attributes ({len(sw_component_type.attributes)}):")
         for attr_name, attr in sw_component_type.attributes.items():
@@ -402,10 +411,10 @@ class TestPdfIntegration:
             f"Expected package '{expected_package}', got '{atomic_sw_component_type.package}'"
 
         # Verify base list contains all expected base classes
+        # Regular bases (non-Atp) including SwComponentType
         expected_bases = [
-            "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier",
-            "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable",
-            "PackageableElement", "Referrable", "SwComponentType"
+            "ARElement", "ARObject", "CollectableElement", "Identifiable",
+            "MultilanguageReferrable", "PackageableElement", "Referrable", "SwComponentType"
         ]
         assert len(atomic_sw_component_type.bases) == len(expected_bases), \
             f"Expected {len(expected_bases)} base classes, got {len(atomic_sw_component_type.bases)}"
@@ -414,6 +423,14 @@ class TestPdfIntegration:
         for base in expected_bases:
             assert base in atomic_sw_component_type.bases, \
                 f"Expected '{base}' in bases, got {atomic_sw_component_type.bases}"
+
+        # Verify Atp interfaces are in implements field
+        expected_implements = ["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType"]
+        assert len(atomic_sw_component_type.implements) == len(expected_implements), \
+            f"Expected {len(expected_implements)} interfaces, got {len(atomic_sw_component_type.implements)}"
+        for interface in expected_implements:
+            assert interface in atomic_sw_component_type.implements, \
+                f"Expected '{interface}' in implements, got {atomic_sw_component_type.implements}"
 
         # Verify SwComponentType is in the base list (indicating AtomicSwComponentType inherits from SwComponentType)
         assert "SwComponentType" in atomic_sw_component_type.bases, \
@@ -424,17 +441,13 @@ class TestPdfIntegration:
         assert atomic_sw_component_type.bases[-1] == "SwComponentType", \
             f"Expected last base to be 'SwComponentType', got '{atomic_sw_component_type.bases[-1]}'"
 
-        # Verify the total number of base classes is 12
-        expected_base_count = 12
-        assert len(atomic_sw_component_type.bases) == expected_base_count, \
-            f"Expected {expected_base_count} base classes, got {len(atomic_sw_component_type.bases)}"
-
         # Print AtomicSwComponentType class information for verification
         print("\n=== AtomicSwComponentType class verified ===")
         print(f"  Name: {atomic_sw_component_type.name}")
         print(f"  Package: {atomic_sw_component_type.package}")
         print(f"  Abstract: {atomic_sw_component_type.is_abstract}")
         print(f"  Bases ({len(atomic_sw_component_type.bases)}): {', '.join(atomic_sw_component_type.bases)}")
+        print(f"  Implements ({len(atomic_sw_component_type.implements)}): {', '.join(atomic_sw_component_type.implements)}")
         print(f"  Last base: {atomic_sw_component_type.bases[-1]}")
         print("  SwComponentType in bases: YES")
         print("  Base corruption check: PASSED")
@@ -469,10 +482,10 @@ class TestPdfIntegration:
             f"Expected package '{expected_package}', got '{atomic_sw_component_type.package}'"
 
         # Verify base list contains all expected base classes
+        # Regular bases (non-Atp) including SwComponentType
         expected_bases = [
-            "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier",
-            "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable",
-            "PackageableElement", "Referrable", "SwComponentType"
+            "ARElement", "ARObject", "CollectableElement", "Identifiable",
+            "MultilanguageReferrable", "PackageableElement", "Referrable", "SwComponentType"
         ]
         assert len(atomic_sw_component_type.bases) == len(expected_bases), \
             f"Expected {len(expected_bases)} base classes, got {len(atomic_sw_component_type.bases)}"
@@ -480,14 +493,17 @@ class TestPdfIntegration:
             assert base in atomic_sw_component_type.bases, \
                 f"Expected '{base}' in bases, got {atomic_sw_component_type.bases}"
 
+        # Verify Atp interfaces are in implements field
+        expected_implements = ["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType"]
+        assert len(atomic_sw_component_type.implements) == len(expected_implements), \
+            f"Expected {len(expected_implements)} interfaces, got {len(atomic_sw_component_type.implements)}"
+        for interface in expected_implements:
+            assert interface in atomic_sw_component_type.implements, \
+                f"Expected '{interface}' in implements, got {atomic_sw_component_type.implements}"
+
         # Verify SwComponentType is in the base list (indicating AtomicSwComponentType inherits from SwComponentType)
         assert "SwComponentType" in atomic_sw_component_type.bases, \
             f"Expected 'SwComponentType' in bases, got {atomic_sw_component_type.bases}"
-
-        # Verify the total number of base classes is 12
-        expected_base_count = 12
-        assert len(atomic_sw_component_type.bases) == expected_base_count, \
-            f"Expected {expected_base_count} base classes, got {len(atomic_sw_component_type.bases)}"
 
         # Print AtomicSwComponentType class information for verification
         print("\n=== AtomicSwComponentType class verified ===")
@@ -495,6 +511,7 @@ class TestPdfIntegration:
         print(f"  Package: {atomic_sw_component_type.package}")
         print(f"  Abstract: {atomic_sw_component_type.is_abstract}")
         print(f"  Bases ({len(atomic_sw_component_type.bases)}): {', '.join(sorted(atomic_sw_component_type.bases))}")
+        print(f"  Implements ({len(atomic_sw_component_type.implements)}): {', '.join(sorted(atomic_sw_component_type.implements))}")
         print("  SwComponentType in bases: YES")
 
     def test_parse_real_autosar_pdf_and_verify_diagnostic_debounce_enum(

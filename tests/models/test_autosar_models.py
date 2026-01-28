@@ -793,6 +793,15 @@ class TestAutosarClass:
         cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_VARIATION)
         assert cls.atp_type == ATPType.ATP_VARIATION
 
+    def test_init_with_atp_proto(self) -> None:
+        """Test creating class with atpPrototype type.
+
+        Requirements:
+            SWR_MODEL_00001: AUTOSAR Class Representation
+        """
+        cls = AutosarClass(name="MyClass", package="M2::Test", is_abstract=False, atp_type=ATPType.ATP_PROTO)
+        assert cls.atp_type == ATPType.ATP_PROTO
+
     def test_repr_includes_atp_type(self) -> None:
         """Test __repr__ includes ATP type.
 

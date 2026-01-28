@@ -21,12 +21,14 @@ class ATPType(Enum):
         ATP_MIXED_STRING: The class has the <<atpMixedString>> marker
         ATP_VARIATION: The class has the <<atpVariation>> marker
         ATP_MIXED: The class has the <<atpMixed>> marker
+        ATP_PROTO: The class has the <<atpPrototype>> marker
     """
 
     NONE = "none"
     ATP_MIXED_STRING = "atpMixedString"
     ATP_VARIATION = "atpVariation"
     ATP_MIXED = "atpMixed"
+    ATP_PROTO = "atpPrototype"
 
 
 class AttributeKind(Enum):

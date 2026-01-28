@@ -372,6 +372,8 @@ class MarkdownWriter:
                 output.write("* atpMixedString\n")
             elif cls.atp_type == ATPType.ATP_MIXED:
                 output.write("* atpMixed\n")
+            elif cls.atp_type == ATPType.ATP_PROTO:
+                output.write("* atpPrototype\n")
             output.write("\n")
 
         # Write base classes if present
@@ -379,6 +381,13 @@ class MarkdownWriter:
             output.write("## Base Classes\n\n")
             for base in cls.bases:
                 output.write(f"* {base}\n")
+            output.write("\n")
+
+        # Write implements if present
+        if cls.implements:
+            output.write("## Implements\n\n")
+            for interface in cls.implements:
+                output.write(f"* {interface}\n")
             output.write("\n")
 
         # Write subclasses if present

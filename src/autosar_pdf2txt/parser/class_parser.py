@@ -432,7 +432,11 @@ class AutosarClassParser(AbstractTypeParser):
         for section_name, (items, _, _) in self._pending_class_lists.items():
             if items:
                 if section_name == "base_classes":
-                    current_model.bases.extend(items)
+                    # Split into regular bases and Atp interfaces
+                    regular_bases = [item for item in items if not item.startswith("Atp")]
+                    interfaces = [item for item in items if item.startswith("Atp")]
+                    current_model.bases.extend(regular_bases)
+                    current_model.implements.extend(interfaces)
                 elif section_name == "subclasses":
                     current_model.subclasses.extend(items)
                 elif section_name == "aggregated_by":

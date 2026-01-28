@@ -63,7 +63,7 @@ This two-phase approach ensures:
 
 **Description**: The system shall recognize and parse AUTOSAR class definitions from PDF text using the following patterns:
 - Class definitions: `Class <name> (abstract)`
-- Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
+- Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, `Class <name> <<atpMixed>>`, and `Class <name> <<atpPrototype>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>` (extracted from the Base column in class tables)
 - Subclasses: `Subclasses <class_list>` (extracted and stored in the subclasses attribute). The subclasses are the descendants of a class, meaning they inherit from this class. Therefore, a subclass cannot be the parent of this class, and it also cannot be in the bases list of this class's parent.
@@ -76,6 +76,7 @@ The system shall strip ATP marker patterns from the class name and determine the
 - Only <<atpMixedString>>: `ATPType.ATP_MIXED_STRING`
 - Only <<atpVariation>>: `ATPType.ATP_VARIATION`
 - Only <<atpMixed>>: `ATPType.ATP_MIXED`
+- Only <<atpPrototype>>: `ATPType.ATP_PROTO`
 
 When multiple ATP markers are detected on the same class, the system shall report a validation error indicating that a class cannot have multiple ATP markers simultaneously.
 
@@ -1004,3 +1005,68 @@ Result:
 - ByteOrderEnum has 3 literals (mostSignificantByteFirst, mostSignificantByteLast, opaque)
 - All literals have correct indices (0, 1, 2)
 ```
+---
+
+### SWR_PARSER_00033
+**Title**: ATP Interface Tracking
+
+**Maturity**: accept
+
+**Description**: The system shall identify and track ATP interface relationships separately from regular class inheritance. When parsing base classes, the system shall:
+
+1. **Interface Detection**: Identify base classes whose names start with "Atp" as interfaces
+2. **Field Separation**: Move Atp-prefixed base classes to a dedicated `implements` field
+3. **Regular Bases Preservation**: Keep non-Atp base classes in the `bases` field
+4. **Display Separation**: Display "Implements" and "Base Classes" as separate sections in markdown output
+
+**Interface Identification Rules**:
+- Base classes starting with "Atp" (case-sensitive) are identified as interfaces
+- Common examples: AtpBlueprint, AtpBlueprintable, AtpClassifier, AtpType, AtpPrototype
+- The "Atp" prefix indicates AUTOSAR Tool Platform interface relationships
+- Interfaces represent a different kind of relationship than class inheritance
+
+**Data Model Changes**:
+- `AutosarClass.implements`: List[str] - Names of ATP interfaces this class implements
+- `AutosarClass.bases`: List[str] - Names of regular parent classes (non-Atp)
+
+**Parsing Behavior**:
+When processing the "Base" column from class tables:
+```python
+# Split base classes into regular bases and Atp interfaces
+for base_class in base_classes:
+    if base_class.startswith("Atp"):
+        class_def.implements.append(base_class)
+    else:
+        class_def.bases.append(base_class)
+```
+
+**Markdown Output**:
+Classes with `implements` entries shall display:
+```markdown
+## Implements
+
+* AtpBlueprint
+* AtpType
+
+## Base Classes
+
+* ARElement
+* ARObject
+```
+
+**Rationale**:
+- ATP classes represent interface implementations, not class inheritance
+- Separating interfaces from bases improves model accuracy
+- Makes the distinction between inheritance and interface implementation explicit
+- Supports better traceability and understanding of AUTOSAR metamodel relationships
+
+**Implementation Notes**:
+- Parent resolution considers only `bases`, not `implements`
+- The `implements` field is displayed after "Base Classes" and before "Subclasses"
+- Classes can have multiple Atp interfaces and multiple regular bases
+- A class with only Atp bases will have empty `bases` and populated `implements`
+- ATP marker types (atpMixedString, etc.) remain separate from the `implements` field
+
+**Requirements Coverage**:
+- SWR_MODEL_00001: AUTOSAR Class Representation (implements field added)
+- SWR_WRITER_00006: Individual Class Markdown File Content (Implements section)

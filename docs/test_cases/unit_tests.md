@@ -4996,3 +4996,265 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_MODEL_00095
+**Title**: Test AutosarClass Initialization With Implements Field
+
+**Maturity**: accept
+
+**Description**: Verify that AutosarClass can be initialized with an implements field to track ATP interface relationships.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with:
+   - name="SwComponentType"
+   - package="M2::AUTOSARTemplates::SWComponentTemplate::Components"
+   - is_abstract=True
+   - implements=["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType"]
+2. Verify implements attribute is set correctly
+3. Verify len(implements) == 4
+4. Verify all interface names are present
+5. Create another AutosarClass without implements parameter
+6. Verify implements defaults to empty list []
+
+**Expected Result**:
+- Implements field is properly initialized
+- Defaults to empty list when not provided
+- Maintains list of interface names separately from bases
+
+**Requirements Coverage**: SWR_PARSER_00033
+
+---
+
+#### SWUT_MODEL_00096
+**Title**: Test AutosarClass String Representation Includes Implements Count
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ method includes implements count in the string representation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClass with:
+   - name="TestClass"
+   - package="M2::Test"
+   - is_abstract=False
+   - implements=["AtpBlueprint", "AtpType"]
+2. Call repr(cls)
+3. Verify result contains "implements=2"
+4. Create an AutosarClass with empty implements
+5. Call repr(cls)
+6. Verify result contains "implements=0"
+
+**Expected Result**: String representation includes implements count
+
+**Requirements Coverage**: SWR_MODEL_00003
+
+---
+
+#### SWUT_PARSER_00096
+**Title**: Test Base Class Splitting Into Bases And Implements
+
+**Maturity**: accept
+
+**Description**: Verify that when parsing base classes, those starting with "Atp" are moved to the implements field while others remain in bases.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClassParser instance
+2. Create a test AutosarClass with empty bases and implements
+3. Set up pending base_classes list with mixed Atp and non-Atp bases:
+   - ["ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "Referrable"]
+4. Call _finalize_pending_class_lists with the test class
+5. Verify bases contains only non-Atp classes: ["ARElement", "ARObject", "Referrable"]
+6. Verify implements contains only Atp classes: ["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType"]
+7. Verify len(bases) == 3
+8. Verify len(implements) == 4
+
+**Expected Result**:
+- Base classes are correctly split based on "Atp" prefix
+- Regular bases remain in bases field
+- Atp interfaces are moved to implements field
+
+**Requirements Coverage**: SWR_PARSER_00033
+
+---
+
+#### SWUT_PARSER_00097
+**Title**: Test Base Class Splitting With Only Atp Interfaces
+
+**Maturity**: accept
+
+**Description**: Verify that when all base classes start with "Atp", the bases field is empty and all are in implements.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClassParser instance
+2. Create a test AutosarClass with empty bases and implements
+3. Set up pending base_classes list with only Atp bases:
+   - ["AtpBlueprint", "AtpType"]
+4. Call _finalize_pending_class_lists with the test class
+5. Verify bases is empty []
+6. Verify implements contains: ["AtpBlueprint", "AtpType"]
+7. Verify len(bases) == 0
+8. Verify len(implements) == 2
+
+**Expected Result**:
+- All Atp bases moved to implements
+- bases field is empty when no regular bases present
+
+**Requirements Coverage**: SWR_PARSER_00033
+
+---
+
+#### SWUT_PARSER_00098
+**Title**: Test Base Class Splitting With Only Regular Bases
+
+**Maturity**: accept
+
+**Description**: Verify that when no base classes start with "Atp", the implements field is empty and all are in bases.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClassParser instance
+2. Create a test AutosarClass with empty bases and implements
+3. Set up pending base_classes list with only regular bases:
+   - ["ARElement", "ARObject"]
+4. Call _finalize_pending_class_lists with the test class
+5. Verify bases contains: ["ARElement", "ARObject"]
+6. Verify implements is empty []
+7. Verify len(bases) == 2
+8. Verify len(implements) == 0
+
+**Expected Result**:
+- All regular bases remain in bases field
+- implements field is empty when no Atp bases present
+
+**Requirements Coverage**: SWR_PARSER_00033
+
+---
+
+#### SWUT_WRITER_00056
+**Title**: Test Writing Class With Implements Section
+
+**Maturity**: accept
+
+**Description**: Verify that classes with implements entries display an "Implements" section in markdown output.
+
+**Precondition**: A MarkdownWriter instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarClass with:
+   - name="SwComponentType"
+   - package="M2::Test"
+   - is_abstract=True
+   - implements=["AtpBlueprint", "AtpType"]
+   - bases=["ARElement", "ARObject"]
+3. Add class to package
+4. Create output stream (StringIO)
+5. Call _write_class_details with the class
+6. Verify output contains "## Implements\n\n"
+7. Verify output contains "* AtpBlueprint\n"
+8. Verify output contains "* AtpType\n"
+9. Verify output contains "## Base Classes\n\n"
+10. Verify "Implements" section appears before "Base Classes" section
+
+**Expected Result**:
+- "Implements" section is displayed
+- All implemented interfaces are listed
+- Section appears in correct order (after Base Classes)
+
+**Requirements Coverage**: SWR_PARSER_00033, SWR_WRITER_00006
+
+---
+
+#### SWUT_PARSER_00099
+**Title**: Test ATP Prototype Marker Detection
+
+**Maturity**: accept
+
+**Description**: Verify that the <<atpPrototype>> marker is correctly detected and parsed from class names.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClassParser instance
+2. Prepare class name with <<atpPrototype>> marker: "MyClass <<atpPrototype>>"
+3. Call _validate_atp_markers with the raw class name
+4. Verify ATPType.ATP_PROTO is returned
+5. Verify clean class name is "MyClass" (marker removed)
+6. Prepare class name with only <<atpPrototype>>: "Test <<atpPrototype>>"
+7. Call _validate_atp_markers
+8. Verify ATPType.ATP_PROTO is returned
+9. Verify clean name is "Test"
+
+**Expected Result**:
+- <<atpPrototype>> marker is correctly identified
+- Marker is stripped from class name
+- ATPType.ATP_PROTO is returned
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_PARSER_00100
+**Title**: Test Multiple ATP Markers Including Prototype
+
+**Maturity**: accept
+
+**Description**: Verify that validation error is raised when multiple ATP markers including <<atpPrototype>> are detected.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarClassParser instance
+2. Prepare class name with two markers: "MyClass <<atpPrototype>> <<atpVariation>>"
+3. Call _validate_atp_markers with the raw class name
+4. Verify ValueError is raised
+5. Verify error message mentions "Multiple ATP markers"
+6. Prepare class name: "Test <<atpMixed>> <<atpPrototype>>"
+7. Verify ValueError is raised
+
+**Expected Result**:
+- Multiple ATP markers detection works with atpPrototype
+- Clear error message is provided
+
+**Requirements Coverage**: SWR_PARSER_00004
+
+---
+
+#### SWUT_WRITER_00057
+**Title**: Test Writing Class With AtpPrototype ATP Type
+
+**Maturity**: accept
+
+**Description**: Verify that a class with <<atpPrototype>> ATP marker shows correct ATP section in markdown output.
+
+**Precondition**: A MarkdownWriter instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarClass with:
+   - name="PrototypeClass"
+   - package="M2::Test"
+   - is_abstract=False
+   - atp_type=ATPType.ATP_PROTO
+3. Add class to package
+4. Create output stream (StringIO)
+5. Call _write_class_details with the class
+6. Verify output contains "## ATP Type\n\n"
+7. Verify output contains "* atpPrototype\n"
+8. Verify output does not contain other ATP markers
+
+**Expected Result**:
+- ATP section displays "atpPrototype"
+- No other ATP markers are shown
+
+**Requirements Coverage**: SWR_PARSER_00004, SWR_WRITER_00006
+
+---

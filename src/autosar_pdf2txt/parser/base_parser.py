@@ -66,6 +66,7 @@ class AbstractTypeParser(ABC):
     ATP_MIXED_STRING_PATTERN = re.compile(r"<<atpMixedString>>")
     ATP_VARIATION_PATTERN = re.compile(r"<<atpVariation>>")
     ATP_MIXED_PATTERN = re.compile(r"<<atpMixed>>")
+    ATP_PROTOTYPE_PATTERN = re.compile(r"<<atpPrototype>>")
 
     # Class constants for filtering and continuation detection
     # SWR_PARSER_00012: Multi-Line Attribute Handling
@@ -202,8 +203,9 @@ class AbstractTypeParser(ABC):
         atp_mixed_string = self.ATP_MIXED_STRING_PATTERN.search(raw_class_name)
         atp_variation = self.ATP_VARIATION_PATTERN.search(raw_class_name)
         atp_mixed = self.ATP_MIXED_PATTERN.search(raw_class_name)
+        atp_prototype = self.ATP_PROTOTYPE_PATTERN.search(raw_class_name)
 
-        atp_markers = [atp_mixed_string, atp_variation, atp_mixed]
+        atp_markers = [atp_mixed_string, atp_variation, atp_mixed, atp_prototype]
         found_markers = [m for m in atp_markers if m is not None]
 
         if len(found_markers) > 1:
@@ -218,6 +220,8 @@ class AbstractTypeParser(ABC):
             atp_type = ATPType.ATP_VARIATION
         elif atp_mixed:
             atp_type = ATPType.ATP_MIXED
+        elif atp_prototype:
+            atp_type = ATPType.ATP_PROTO
         else:
             atp_type = ATPType.NONE
 

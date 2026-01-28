@@ -1070,3 +1070,101 @@ Classes with `implements` entries shall display:
 **Requirements Coverage**:
 - SWR_MODEL_00001: AUTOSAR Class Representation (implements field added)
 - SWR_WRITER_00006: Individual Class Markdown File Content (Implements section)
+
+---
+
+### SWR_PARSER_00034
+**Title**: ATP Class Parent Resolution from Implements
+
+**Maturity**: accept
+
+**Description**: For ATP classes, the system shall resolve parent references from the `implements` field instead of the `bases` field. Non-ATP classes shall continue using the existing parent resolution from `bases`.
+
+The system shall:
+1. **ATP Parent Resolution**: For classes with non-empty `implements` field and no existing parent:
+   - Filter `implements` to only ATP classes (starting with "Atp") or ARObject
+   - Exclude non-ATP interfaces from parent consideration
+   - Use ancestry analysis to find the direct parent from filtered candidates
+   - Set the `parent` field if a valid parent is found
+
+2. **Non-ATP Classes**: Continue using existing parent resolution from `bases` field
+
+3. **ATP Ancestry Cache**: Build separate ancestry cache for ATP classes from `implements` field
+   - Only include ATP classes and ARObject in ancestry relationships
+   - Exclude ARObject from ancestors (treat as root, not ancestor)
+
+4. **Parent Selection Algorithm**: Use ancestry-based selection similar to regular parent resolution:
+   - Filter out candidates that are ancestors of other candidates
+   - The direct parent is the candidate that is NOT an ancestor of any other candidate
+   - If multiple candidates exist, choose the last one (backward compatibility)
+
+**ATP Class Hierarchy Rules**:
+- ATP classes track their hierarchy separately from regular classes
+- Parent is determined from `implements` field (not `bases`)
+- Only ATP classes (or ARObject) are considered as potential parents
+- ARObject is the parent of the first/root ATP class
+- ATP classes cannot have non-ATP classes as parents
+
+**Example Hierarchy**:
+```
+ARObject (root)
+└── AtpFeature (parent: ARObject, implements: [ARObject])
+    └── AtpPrototype (parent: AtpFeature, implements: [AtpFeature, Identifiable])
+        └── AtpBlueprint (parent: AtpPrototype, implements: [AtpPrototype])
+```
+
+**Example Scenarios**:
+
+**Scenario 1: AtpPrototype with mixed implements**
+```python
+cls: AtpPrototype
+implements: [AtpFeature, Identifiable, Referrable]
+bases: [ARObject]
+parent: None (before)
+
+Resolution:
+- Filter to ATP: [AtpFeature]
+- Set parent: AtpFeature
+```
+
+**Scenario 2: AtpFeature (root ATP class)**
+```python
+cls: AtpFeature
+implements: [ARObject, SomeOtherClass]
+bases: []
+parent: None (before)
+
+Resolution:
+- Filter to ATP/ARObject: [ARObject]
+- Set parent: ARObject
+```
+
+**Scenario 3: Non-ATP class**
+```python
+cls: RegularClass
+implements: []
+bases: [ParentClass]
+parent: None (before)
+
+Resolution:
+- Empty implements, skip ATP parent resolution
+- Existing parent resolution from bases will handle it
+```
+
+**Rationale**:
+- ATP classes have their own separate hierarchy from regular classes
+- The `implements` field tracks ATP interface relationships
+- Parent must be an ATP class (or ARObject for the root ATP class)
+- Non-ATP interfaces in `implements` should be ignored for parent resolution
+- Maintains clean separation between ATP hierarchy and regular class hierarchy
+
+**Implementation**:
+- Add `_build_atp_ancestry_cache()` method to build ATP ancestry from `implements`
+- Add `_resolve_atp_parent_references()` method to resolve ATP parents
+- Call ATP parent resolution after regular parent resolution in `_resolve_parent_references()`
+- Only process classes with `implements` and no existing `parent`
+- Re-populate children lists after ATP parent resolution
+
+**Requirements Coverage**:
+- SWR_PARSER_00017: AUTOSAR Class Parent Resolution (extended for ATP classes)
+- SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)

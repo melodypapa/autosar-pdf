@@ -44,13 +44,13 @@ def generic_structure_template_pdf(parser: PdfParser) -> AutosarDoc:
     Returns:
         AutosarDoc containing parsed packages and root classes.
 
-    Skips:
-        If the PDF file is not found.
+    Raises:
+        FileNotFoundError: If the PDF file is not found.
     """
     pdf_path = "examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf"
 
     if not os.path.exists(pdf_path):
-        pytest.skip(f"PDF file not found: {pdf_path}")
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
     return parser.parse_pdf(pdf_path)
 
@@ -68,30 +68,30 @@ def generic_structure_sw_component_type(generic_structure_template_pdf: AutosarD
     Returns:
         The SwComponentType AutosarClass.
 
-    Skips:
-        If SwComponentType class is not found.
+    Raises:
+        ValueError: If SwComponentType class is not found.
     """
     # Find M2 package (root metamodel package)
     m2 = generic_structure_template_pdf.get_package("M2")
     if not m2:
-        pytest.skip("M2 package not found")
+        raise ValueError("M2 package not found")
 
     # Navigate to AUTOSARTemplates -> SWComponentTemplate -> Components
     autosar_templates = m2.get_subpackage("AUTOSARTemplates")
     if not autosar_templates:
-        pytest.skip("AUTOSARTemplates package not found")
+        raise ValueError("AUTOSARTemplates package not found")
 
     sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
     if not sw_component_template:
-        pytest.skip("SWComponentTemplate package not found")
+        raise ValueError("SWComponentTemplate package not found")
 
     components = sw_component_template.get_subpackage("Components")
     if not components:
-        pytest.skip("Components package not found")
+        raise ValueError("Components package not found")
 
     sw_component_type = components.get_class("SwComponentType")
     if not sw_component_type:
-        pytest.skip("SwComponentType class not found")
+        raise ValueError("SwComponentType class not found")
 
     return sw_component_type
 
@@ -109,34 +109,34 @@ def generic_structure_arelement(generic_structure_template_pdf: AutosarDoc) -> A
     Returns:
         The ARElement AutosarClass.
 
-    Skips:
-        If ARElement class is not found.
+    Raises:
+        ValueError: If ARElement class is not found.
     """
     # Find M2 package (root metamodel package)
     m2 = generic_structure_template_pdf.get_package("M2")
     if not m2:
-        pytest.skip("M2 package not found")
+        raise ValueError("M2 package not found")
 
     # Navigate to AUTOSARTemplates -> GenericStructure -> GeneralTemplateClasses -> ARPackage
     autosar_templates = m2.get_subpackage("AUTOSARTemplates")
     if not autosar_templates:
-        pytest.skip("AUTOSARTemplates package not found")
+        raise ValueError("AUTOSARTemplates package not found")
 
     generic_structure = autosar_templates.get_subpackage("GenericStructure")
     if not generic_structure:
-        pytest.skip("GenericStructure package not found")
+        raise ValueError("GenericStructure package not found")
 
     general_template_classes = generic_structure.get_subpackage("GeneralTemplateClasses")
     if not general_template_classes:
-        pytest.skip("GeneralTemplateClasses package not found")
+        raise ValueError("GeneralTemplateClasses package not found")
 
     ar_package = general_template_classes.get_subpackage("ARPackage")
     if not ar_package:
-        pytest.skip("ARPackage package not found")
+        raise ValueError("ARPackage package not found")
 
     arelement = ar_package.get_class("ARElement")
     if not arelement:
-        pytest.skip("ARElement class not found")
+        raise ValueError("ARElement class not found")
 
     return arelement
 
@@ -153,13 +153,13 @@ def timing_extensions_pdf(parser: PdfParser) -> AutosarDoc:
     Returns:
         AutosarDoc containing parsed packages and root classes.
 
-    Skips:
-        If the PDF file is not found.
+    Raises:
+        FileNotFoundError: If the PDF file is not found.
     """
     pdf_path = "examples/pdf/AUTOSAR_CP_TPS_TimingExtensions.pdf"
 
     if not os.path.exists(pdf_path):
-        pytest.skip(f"PDF file not found: {pdf_path}")
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
     return parser.parse_pdf(pdf_path)
 
@@ -176,13 +176,13 @@ def bsw_module_description_pdf(parser: PdfParser) -> AutosarDoc:
     Returns:
         AutosarDoc containing parsed packages and root classes.
 
-    Skips:
-        If the PDF file is not found.
+    Raises:
+        FileNotFoundError: If the PDF file is not found.
     """
     pdf_path = "examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf"
 
     if not os.path.exists(pdf_path):
-        pytest.skip(f"PDF file not found: {pdf_path}")
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
     return parser.parse_pdf(pdf_path)
 
@@ -200,30 +200,30 @@ def bsw_module_description_atomic_sw_component_type(bsw_module_description_pdf: 
     Returns:
         The AtomicSwComponentType AutosarClass.
 
-    Skips:
-        If AtomicSwComponentType class is not found.
+    Raises:
+        ValueError: If AtomicSwComponentType class is not found.
     """
     # Find M2 package (root metamodel package)
     m2 = bsw_module_description_pdf.get_package("M2")
     if not m2:
-        pytest.skip("M2 package not found")
+        raise ValueError("M2 package not found")
 
     # Navigate to AUTOSARTemplates -> SWComponentTemplate -> Components
     autosar_templates = m2.get_subpackage("AUTOSARTemplates")
     if not autosar_templates:
-        pytest.skip("AUTOSARTemplates package not found")
+        raise ValueError("AUTOSARTemplates package not found")
 
     sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
     if not sw_component_template:
-        pytest.skip("SWComponentTemplate package not found")
+        raise ValueError("SWComponentTemplate package not found")
 
     components = sw_component_template.get_subpackage("Components")
     if not components:
-        pytest.skip("Components package not found")
+        raise ValueError("Components package not found")
 
     atomic_sw_component_type = components.get_class("AtomicSwComponentType")
     if not atomic_sw_component_type:
-        pytest.skip("AtomicSwComponentType class not found")
+        raise ValueError("AtomicSwComponentType class not found")
 
     return atomic_sw_component_type
 
@@ -241,30 +241,30 @@ def timing_extensions_atomic_sw_component_type(timing_extensions_pdf: AutosarDoc
     Returns:
         The AtomicSwComponentType AutosarClass.
 
-    Skips:
-        If AtomicSwComponentType class is not found.
+    Raises:
+        ValueError: If AtomicSwComponentType class is not found.
     """
     # Find M2 package (root metamodel package)
     m2 = timing_extensions_pdf.get_package("M2")
     if not m2:
-        pytest.skip("M2 package not found")
+        raise ValueError("M2 package not found")
 
     # Navigate to AUTOSARTemplates -> SWComponentTemplate -> Components
     autosar_templates = m2.get_subpackage("AUTOSARTemplates")
     if not autosar_templates:
-        pytest.skip("AUTOSARTemplates package not found")
+        raise ValueError("AUTOSARTemplates package not found")
 
     sw_component_template = autosar_templates.get_subpackage("SWComponentTemplate")
     if not sw_component_template:
-        pytest.skip("SWComponentTemplate package not found")
+        raise ValueError("SWComponentTemplate package not found")
 
     components = sw_component_template.get_subpackage("Components")
     if not components:
-        pytest.skip("Components package not found")
+        raise ValueError("Components package not found")
 
     atomic_sw_component_type = components.get_class("AtomicSwComponentType")
     if not atomic_sw_component_type:
-        pytest.skip("AtomicSwComponentType class not found")
+        raise ValueError("AtomicSwComponentType class not found")
 
     return atomic_sw_component_type
 
@@ -319,34 +319,34 @@ def generic_structure_diagnostic_debounce_enum(
     Returns:
         The DiagnosticDebounceBehaviorEnum AutosarEnumeration.
 
-    Skips:
-        If DiagnosticDebounceBehaviorEnum is not found.
+    Raises:
+        ValueError: If DiagnosticDebounceBehaviorEnum is not found.
     """
     # Find M2 package (root metamodel package)
     m2 = generic_structure_template_pdf.get_package("M2")
     if not m2:
-        pytest.skip("M2 package not found")
+        raise ValueError("M2 package not found")
 
     # Navigate to AUTOSARTemplates -> DiagnosticExtract -> Dem -> DiagnosticDebouncingAlgorithm
     autosar_templates = m2.get_subpackage("AUTOSARTemplates")
     if not autosar_templates:
-        pytest.skip("AUTOSARTemplates package not found")
+        raise ValueError("AUTOSARTemplates package not found")
 
     diagnostic_extract = autosar_templates.get_subpackage("DiagnosticExtract")
     if not diagnostic_extract:
-        pytest.skip("DiagnosticExtract package not found")
+        raise ValueError("DiagnosticExtract package not found")
 
     dem = diagnostic_extract.get_subpackage("Dem")
     if not dem:
-        pytest.skip("Dem package not found")
+        raise ValueError("Dem package not found")
 
     diagnostic_debouncing_algorithm = dem.get_subpackage("DiagnosticDebouncingAlgorithm")
     if not diagnostic_debouncing_algorithm:
-        pytest.skip("DiagnosticDebouncingAlgorithm package not found")
+        raise ValueError("DiagnosticDebouncingAlgorithm package not found")
 
     debounce_enum = diagnostic_debouncing_algorithm.get_enumeration("DiagnosticDebounceBehaviorEnum")
     if not debounce_enum:
-        pytest.skip("DiagnosticDebounceBehaviorEnum not found")
+        raise ValueError("DiagnosticDebounceBehaviorEnum not found")
 
     return debounce_enum
 
@@ -365,13 +365,13 @@ def diagnostic_extract_template_pdf(parser: PdfParser) -> AutosarDoc:
     Returns:
         AutosarDoc containing parsed packages and root classes.
 
-    Skips:
-        If the PDF file is not found.
+    Raises:
+        FileNotFoundError: If the PDF file is not found.
     """
     pdf_path = "examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf"
 
     if not os.path.exists(pdf_path):
-        pytest.skip(f"PDF file not found: {pdf_path}")
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
     doc = parser.parse_pdf(pdf_path)
 

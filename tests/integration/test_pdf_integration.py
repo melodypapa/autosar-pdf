@@ -31,18 +31,25 @@ def find_enumeration_by_name(doc: AutosarDoc, name: str) -> Optional[AutosarEnum
     Returns:
         The AutosarEnumeration if found, None otherwise.
     """
-    for pkg in doc.packages:
-        enum = pkg.get_enumeration(name)
-        if enum:
-            return enum
-    return None
+    def search_packages(packages) -> Optional[AutosarEnumeration]:
+        for pkg in packages:
+            enum = pkg.get_enumeration(name)
+            if enum:
+                return enum
+            # Recursively search subpackages
+            result = search_packages(pkg.subpackages)
+            if result:
+                return result
+        return None
+
+    return search_packages(doc.packages)
 
 
 class TestPdfIntegration:
     """Integration tests using real AUTOSAR PDF files.
 
     These tests require actual PDF files to be present in the examples/pdf directory.
-    Tests are skipped if files are not available (for CI/CD environments).
+    Tests will fail with errors if files are not available or classes cannot be found.
     """
 
     def test_parse_real_autosar_pdf_and_verify_autosar_and_sw_component_type(
@@ -325,7 +332,7 @@ class TestPdfIntegration:
         class_list_file = "tests/integration/timing_extensions_class_list.txt"
 
         if not os.path.exists(class_list_file):
-            pytest.skip(f"Class list file not found: {class_list_file}")
+            raise FileNotFoundError(f"Class list file not found: {class_list_file}")
 
         expected_classes = set()
         with open(class_list_file, 'r') as f:
@@ -626,7 +633,7 @@ class TestPdfIntegration:
             "DiagnosticTypeOfDtcSupportedEnum"
         )
         if enum is None:
-            pytest.skip("DiagnosticTypeOfDtcSupportedEnum not found in PDF - may not exist or be in different location")
+            raise ValueError("DiagnosticTypeOfDtcSupportedEnum not found in PDF")
 
         # SWIT_00005 Step 1: Verify enumeration has literals
         assert len(enum.enumeration_literals) > 0, "Enumeration must have literals"
@@ -698,7 +705,7 @@ class TestPdfIntegration:
             "ByteOrderEnum"
         )
         if enum is None:
-            pytest.skip("ByteOrderEnum not found in PDF - may not exist or be in different location")
+            raise ValueError("ByteOrderEnum not found in PDF")
 
         # SWIT_00006 Step 1: Verify enumeration has literals
         assert len(enum.enumeration_literals) > 0, "Enumeration must have literals"
@@ -769,7 +776,7 @@ class TestPdfIntegration:
             "DiagnosticEventCombinationReportingBehaviorEnum"
         )
         if enum is None:
-            pytest.skip("DiagnosticEventCombinationReportingBehaviorEnum not found in PDF")
+            raise ValueError("DiagnosticEventCombinationReportingBehaviorEnum not found in PDF")
 
         # Step 1: Verify enumeration has exactly one literal
         assert len(enum.enumeration_literals) == 1, \

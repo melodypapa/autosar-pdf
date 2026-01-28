@@ -4851,6 +4851,136 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00079
+**Title**: Test ATP Parent Resolution from Implements
+
+**Maturity**: accept
+
+**Description**: Verify that ATP classes (classes starting with "Atp") get their parent resolved from the `implements` field instead of the `bases` field.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create an AutosarPackage named "M2::AUTOSAR"
+3. Create ATP classes:
+   - ARObject with bases=[]
+   - AtpFeature with bases=[], implements=["ARObject"]
+   - AtpPrototype with bases=["ARObject"], implements=["AtpFeature", "Identifiable"]
+4. Add all classes to the package
+5. Call _resolve_parent_references with the package
+6. Verify ARObject.parent is None
+7. Verify AtpFeature.parent is "ARObject"
+8. Verify AtpPrototype.parent is "AtpFeature" (from implements, not from bases)
+
+**Expected Result**:
+- ARObject has no parent (root class)
+- AtpFeature has ARObject as parent
+- AtpPrototype has AtpFeature as parent (from implements field, ignoring bases)
+- ATP classes get parent from implements field
+
+**Requirements Coverage**: SWR_PARSER_00034
+
+---
+
+#### SWUT_PARSER_00080
+**Title**: Test ATP Parent Ignores Non-ATP in Implements
+
+**Maturity**: accept
+
+**Description**: Verify that non-ATP interfaces in the implements field are ignored during ATP parent resolution.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create an AutosarPackage named "M2::AUTOSAR"
+3. Create classes:
+   - ARObject with bases=[]
+   - AtpFeature with bases=[], implements=["ARObject"]
+   - AtpPrototype with bases=["ARObject"], implements=["AtpFeature", "Identifiable", "Referrable"]
+   - Identifiable with bases=["ARObject"]
+   - Referrable with bases=["ARObject", "Identifiable"]
+4. Add all classes to the package
+5. Call _resolve_parent_references with the package
+6. Verify AtpPrototype.parent is "AtpFeature" (only ATP class considered)
+7. Verify Referrable.parent is "Identifiable" (regular parent resolution from bases)
+
+**Expected Result**:
+- AtpPrototype parent is AtpFeature (non-ATP interfaces ignored)
+- Referrable parent is Identifiable (regular classes use bases)
+- Only ATP classes and ARObject are considered for ATP parent resolution
+
+**Requirements Coverage**: SWR_PARSER_00034
+
+---
+
+#### SWUT_PARSER_00081
+**Title**: Test ATP Parent Ancestry Based Selection
+
+**Maturity**: accept
+
+**Description**: Verify that ATP parent selection uses ancestry-based analysis to find the most specific parent.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create an AutosarPackage named "M2::AUTOSAR"
+3. Create ATP hierarchy:
+   - ARObject with bases=[]
+   - AtpFeature with implements=["ARObject"]
+   - AtpPrototype with implements=["AtpFeature"]
+   - AtpBlueprint with implements=["AtpFeature", "AtpPrototype"]
+4. Add all classes to the package
+5. Call _resolve_parent_references with the package
+6. Verify ARObject.parent is None
+7. Verify AtpFeature.parent is "ARObject"
+8. Verify AtpPrototype.parent is "AtpFeature"
+9. Verify AtpBlueprint.parent is "AtpPrototype" (most specific, not ancestor)
+
+**Expected Result**:
+- AtpFeature parent is ARObject
+- AtpPrototype parent is AtpFeature
+- AtpBlueprint parent is AtpPrototype (AtpFeature is ancestor, so AtpPrototype selected)
+- Ancestry-based selection correctly identifies direct parent
+
+**Requirements Coverage**: SWR_PARSER_00034
+
+---
+
+#### SWUT_PARSER_00082
+**Title**: Test ATP Parent No Existing Parent
+
+**Maturity**: accept
+
+**Description**: Verify that ATP parent resolution only applies to ATP classes (names starting with "Atp"), not to other classes with implements.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a PdfParser instance
+2. Create an AutosarPackage named "M2::AUTOSAR"
+3. Create classes:
+   - ARObject with bases=[]
+   - AtpFeature with bases=[], implements=["ARObject"]
+   - RegularClass with bases=["ARObject"], implements=[]
+   - MixedClass with bases=["RegularClass"], implements=["AtpFeature"]
+4. Add all classes to the package
+5. Call _resolve_parent_references with the package
+6. Verify MixedClass.parent is "RegularClass" (from bases, not implements)
+7. Verify AtpFeature.parent is "ARObject" (from implements)
+
+**Expected Result**:
+- AtpFeature gets parent from implements (ATP class)
+- MixedClass gets parent from bases (non-ATP class, even with implements)
+- ATP parent resolution only applies to classes whose names start with "Atp"
+- Regular parent resolution continues to work for non-ATP classes
+
+**Requirements Coverage**: SWR_PARSER_00034
+
+---
+
 #### SWUT_MODEL_00089
 **Title**: Test AutosarEnumLiteral With Tags Initialization
 

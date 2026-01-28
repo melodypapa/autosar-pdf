@@ -326,7 +326,17 @@ class AutosarEnumerationParser(AbstractTypeParser):
             else:
                 # Distinguish between Pattern 3 (combined names) and Pattern 2/5 (separate literals)
                 previous_literal = self._pending_literals[-1] if self._pending_literals else None
-                
+
+                # Check for multi-line literal name scenario (enum3.png from master):
+                # When consecutive lines have the same description and the literal name
+                # continues the previous name (e.g., "reportingIn", "ChronologicalOrder", "OldestFirst")
+                if (literal_description and previous_literal and previous_literal.description and
+                      literal_description == previous_literal.description):
+                    # Append to previous literal's name (stacked names with same description)
+                    self._pending_literals[-1].name += literal_name
+                    # Don't create a new literal, continue processing
+                    return False
+
                 # Check if this is Pattern 2/5 (separate literal):
                 # - Previous literal has tags and index (complete)
                 # - Current description is a real description (not just "Tags:")
@@ -341,10 +351,10 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 # - NOT a continuation line (append_to_name=False)
                 # - NOT a continuation word (in continuation_words set)
                 is_new_literal_by_tags = (
-                    previous_literal and 
-                    previous_literal.tags and 
+                    previous_literal and
+                    previous_literal.tags and
                     previous_literal.index is not None and
-                    literal_description and 
+                    literal_description and
                     literal_description != "Tags:" and
                     "atp.EnumerationLiteralIndex" in previous_literal.tags and
                     not append_to_name and  # Not a continuation line (append_to_name=False)
@@ -361,7 +371,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                     literal_name != previous_literal.name and
                     len(literal_name) > 2  # Not a small word like "of", "in"
                 )
-                
+
                 if is_new_literal_by_tags or is_new_literal_by_uppercase:
                     # This is Pattern 2/5 (separate literal) - current line is a NEW literal
                     # For Pattern 2, names are the same (base name) but create separate literals
@@ -371,7 +381,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                     index = None
                     if "atp.EnumerationLiteralIndex" in tags:
                         index = int(tags["atp.EnumerationLiteralIndex"])
-                    
+
                     # Clean description by removing all tag patterns
                     clean_description = literal_description
                     if "atp.EnumerationLiteralIndex" in tags:
@@ -379,7 +389,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                     if "xml.name" in tags:
                         clean_description = re.sub(r"\s*xml\.name=[^\s,]+", "", clean_description)
                     clean_description = clean_description.strip()
-                    
+
                     # Create new literal with current name and description
                     literal = AutosarEnumLiteral(
                         name=literal_name,
@@ -421,6 +431,32 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 previous_literal.description += continuation_text
             else:
                 # This is a new literal - create it
+                # Filter out common header words and phrases that are not valid enumeration literals
+                # These often appear in PDF headers around enumeration tables
+                header_exclusion_patterns = {
+                    "extract template", "cp r23-11", "r23-11", "template",
+                    "autosar ", "diagnostic "
+                }
+                # Check if literal name or description matches header exclusion patterns
+                skip_literal = False
+                literal_lower = literal_name.lower()
+                desc_lower = literal_description.lower() if literal_description else ""
+
+                # Check if description contains header patterns (e.g., "Extract Template")
+                for pattern in header_exclusion_patterns:
+                    if pattern in desc_lower or pattern in literal_lower:
+                        skip_literal = True
+                        break
+
+                # Also check if name is a single common header word with generic description
+                # e.g., "Diagnostic" with description "Extract Template"
+                if (literal_name in ["Diagnostic", "AUTOSAR", "Generic", "Structure", "Timing"] and
+                    any(p in desc_lower for p in ["extract", "template", "r23-11", "structure", "timing"])):
+                    skip_literal = True
+
+                if skip_literal:
+                    # Skip this literal - it's likely header text
+                    return False
                 # Extract tags from description
                 tags = self._extract_literal_tags(literal_description)
 

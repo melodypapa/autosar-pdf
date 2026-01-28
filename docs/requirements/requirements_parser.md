@@ -63,7 +63,7 @@ This two-phase approach ensures:
 
 **Description**: The system shall recognize and parse AUTOSAR class definitions from PDF text using the following patterns:
 - Class definitions: `Class <name> (abstract)`
-- Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, and `Class <name> <<atpMixed>>`
+- Class definitions with ATP markers: `Class <name> <<atpMixedString>>`, `Class <name> <<atpVariation>>`, `Class <name> <<atpMixed>>`, and `Class <name> <<atpPrototype>>`
 - Package definitions: `Package <M2::?><path>`
 - Base classes: `Base <class_list>` (extracted from the Base column in class tables)
 - Subclasses: `Subclasses <class_list>` (extracted and stored in the subclasses attribute). The subclasses are the descendants of a class, meaning they inherit from this class. Therefore, a subclass cannot be the parent of this class, and it also cannot be in the bases list of this class's parent.
@@ -76,6 +76,7 @@ The system shall strip ATP marker patterns from the class name and determine the
 - Only <<atpMixedString>>: `ATPType.ATP_MIXED_STRING`
 - Only <<atpVariation>>: `ATPType.ATP_VARIATION`
 - Only <<atpMixed>>: `ATPType.ATP_MIXED`
+- Only <<atpPrototype>>: `ATPType.ATP_PROTO`
 
 When multiple ATP markers are detected on the same class, the system shall report a validation error indicating that a class cannot have multiple ATP markers simultaneously.
 
@@ -1076,3 +1077,166 @@ Result:
 - ByteOrderEnum has 3 literals (mostSignificantByteFirst, mostSignificantByteLast, opaque)
 - All literals have correct indices (0, 1, 2)
 ```
+---
+
+### SWR_PARSER_00033
+**Title**: ATP Interface Tracking
+
+**Maturity**: accept
+
+**Description**: The system shall identify and track ATP interface relationships separately from regular class inheritance. When parsing base classes, the system shall:
+
+1. **Interface Detection**: Identify base classes whose names start with "Atp" as interfaces
+2. **Field Separation**: Move Atp-prefixed base classes to a dedicated `implements` field
+3. **Regular Bases Preservation**: Keep non-Atp base classes in the `bases` field
+4. **Display Separation**: Display "Implements" and "Base Classes" as separate sections in markdown output
+
+**Interface Identification Rules**:
+- Base classes starting with "Atp" (case-sensitive) are identified as interfaces
+- Common examples: AtpBlueprint, AtpBlueprintable, AtpClassifier, AtpType, AtpPrototype
+- The "Atp" prefix indicates AUTOSAR Tool Platform interface relationships
+- Interfaces represent a different kind of relationship than class inheritance
+
+**Data Model Changes**:
+- `AutosarClass.implements`: List[str] - Names of ATP interfaces this class implements
+- `AutosarClass.bases`: List[str] - Names of regular parent classes (non-Atp)
+
+**Parsing Behavior**:
+When processing the "Base" column from class tables:
+```python
+# Split base classes into regular bases and Atp interfaces
+for base_class in base_classes:
+    if base_class.startswith("Atp"):
+        class_def.implements.append(base_class)
+    else:
+        class_def.bases.append(base_class)
+```
+
+**Markdown Output**:
+Classes with `implements` entries shall display:
+```markdown
+## Implements
+
+* AtpBlueprint
+* AtpType
+
+## Base Classes
+
+* ARElement
+* ARObject
+```
+
+**Rationale**:
+- ATP classes represent interface implementations, not class inheritance
+- Separating interfaces from bases improves model accuracy
+- Makes the distinction between inheritance and interface implementation explicit
+- Supports better traceability and understanding of AUTOSAR metamodel relationships
+
+**Implementation Notes**:
+- Parent resolution considers only `bases`, not `implements`
+- The `implements` field is displayed after "Base Classes" and before "Subclasses"
+- Classes can have multiple Atp interfaces and multiple regular bases
+- A class with only Atp bases will have empty `bases` and populated `implements`
+- ATP marker types (atpMixedString, etc.) remain separate from the `implements` field
+
+**Requirements Coverage**:
+- SWR_MODEL_00001: AUTOSAR Class Representation (implements field added)
+- SWR_WRITER_00006: Individual Class Markdown File Content (Implements section)
+
+---
+
+### SWR_PARSER_00034
+**Title**: ATP Class Parent Resolution from Implements
+
+**Maturity**: accept
+
+**Description**: For ATP classes, the system shall resolve parent references from the `implements` field instead of the `bases` field. Non-ATP classes shall continue using the existing parent resolution from `bases`.
+
+The system shall:
+1. **ATP Parent Resolution**: For classes with non-empty `implements` field and no existing parent:
+   - Filter `implements` to only ATP classes (starting with "Atp") or ARObject
+   - Exclude non-ATP interfaces from parent consideration
+   - Use ancestry analysis to find the direct parent from filtered candidates
+   - Set the `parent` field if a valid parent is found
+
+2. **Non-ATP Classes**: Continue using existing parent resolution from `bases` field
+
+3. **ATP Ancestry Cache**: Build separate ancestry cache for ATP classes from `implements` field
+   - Only include ATP classes and ARObject in ancestry relationships
+   - Exclude ARObject from ancestors (treat as root, not ancestor)
+
+4. **Parent Selection Algorithm**: Use ancestry-based selection similar to regular parent resolution:
+   - Filter out candidates that are ancestors of other candidates
+   - The direct parent is the candidate that is NOT an ancestor of any other candidate
+   - If multiple candidates exist, choose the last one (backward compatibility)
+
+**ATP Class Hierarchy Rules**:
+- ATP classes track their hierarchy separately from regular classes
+- Parent is determined from `implements` field (not `bases`)
+- Only ATP classes (or ARObject) are considered as potential parents
+- ARObject is the parent of the first/root ATP class
+- ATP classes cannot have non-ATP classes as parents
+
+**Example Hierarchy**:
+```
+ARObject (root)
+└── AtpFeature (parent: ARObject, implements: [ARObject])
+    └── AtpPrototype (parent: AtpFeature, implements: [AtpFeature, Identifiable])
+        └── AtpBlueprint (parent: AtpPrototype, implements: [AtpPrototype])
+```
+
+**Example Scenarios**:
+
+**Scenario 1: AtpPrototype with mixed implements**
+```python
+cls: AtpPrototype
+implements: [AtpFeature, Identifiable, Referrable]
+bases: [ARObject]
+parent: None (before)
+
+Resolution:
+- Filter to ATP: [AtpFeature]
+- Set parent: AtpFeature
+```
+
+**Scenario 2: AtpFeature (root ATP class)**
+```python
+cls: AtpFeature
+implements: [ARObject, SomeOtherClass]
+bases: []
+parent: None (before)
+
+Resolution:
+- Filter to ATP/ARObject: [ARObject]
+- Set parent: ARObject
+```
+
+**Scenario 3: Non-ATP class**
+```python
+cls: RegularClass
+implements: []
+bases: [ParentClass]
+parent: None (before)
+
+Resolution:
+- Empty implements, skip ATP parent resolution
+- Existing parent resolution from bases will handle it
+```
+
+**Rationale**:
+- ATP classes have their own separate hierarchy from regular classes
+- The `implements` field tracks ATP interface relationships
+- Parent must be an ATP class (or ARObject for the root ATP class)
+- Non-ATP interfaces in `implements` should be ignored for parent resolution
+- Maintains clean separation between ATP hierarchy and regular class hierarchy
+
+**Implementation**:
+- Add `_build_atp_ancestry_cache()` method to build ATP ancestry from `implements`
+- Add `_resolve_atp_parent_references()` method to resolve ATP parents
+- Call ATP parent resolution after regular parent resolution in `_resolve_parent_references()`
+- Only process classes with `implements` and no existing `parent`
+- Re-populate children lists after ATP parent resolution
+
+**Requirements Coverage**:
+- SWR_PARSER_00017: AUTOSAR Class Parent Resolution (extended for ATP classes)
+- SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)

@@ -211,3 +211,96 @@ class TestClassListParsing:
         assert parser._pending_class_lists["base_classes"] == (None, None, True)
         assert parser._pending_class_lists["subclasses"] == (None, None, True)
         assert parser._pending_class_lists["aggregated_by"] == (None, None, True)
+
+    def test_finalize_pending_class_lists_splits_atp_interfaces(self) -> None:
+        """Verify base classes starting with 'Atp' are moved to implements field.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+        """
+        from autosar_pdf2txt.models import AutosarClass
+
+        parser = AutosarClassParser()
+        test_class = AutosarClass(
+            name="TestClass",
+            is_abstract=False,
+            atp_type=None,
+            attributes={},
+            bases=[],
+            package="TestPackage"
+        )
+
+        # Set up pending lists with mix of Atp and non-Atp bases
+        parser._pending_class_lists = {
+            "base_classes": (["AtpInterface", "RegularBase", "AtpVariation", "AnotherBase"], "AnotherBase", True),
+        }
+
+        # Finalize should split Atp interfaces from regular bases
+        parser._finalize_pending_class_lists(test_class)
+
+        # Atp interfaces should be in implements field
+        assert test_class.implements == ["AtpInterface", "AtpVariation"]
+        # Regular bases should be in bases field
+        assert test_class.bases == ["RegularBase", "AnotherBase"]
+
+    def test_finalize_pending_class_lists_with_only_atp_interfaces(self) -> None:
+        """Verify when all base classes start with 'Atp', bases is empty.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+        """
+        from autosar_pdf2txt.models import AutosarClass
+
+        parser = AutosarClassParser()
+        test_class = AutosarClass(
+            name="TestClass",
+            is_abstract=False,
+            atp_type=None,
+            attributes={},
+            bases=[],
+            package="TestPackage"
+        )
+
+        # Set up pending lists with only Atp interfaces
+        parser._pending_class_lists = {
+            "base_classes": (["AtpInterface1", "AtpInterface2"], "AtpInterface2", True),
+        }
+
+        # Finalize should move all to implements
+        parser._finalize_pending_class_lists(test_class)
+
+        # All should be in implements field
+        assert test_class.implements == ["AtpInterface1", "AtpInterface2"]
+        # bases should be empty
+        assert test_class.bases == []
+
+    def test_finalize_pending_class_lists_with_only_regular_bases(self) -> None:
+        """Verify when no base classes start with 'Atp', implements is empty.
+
+        Requirements:
+            SWR_PARSER_00021: Multi-Line Attribute Parsing for AutosarClass
+        """
+        from autosar_pdf2txt.models import AutosarClass
+
+        parser = AutosarClassParser()
+        test_class = AutosarClass(
+            name="TestClass",
+            is_abstract=False,
+            atp_type=None,
+            attributes={},
+            bases=[],
+            package="TestPackage"
+        )
+
+        # Set up pending lists with only regular bases
+        parser._pending_class_lists = {
+            "base_classes": (["RegularBase1", "RegularBase2"], "RegularBase2", True),
+        }
+
+        # Finalize should keep all in bases
+        parser._finalize_pending_class_lists(test_class)
+
+        # implements should be empty
+        assert test_class.implements == []
+        # All should be in bases field
+        assert test_class.bases == ["RegularBase1", "RegularBase2"]

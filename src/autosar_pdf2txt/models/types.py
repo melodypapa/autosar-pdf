@@ -43,7 +43,9 @@ class AutosarClass(AbstractAutosarBase):
         bases: List of base class names for inheritance tracking.
         parent: Name of the immediate parent class from the bases list (None for root classes).
         children: List of child class names that inherit from this class.
+        subclasses: List of subclass names explicitly listed in the PDF.
         aggregated_by: List of class names that aggregate this class.
+        implements: List of interface names (starting with "Atp") that this class implements.
         sources: List of source locations for the class definition itself (inherited).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
@@ -68,6 +70,7 @@ class AutosarClass(AbstractAutosarBase):
     children: List[str] = field(default_factory=list)
     subclasses: List[str] = field(default_factory=list)
     aggregated_by: List[str] = field(default_factory=list)
+    implements: List[str] = field(default_factory=list)
 
     def __init__(
         self,
@@ -81,6 +84,7 @@ class AutosarClass(AbstractAutosarBase):
         children: Optional[List[str]] = None,
         subclasses: Optional[List[str]] = None,
         aggregated_by: Optional[List[str]] = None,
+        implements: Optional[List[str]] = None,
         note: Optional[str] = None,
         sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
@@ -103,6 +107,7 @@ class AutosarClass(AbstractAutosarBase):
             children: List of child class names that inherit from this class.
             subclasses: List of subclass names explicitly listed in the PDF.
             aggregated_by: List of class names that aggregate this class.
+            implements: List of interface names (starting with "Atp") that this class implements.
             note: Optional documentation.
             sources: Optional list of source locations for this class definition.
 
@@ -118,6 +123,7 @@ class AutosarClass(AbstractAutosarBase):
         self.children = children or []
         self.subclasses = subclasses or []
         self.aggregated_by = aggregated_by or []
+        self.implements = implements or []
 
     def __str__(self) -> str:
         """Return string representation of the class.
@@ -143,12 +149,13 @@ class AutosarClass(AbstractAutosarBase):
         bases_count = len(self.bases)
         children_count = len(self.children)
         subclasses_count = len(self.subclasses)
+        implements_count = len(self.implements)
         note_present = self.note is not None
         return (
             f"AutosarClass(name='{self.name}', is_abstract={self.is_abstract}, "
             f"atp_type={self.atp_type.name}, "
             f"attributes={attrs_count}, bases={bases_count}, parent={self.parent}, "
-            f"children={children_count}, subclasses={subclasses_count}, note={note_present})"
+            f"children={children_count}, subclasses={subclasses_count}, implements={implements_count}, note={note_present})"
         )
 
 

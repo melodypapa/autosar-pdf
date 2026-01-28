@@ -13,6 +13,7 @@ Requirements:
     SWR_PARSER_00019: Backend Warning Suppression
     SWR_PARSER_00022: PDF Source Location Extraction
     SWR_PARSER_00027: Parser Backward Compatibility
+    SWR_PARSER_00034: ATP Class Parent Resolution from Implements
 """
 
 import logging
@@ -570,11 +571,19 @@ class PdfParser:
         warned_parent_bases: set[str] = set()
         ancestry_cache = self._build_ancestry_cache(packages, warned_ancestry_bases)
 
+        # Resolve ATP class parent references from implements field (SWR_PARSER_00034)
+        # This must happen BEFORE regular parent resolution for ATP classes
+        # so that ATP classes get their parent from implements, not from bases
+        self._resolve_atp_parent_references(packages)
+
         # Set parent references for all classes
         root_classes: List[AutosarClass] = []
         for pkg in packages:
             for typ in pkg.types:
                 if isinstance(typ, AutosarClass):
+                    # Skip if parent already set by ATP parent resolution
+                    if typ.parent is not None:
+                        continue
                     self._set_parent_references(typ, ancestry_cache, packages, warned_parent_bases)
                     if typ.parent is None:
                         root_classes.append(typ)
@@ -842,3 +851,132 @@ class PdfParser:
                                 typ.name,
                             )
                             continue
+
+    def _build_atp_ancestry_cache(self, packages: List[AutosarPackage]) -> Dict[str, Set[str]]:
+        """Build a cache of ATP ancestry relationships from implements field.
+
+        Requirements:
+            SWR_PARSER_00034: ATP Class Parent Resolution from Implements
+
+        Args:
+            packages: List of packages to process.
+
+        Returns:
+            Dictionary mapping ATP class names to sets of all ATP ancestor class names.
+        """
+        # First, build a direct implements map (only ATP classes)
+        direct_implements: Dict[str, List[str]] = {}
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass):
+                    # Filter implements to only ATP classes (or ARObject)
+                    atp_implements = [
+                        impl for impl in typ.implements
+                        if impl.startswith("Atp") or impl == "ARObject"
+                    ]
+                    direct_implements[typ.name] = atp_implements
+
+        # Then, recursively collect all ATP ancestors for each class
+        def collect_atp_ancestors(class_name: str, visited: Set[str]) -> Set[str]:
+            """Recursively collect all ATP ancestors of a class."""
+            if class_name in visited:
+                return set()
+
+            visited.add(class_name)
+            ancestors = set()
+
+            for impl_name in direct_implements.get(class_name, []):
+                if impl_name != "ARObject":  # Don't treat ARObject as an ancestor
+                    # Check if implemented ATP class exists in the model
+                    impl_exists = False
+                    for pkg in packages:
+                        for typ in pkg.types:
+                            if isinstance(typ, AutosarClass) and typ.name == impl_name:
+                                impl_exists = True
+                                break
+                        if impl_exists:
+                            break
+
+                    if impl_exists:
+                        ancestors.add(impl_name)
+                        # Recursively collect ancestors of this implemented class
+                        ancestors.update(collect_atp_ancestors(impl_name, visited))
+
+            return ancestors
+
+        cache: Dict[str, Set[str]] = {}
+        for class_name in direct_implements.keys():
+            cache[class_name] = collect_atp_ancestors(class_name, set())
+
+        return cache
+
+    def _resolve_atp_parent_references(self, packages: List[AutosarPackage]) -> None:
+        """Resolve parent references for ATP classes from implements field.
+
+        Requirements:
+            SWR_PARSER_00034: ATP Class Parent Resolution from Implements
+
+        For ATP classes (classes whose names start with "Atp"), the parent is
+        determined from the implements field by considering only ATP classes
+        (or ARObject) as potential parents. Non-ATP classes continue using the
+        existing parent resolution from bases.
+
+        Args:
+            packages: List of all packages.
+        """
+        # Build ATP ancestry cache from implements field
+        atp_ancestry_cache = self._build_atp_ancestry_cache(packages)
+
+        # Set parent references for ATP classes from implements
+        for pkg in packages:
+            for typ in pkg.types:
+                # Only process AutosarClass instances
+                if not isinstance(typ, AutosarClass):
+                    continue
+
+                # Only process ATP classes (names starting with "Atp") with implements
+                # (parent check removed since ATP resolution runs first)
+                if not typ.name.startswith("Atp") or not typ.implements:
+                    continue
+
+                # Filter to only ATP classes and ARObject
+                atp_candidates = [
+                    impl for impl in typ.implements
+                    if impl.startswith("Atp") or impl == "ARObject"
+                ]
+
+                if not atp_candidates:
+                    continue
+
+                # Find existing ATP candidates only (for ancestry analysis)
+                existing_atp = []
+                for candidate_name in atp_candidates:
+                    candidate_class = self._find_class_in_all_packages(candidate_name, packages)
+                    if candidate_class is not None:
+                        existing_atp.append(candidate_name)
+
+                if not existing_atp:
+                    # No valid ATP candidates found, parent remains unchanged
+                    continue
+
+                # Ancestry-based parent selection:
+                # Filter out candidates that are ancestors of other candidates
+                # The direct parent is the candidate that is NOT an ancestor of any other candidate
+                direct_parent = None
+                for i, candidate_name in enumerate(existing_atp):
+                    is_ancestor = False
+                    for j, other_candidate_name in enumerate(existing_atp):
+                        if i != j:
+                            # Check if candidate_name is an ancestor of other_candidate_name
+                            if candidate_name in atp_ancestry_cache.get(other_candidate_name, set()):
+                                is_ancestor = True
+                                break
+
+                    if not is_ancestor:
+                        # This candidate is not an ancestor of any other candidate
+                        # It could be the direct parent
+                        # If multiple candidates exist, choose the last one (backward compatibility)
+                        direct_parent = candidate_name
+
+                if direct_parent:
+                    typ.parent = direct_parent

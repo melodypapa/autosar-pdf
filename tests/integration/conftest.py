@@ -359,6 +359,8 @@ def diagnostic_extract_template_pdf(parser: PdfParser) -> AutosarDoc:
     This PDF contains enumeration literals with tags (atp.EnumerationLiteralIndex, xml.name)
     and multi-page enumeration literal lists.
 
+    Also applies TOML patches for enumerations that cannot be automatically extracted.
+
     Args:
         parser: Shared PdfParser instance.
 
@@ -369,11 +371,14 @@ def diagnostic_extract_template_pdf(parser: PdfParser) -> AutosarDoc:
         FileNotFoundError: If the PDF file is not found.
     """
     pdf_path = "examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf"
+    patch_file = "patches/enumeration_patches.toml"
 
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
-    doc = parser.parse_pdf(pdf_path)
+    # Parse PDF with TOML patches for enumerations that cannot be auto-extracted
+    # SWR_PARSER_00037: TOML-based Enumeration Patch Loading
+    doc = parser.parse_pdf(pdf_path, patch_file=patch_file)
 
     print("\n=== DiagnosticExtractTemplate PDF parsed ===")
     print(f"  Packages: {len(doc.packages)}")

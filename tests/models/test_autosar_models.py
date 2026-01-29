@@ -247,7 +247,95 @@ class TestAutosarEnumLiteral:
         assert literal.tags == {}
         literal.tags["new_tag"] = "value"
         assert literal.tags == {"new_tag": "value"}
-        assert len(literal.tags) == 1
+
+    def test_init_with_value(self) -> None:
+        """Test initialization with value field.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="VALUE1", value=0)
+        assert literal.name == "VALUE1"
+        assert literal.value == 0
+        assert literal.index is None
+
+    def test_init_with_index_and_value(self) -> None:
+        """Test initialization with both index and value fields.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="VALUE1", index=0, value=0)
+        assert literal.index == 0
+        assert literal.value == 0
+
+    def test_init_with_different_index_and_value(self) -> None:
+        """Test initialization with different index and values.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="VALUE1", index=1, value=10)
+        assert literal.index == 1
+        assert literal.value == 10
+
+    def test_value_without_index(self) -> None:
+        """Test that value can be set without index.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="VALUE1", value=5)
+        assert literal.value == 5
+        assert literal.index is None
+        assert str(literal) == "VALUE1 (value=5)"
+
+    def test_str_with_value_only(self) -> None:
+        """Test string representation with value only.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="MyLiteral", value=0)
+        assert str(literal) == "MyLiteral (value=0)"
+
+    def test_str_with_same_index_and_value(self) -> None:
+        """Test string representation when index equals value (shows value only).
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="MyLiteral", index=0, value=0)
+        assert str(literal) == "MyLiteral (value=0)"
+
+    def test_str_with_different_index_and_value(self) -> None:
+        """Test string representation with different index and values.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="MyLiteral", index=1, value=10)
+        assert str(literal) == "MyLiteral (value=10) (index=1)"
+
+    def test_repr_includes_value(self) -> None:
+        """Test debug representation includes value field.
+
+        Requirements:
+            SWR_MODEL_00016: AUTOSAR Enumeration Literal String Representation
+        """
+        literal = AutosarEnumLiteral(name="TestLiteral", value=5)
+        result = repr(literal)
+        assert "value=5" in result
+
+    def test_value_optional(self) -> None:
+        """Test that value field is optional.
+
+        Requirements:
+            SWR_MODEL_00014: AUTOSAR Enumeration Literal Representation
+        """
+        literal = AutosarEnumLiteral(name="TestLiteral")
+        assert literal.value is None
+        assert literal.index is None
 
 
 class TestAutosarAttribute:

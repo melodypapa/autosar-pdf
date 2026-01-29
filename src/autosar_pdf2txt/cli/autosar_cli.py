@@ -57,6 +57,11 @@ def main() -> int:
         type=str,
         help="Write log messages to the specified file (in addition to stderr)",
     )
+    parser.add_argument(
+        "--enum-patch-file",
+        type=str,
+        help="Path to TOML patch file for enumeration literal corrections",
+    )
 
     args = parser.parse_args()
 
@@ -143,7 +148,8 @@ def main() -> int:
         pdf_path_strings = [str(pdf_path) for pdf_path in pdf_paths]
 
         # Parse all PDFs at once - parent/children resolution happens on complete model
-        doc = pdf_parser.parse_pdfs(pdf_path_strings)
+        # SWR_PARSER_00037: TOML-based Enumeration Patch Loading
+        doc = pdf_parser.parse_pdfs(pdf_path_strings, patch_file=args.enum_patch_file)
 
         logging.info(f"Total: {len(doc.packages)} top-level packages")
         logging.info(f"Total: {len(doc.root_classes)} root classes")

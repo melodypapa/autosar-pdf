@@ -510,8 +510,14 @@ class MarkdownWriter:
         if enum.enumeration_literals:
             output.write("## Enumeration Literals\n\n")
             for literal in enum.enumeration_literals:
-                index_suffix = f" (index={literal.index})" if literal.index is not None else ""
-                output.write(f"* {literal.name}{index_suffix}\n")
+                # Show value if present, otherwise show index
+                if literal.value is not None:
+                    value_suffix = f" (value={literal.value})"
+                elif literal.index is not None:
+                    value_suffix = f" (index={literal.index})"
+                else:
+                    value_suffix = ""
+                output.write(f"* {literal.name}{value_suffix}\n")
                 if literal.description:
                     output.write(f"  * {literal.description}\n")
                 # Write Tags table if tags exist

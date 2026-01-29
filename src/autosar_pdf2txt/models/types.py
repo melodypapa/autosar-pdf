@@ -182,8 +182,8 @@ class AutosarEnumeration(AbstractAutosarBase):
         ...     "MyEnum",
         ...     "M2::ECUC",
         ...     enumeration_literals=[
-        ...         AutosarEnumLiteral("VALUE1", 0, "First value"),
-        ...         AutosarEnumLiteral("VALUE2", 1, "Second value")
+        ...         AutosarEnumLiteral("VALUE1", value=0, description="First value"),
+        ...         AutosarEnumLiteral("VALUE2", value=1, description="Second value")
         ...     ]
         ... )
     """

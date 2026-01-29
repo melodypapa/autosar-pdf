@@ -3609,8 +3609,8 @@ class TestATPParentResolution:
         atp_blueprint = AutosarClass(
             name="AtpBlueprint",
             package="M2::AUTOSAR",
-            bases=["ARObject"],
-            implements=["AtpFeature", "AtpPrototype"]  # Both ATP, AtpPrototype is more specific
+            bases=[],
+            implements=["ARObject"]  # Expected hierarchy: ARObject -> AtpBlueprint
         )
 
         # Add classes to package
@@ -3628,9 +3628,8 @@ class TestATPParentResolution:
         # AtpPrototype parent is AtpFeature
         assert atp_prototype.parent == "AtpFeature"
 
-        # AtpBlueprint parent should be AtpPrototype (most specific, not ancestor)
-        # AtpFeature is an ancestor of AtpPrototype, so AtpPrototype is selected
-        assert atp_blueprint.parent == "AtpPrototype"
+        # AtpBlueprint parent should be ARObject (expected hierarchy)
+        assert atp_blueprint.parent == "ARObject"
 
     def test_atp_parent_no_existing_parent(self) -> None:
         """Test that ATP parent resolution only sets parent if not already set.
@@ -3684,6 +3683,164 @@ class TestATPParentResolution:
         # MixedClass parent should be RegularClass (from bases)
         # ATP parent resolution should not override it
         assert mixed_class.parent == "RegularClass"
+
+    def test_atp_parent_validation_valid_relationships(self) -> None:
+        """Test that valid ATP parent relationships pass validation.
+
+        SWUT_PARSER_00083: Test ATP Parent Validation Valid Relationships
+
+        Requirements:
+            SWR_PARSER_00035: ATP Class Parent Relationship Validation
+        """
+        parser = PdfParser()
+
+        # Create package
+        pkg = AutosarPackage(name="M2::AUTOSAR")
+
+        # Create ATP classes with valid parent relationships
+        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
+
+        atp_blueprint = AutosarClass(
+            name="AtpBlueprint",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["ARObject"]  # Valid: ARObject -> AtpBlueprint
+        )
+
+        atp_feature = AutosarClass(
+            name="AtpFeature",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["ARObject"]  # Valid: ARObject -> AtpFeature
+        )
+
+        atp_prototype = AutosarClass(
+            name="AtpPrototype",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["AtpFeature"]  # Valid: AtpFeature -> AtpPrototype
+        )
+
+        # Add classes to package
+        pkg.add_class(ar_object)
+        pkg.add_class(atp_blueprint)
+        pkg.add_class(atp_feature)
+        pkg.add_class(atp_prototype)
+
+        # Resolve parent references (including validation)
+        # Should not raise any errors
+        parser._resolve_parent_references([pkg])
+
+        # Verify parents are set correctly
+        assert atp_blueprint.parent == "ARObject"
+        assert atp_feature.parent == "ARObject"
+        assert atp_prototype.parent == "AtpFeature"
+
+    def test_atp_parent_validation_invalid_relationship_raises_error(self) -> None:
+        """Test that invalid ATP parent relationships raise ValueError.
+
+        SWUT_PARSER_00084: Test ATP Parent Validation Invalid Relationship
+
+        Requirements:
+            SWR_PARSER_00035: ATP Class Parent Relationship Validation
+        """
+        parser = PdfParser()
+
+        # Create package
+        pkg = AutosarPackage(name="M2::AUTOSAR")
+
+        # Create ATP classes with invalid parent relationship
+        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
+
+        atp_feature = AutosarClass(
+            name="AtpFeature",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["ARObject"]
+        )
+
+        # AtpPrototype should have parent AtpFeature or ARObject, but we'll set it to AtpBlueprint
+        # This should fail validation
+        atp_blueprint = AutosarClass(
+            name="AtpBlueprint",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["ARObject"]
+        )
+
+        atp_prototype = AutosarClass(
+            name="AtpPrototype",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["AtpBlueprint"]  # Invalid: AtpPrototype cannot have AtpBlueprint as parent
+        )
+
+        # Add classes to package
+        pkg.add_class(ar_object)
+        pkg.add_class(atp_feature)
+        pkg.add_class(atp_blueprint)
+        pkg.add_class(atp_prototype)
+
+        # Resolve parent references should raise ValueError
+        with pytest.raises(ValueError, match="ATP parent validation failed"):
+            parser._resolve_parent_references([pkg])
+
+    def test_atp_parent_validation_allows_multiple_acceptable_parents(self) -> None:
+        """Test that validation allows multiple acceptable parent options.
+
+        SWUT_PARSER_00085: Test ATP Parent Validation Multiple Acceptable Parents
+
+        Requirements:
+            SWR_PARSER_00035: ATP Class Parent Relationship Validation
+        """
+        parser = PdfParser()
+
+        # Create package
+        pkg = AutosarPackage(name="M2::AUTOSAR")
+
+        # Create ATP classes
+        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
+
+        # Test 1: AtpPrototype with parent AtpFeature (valid)
+        atp_feature1 = AutosarClass(
+            name="AtpFeature",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["ARObject"]
+        )
+
+        atp_prototype1 = AutosarClass(
+            name="AtpPrototype",
+            package="M2::AUTOSAR",
+            bases=[],
+            implements=["AtpFeature"]  # Valid: AtpFeature is acceptable parent
+        )
+
+        pkg.add_class(ar_object)
+        pkg.add_class(atp_feature1)
+        pkg.add_class(atp_prototype1)
+
+        # Should not raise any errors
+        parser._resolve_parent_references([pkg])
+        assert atp_prototype1.parent == "AtpFeature"
+
+        # Test 2: AtpPrototype with parent ARObject (also valid)
+        pkg2 = AutosarPackage(name="M2::AUTOSAR2")
+        ar_object2 = AutosarClass(name="ARObject", package="M2::AUTOSAR2", bases=[])
+
+        atp_prototype2 = AutosarClass(
+            name="AtpPrototype",
+            package="M2::AUTOSAR2",
+            bases=[],
+            implements=["ARObject"]  # Also valid: ARObject is acceptable parent
+        )
+
+        pkg2.add_class(ar_object2)
+        pkg2.add_class(atp_prototype2)
+
+        # Should not raise any errors
+        parser._resolve_parent_references([pkg2])
+        assert atp_prototype2.parent == "ARObject"
 
 
 class TestPdfParserPageTracking:

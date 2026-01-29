@@ -1,0 +1,53 @@
+# AUTOSAR Enumeration Literal Patches
+# This file defines manual corrections for enumeration literals that cannot be
+# automatically extracted from PDFs due to table structure issues.
+#
+# Format:
+# [[enumerations]] - Define missing enumerations
+# [[literal_corrections]] - Fix literal names in existing enumerations
+
+# ============================================================================
+# Missing Enumerations
+# ============================================================================
+
+# ByteOrderEnum - Direct format table without Package line (page 67)
+[[enumerations]]
+name = "ByteOrderEnum"
+package = "M2::AUTOSARTemplates::GenericStructure::PrimitiveTypes"
+[[enumerations.literals]]
+name = "mostSignificantByteFirst"
+index = 0
+value = 0
+description = "Most significant byte shall come at the lowest address (also known as Big Endian or Motorola-Format)"
+[[enumerations.literals]]
+name = "mostSignificantByteLast"
+index = 1
+value = 1
+description = "Most significant byte shall come highest address (also known as Little Endian or Intel-Format)"
+[[enumerations.literals]]
+name = "opaque"
+index = 2
+value = 2
+description = "For opaque data endianness conversion has to be configured to Opaque. See AUTOSAR COM Specification for more details."
+
+# DiagnosticEventCombinationReportingBehaviorEnum - Multi-line literal name split across table cell (page 67)
+[[enumerations]]
+name = "DiagnosticEventCombinationReportingBehaviorEnum"
+package = "M2::AUTOSARTemplates::DiagnosticExtract::DiagnosticCommonProps"
+[[enumerations.literals]]
+name = "reportingInChronlogicalOrderOldestFirst"
+index = 0
+value = 0
+description = "The reporting order for event combination on retrieval is the chronological storage order of the events. Applicable only for Event Combination on Retrieval."
+tags = { "atp.EnumerationLiteralIndex" = "0" }
+
+# ============================================================================
+# Literal Name Corrections
+# ============================================================================
+
+# For cases where the enumeration exists but literal names are wrong
+# Example: Multi-line names that weren't properly concatenated
+[[literal_corrections]]
+enumeration = "DiagnosticEventCombinationReportingBehaviorEnum"
+wrong_name = "reportingInChronlogicalOrder"
+correct_name = "reportingInChronlogicalOrderOldestFirst"

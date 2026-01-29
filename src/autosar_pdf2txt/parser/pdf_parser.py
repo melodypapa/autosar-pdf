@@ -14,13 +14,14 @@ Requirements:
     SWR_PARSER_00022: PDF Source Location Extraction
     SWR_PARSER_00027: Parser Backward Compatibility
     SWR_PARSER_00034: ATP Class Parent Resolution from Implements
+    SWR_PARSER_00036: Table-Based Enumeration Literal Extraction
 """
 
 import logging
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union
 
 from autosar_pdf2txt.models import (
     AutosarClass,
@@ -32,9 +33,25 @@ from autosar_pdf2txt.models import (
 
 from autosar_pdf2txt.parser.class_parser import AutosarClassParser
 from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
+from autosar_pdf2txt.parser.enumeration_patch_loader import EnumerationPatchLoader
 from autosar_pdf2txt.parser.primitive_parser import AutosarPrimitiveParser
 
+if TYPE_CHECKING:
+    import pdfplumber
+else:
+    pdfplumber: Any = None  # type: ignore
+
 logger = logging.getLogger(__name__)
+
+# Expected ATP class hierarchy for validation
+# Keys are ATP class names, values are expected parent names (or list of acceptable parents)
+EXPECTED_ATP_HIERARCHY: Dict[str, Union[str, List[str]]] = {
+    "AtpBlueprint": "ARObject",
+    "AtpDefinition": "ARObject",
+    "AtpBlueprintable": "ARObject",
+    "AtpPrototype": ["AtpFeature", "ARObject"],  # Can be AtpFeature or direct ARObject
+    "AtpStructureElement": ["AtpFeature", "ARObject"],
+}
 
 
 class PdfParser:
@@ -127,7 +144,7 @@ class PdfParser:
 
         return autosar_standard, standard_release
 
-    def parse_pdf(self, pdf_path: str) -> AutosarDoc:
+    def parse_pdf(self, pdf_path: str, patch_file: Optional[str] = None) -> AutosarDoc:
         """Parse a PDF file and extract the package hierarchy.
 
         This is a convenience method for parsing a single PDF. Internally calls
@@ -135,9 +152,11 @@ class PdfParser:
 
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00037: TOML-based Enumeration Patch Loading
 
         Args:
             pdf_path: Path to the PDF file.
+            patch_file: Optional path to TOML patch file for enumeration corrections.
 
         Returns:
             AutosarDoc containing packages and root classes.
@@ -146,9 +165,9 @@ class PdfParser:
             FileNotFoundError: If the PDF file doesn't exist.
             Exception: If PDF parsing fails.
         """
-        return self.parse_pdfs([pdf_path])
+        return self.parse_pdfs([pdf_path], patch_file=patch_file)
 
-    def parse_pdfs(self, pdf_paths: List[str]) -> AutosarDoc:
+    def parse_pdfs(self, pdf_paths: List[str], patch_file: Optional[str] = None) -> AutosarDoc:
         """Parse multiple PDF files and extract the complete package hierarchy.
 
         This method parses all PDFs first, then builds the package hierarchy and
@@ -159,9 +178,11 @@ class PdfParser:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00006: Package Hierarchy Building
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
+            SWR_PARSER_00037: TOML-based Enumeration Patch Loading
 
         Args:
             pdf_paths: List of paths to PDF files.
+            patch_file: Optional path to TOML patch file for enumeration corrections.
 
         Returns:
             AutosarDoc containing packages and root classes from all PDFs.
@@ -178,7 +199,19 @@ class PdfParser:
             all_models.extend(models)
 
         # Phase 2: Build complete package hierarchy once
-        return self._build_package_hierarchy(all_models)
+        document = self._build_package_hierarchy(all_models)
+
+        # Phase 3: Apply TOML patches if provided
+        if patch_file:
+            logger.info(f"Applying enumeration patches from {patch_file}")
+            loader = EnumerationPatchLoader()
+            loader.load_patches(patch_file)
+            # Use the first PDF's filename for source tracking of patched enumerations
+            import os
+            pdf_file_name = os.path.basename(pdf_paths[0]) if pdf_paths else "PATCH_FILE"
+            loader.apply_to_document(document, pdf_file=pdf_file_name)
+
+        return document
 
     def _extract_models(self, pdf_path: str) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
         """Extract all model objects from the PDF.
@@ -230,8 +263,12 @@ class PdfParser:
                     # SWR_PARSER_00030: Track line-to-page mapping for accurate page number tracking
                     text_buffer = StringIO()
                     line_to_page: List[int] = []  # Maps line index to page number
-                    
+                    page_objects: Dict[int, Any] = {}  # Store page objects for table extraction
+
                     for page_num, page in enumerate(pdf.pages, start=1):
+                        # Store page object for table extraction
+                        page_objects[page_num] = page
+
                         # Use extract_words() with x_tolerance=1 to properly extract words with spaces
                         # This fixes the issue where words are concatenated without spaces
                         words = page.extract_words(x_tolerance=1)
@@ -259,17 +296,18 @@ class PdfParser:
 
                     # Phase 2: Parse the complete text at once
                     complete_text = text_buffer.getvalue()
-                    
+
                     # Parse all text with state management for multi-page definitions
                     current_models: Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = {}
                     model_parsers: Dict[int, str] = {}  # Maps model index to parser type
-                    
+
                     models = self._parse_complete_text(
                         complete_text,
                         pdf_filename=pdf_filename,
                         current_models=current_models,
                         model_parsers=model_parsers,
                         line_to_page=line_to_page,
+                        page_objects=page_objects,
                     )
 
             except Exception as e:
@@ -284,6 +322,7 @@ class PdfParser:
         current_models: Optional[Dict[int, Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]] = None,
         model_parsers: Optional[Dict[int, str]] = None,
         line_to_page: Optional[List[int]] = None,
+        page_objects: Optional[Dict[int, Any]] = None,
     ) -> List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]]:
         """Parse model definitions from complete PDF text.
 
@@ -303,6 +342,7 @@ class PdfParser:
             SWR_MODEL_00027: AUTOSAR Source Location Representation
             SWR_PARSER_00022: PDF Source Location Extraction
             SWR_PARSER_00030: Page Number Tracking in Two-Phase Parsing
+            SWR_PARSER_00036: Table-Based Enumeration Literal Extraction
 
         Args:
             text: The complete extracted text from the entire PDF.
@@ -310,6 +350,7 @@ class PdfParser:
             current_models: Dictionary of current models being parsed (for multi-page support).
             model_parsers: Dictionary mapping model indices to parser types.
             line_to_page: Optional list mapping line indices to page numbers.
+            page_objects: Optional dictionary of page objects for table extraction.
 
         Returns:
             List of model objects parsed from the PDF.
@@ -320,6 +361,8 @@ class PdfParser:
             model_parsers = {}
         if line_to_page is None:
             line_to_page = []
+        if page_objects is None:
+            page_objects = {}
 
         # Extract AUTOSAR standard and release from text
         autosar_standard, standard_release = self._extract_autosar_metadata(text)
@@ -349,6 +392,12 @@ class PdfParser:
             class_match = self._class_parser.CLASS_PATTERN.match(line)
             primitive_match = self._primitive_parser.PRIMITIVE_PATTERN.match(line)
             enumeration_match = self._enum_parser.ENUMERATION_PATTERN.match(line)
+
+            # DEBUG: Log enumeration pattern matches
+            if enumeration_match:
+                enum_name = enumeration_match.group(1).strip()
+                if enum_name in ['ByteOrderEnum', 'DiagnosticEventCombinationReportingBehaviorEnum']:
+                    print(f"DEBUG PDF PARSER: Matched enumeration '{enum_name}' at line {i} on page {current_page}")
 
             if class_match or primitive_match or enumeration_match:
                 # This is a new type definition
@@ -394,7 +443,7 @@ class PdfParser:
                             )
                         else:  # enumeration
                             new_i, is_complete = self._enum_parser.continue_parsing(
-                                new_model, lines, i
+                                new_model, lines, i, page_objects=page_objects, current_page=current_page
                             )
 
                         i = new_i
@@ -412,7 +461,7 @@ class PdfParser:
             if current_models:
                 for model_index, current_model in list(current_models.items()):
                     parser_type = model_parsers[model_index]
-                    
+
                     if parser_type == "class":
                         new_i, is_complete = self._class_parser.continue_parsing(
                             current_model, lines, i
@@ -423,7 +472,7 @@ class PdfParser:
                         )
                     else:  # enumeration
                         new_i, is_complete = self._enum_parser.continue_parsing(
-                            current_model, lines, i
+                            current_model, lines, i, page_objects=page_objects, current_page=current_page
                         )
 
                     i = new_i
@@ -575,6 +624,9 @@ class PdfParser:
         # This must happen BEFORE regular parent resolution for ATP classes
         # so that ATP classes get their parent from implements, not from bases
         self._resolve_atp_parent_references(packages)
+
+        # Validate ATP class parent relationships match expected hierarchy (SWR_PARSER_00035)
+        self._validate_atp_parent_relationships(packages)
 
         # Set parent references for all classes
         root_classes: List[AutosarClass] = []
@@ -980,3 +1032,66 @@ class PdfParser:
 
                 if direct_parent:
                     typ.parent = direct_parent
+
+    def _validate_atp_parent_relationships(self, packages: List[AutosarPackage]) -> None:
+        """Validate that ATP class parent relationships match expected hierarchy.
+
+        Requirements:
+            SWR_PARSER_00035: ATP Class Parent Relationship Validation
+
+        Validates that resolved parent relationships for ATP classes match the
+        expected AUTOSAR template hierarchy defined in EXPECTED_ATP_HIERARCHY.
+        Raises errors for unexpected parent relationships to catch potential
+        parsing issues or non-standard PDFs.
+
+        Args:
+            packages: List of all packages.
+
+        Raises:
+            ValueError: If an ATP class has an unexpected parent relationship.
+        """
+        # Collect all validation errors
+        validation_errors: List[str] = []
+
+        for pkg in packages:
+            for typ in pkg.types:
+                # Only validate ATP classes with parents
+                if not isinstance(typ, AutosarClass):
+                    continue
+
+                if not typ.name.startswith("Atp"):
+                    continue
+
+                if typ.parent is None:
+                    # ATP class without parent - may be valid (e.g., ARObject itself)
+                    continue
+
+                # Check if this ATP class is in our expected hierarchy
+                if typ.name not in EXPECTED_ATP_HIERARCHY:
+                    # Unknown ATP class - log warning but don't fail
+                    logger.warning(
+                        f"ATP class '{typ.name}' not in expected hierarchy definition, "
+                        f"has parent '{typ.parent}'"
+                    )
+                    continue
+
+                # Get expected parent(s) for this ATP class
+                expected_parents = EXPECTED_ATP_HIERARCHY[typ.name]
+
+                # Normalize to list for easier comparison
+                if isinstance(expected_parents, str):
+                    expected_list = [expected_parents]
+                else:
+                    expected_list = expected_parents
+
+                # Validate parent
+                if typ.parent not in expected_list:
+                    validation_errors.append(
+                        f"ATP class '{typ.name}' has unexpected parent '{typ.parent}'. "
+                        f"Expected one of: {expected_list}"
+                    )
+
+        # Raise error if any validation errors found
+        if validation_errors:
+            error_message = "ATP parent validation failed:\n" + "\n".join(validation_errors)
+            raise ValueError(error_message)

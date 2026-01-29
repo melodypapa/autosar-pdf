@@ -14,7 +14,10 @@ Requirements:
 """
 
 import re
+from pathlib import Path
 from typing import Dict, List, Match, Optional, Tuple
+
+import yaml
 
 from autosar_pdf2txt.models import (
     AutosarEnumeration,
@@ -41,14 +44,59 @@ class AutosarEnumerationParser(AbstractTypeParser):
     def __init__(self) -> None:
         """Initialize the AutosarEnumeration parser.
 
+        Loads YAML configuration for enumeration literal parsing patterns.
+
         Requirements:
             SWR_PARSER_00025: AutosarEnumeration Specialized Parser
+            SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
         """
         super().__init__()
         # Parsing state
         self._in_enumeration_literal_section: bool = False
         # Temporary list to collect literals during parsing (converted to tuple at end)
         self._pending_literals: List[AutosarEnumLiteral] = []
+
+        # Load YAML configuration for word mapping and patterns
+        enum_config = self._load_yaml_config()
+        self._continuation_words: set = set(enum_config.get("continuation_words", []))
+        self._suffix_words: set = set(enum_config.get("suffix_words", []))
+        self._header_exclusion_patterns: list = enum_config.get("header_exclusion_patterns", [])
+        self._header_words: list = enum_config.get("header_words", [])
+        self._patches: Dict = enum_config.get("patches", {})
+
+    def _load_yaml_config(self) -> Dict:
+        """Load YAML configuration for enumeration literal parsing.
+
+        Returns:
+            Dictionary containing enumeration literal configuration keys:
+            - continuation_words: Words indicating continuation lines
+            - suffix_words: Words to append to literal names
+            - header_exclusion_patterns: Patterns to skip as headers
+            - header_words: Individual header words
+            - patches: Manual corrections for edge cases
+
+        Requirements:
+            SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
+        """
+        config_path = Path(__file__).parent.parent / "config" / "parser_config.yaml"
+
+        if not config_path.exists():
+            # Return empty config if file not found (backward compatibility)
+            return {
+                "continuation_words": [],
+                "suffix_words": [],
+                "header_exclusion_patterns": [],
+                "header_words": [],
+                "patches": {}
+            }
+
+        with open(config_path, "r") as f:
+            full_config = yaml.safe_load(f) or {}
+
+        # Extract enumeration_literals section from global config
+        enum_config = full_config.get("enumeration_literals", {})
+
+        return enum_config
 
     def _reset_state(self) -> None:
         """Reset parser state for a new enumeration definition.
@@ -214,17 +262,51 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
         This method is called when enumeration parsing is complete to convert
         the temporarily collected literals into an immutable tuple.
+        Applies YAML patches if configured.
 
         Requirements:
             SWR_PARSER_00015: Enumeration Literal Extraction from PDF
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
 
         Args:
             current_model: The current AutosarEnumeration being parsed.
         """
+        # Apply YAML patches before finalizing (if any)
+        self._apply_patches(current_model)
+
         # Convert pending literals to immutable tuple
         current_model.enumeration_literals = tuple(self._pending_literals)
         self._pending_literals = []
+
+    def _apply_patches(self, current_model: AutosarEnumeration) -> None:
+        """Apply YAML patches to fix enumeration literal names.
+
+        Patches are applied as a post-processing step for edge cases that
+        the improved multi-line logic couldn't handle.
+
+        Args:
+            current_model: The current AutosarEnumeration being parsed.
+
+        Requirements:
+            SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
+        """
+        if not self._patches:
+            return
+
+        # Check if this enumeration has patches configured
+        enum_name = current_model.name
+        if enum_name not in self._patches:
+            return
+
+        # Get patches for this enumeration
+        enum_patches = self._patches[enum_name]
+
+        # Apply patches to pending literals
+        for literal in self._pending_literals:
+            if literal.name in enum_patches:
+                # Apply patch: replace wrong name with correct name
+                literal.name = enum_patches[literal.name]
 
     def _process_enumeration_literal_line(self, line: str, current_model: AutosarEnumeration) -> bool:
         """Process a line in the enumeration literal section.
@@ -270,11 +352,8 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
             # Common continuation words that indicate multi-line descriptions
             # These are fragments that should be appended to the previous literal
-            continuation_words = {
-                "enable", "qualification", "the", "condition", "conditions",
-                "of", "or", "and", "with", "will", "after", "related", "all",
-                "first", "last", "on", "in", "out", "up", "down"  # Common suffix words for Pattern 2/5
-            }
+            # Loaded from YAML configuration (SWR_PARSER_00101)
+            continuation_words = self._continuation_words
 
             # Check if this is a continuation line (multi-line description or multi-line literal name)
             is_continuation = False
@@ -290,10 +369,11 @@ class AutosarEnumerationParser(AbstractTypeParser):
                         is_continuation = True
                 # Check if the "name" is a common continuation word or starts with one
                 elif (literal_name.lower() in continuation_words or
-                      any(literal_name.lower().startswith(word) for word in ["first", "last", "on", "in", "out", "up", "down"])):
+                      any(literal_name.lower().startswith(word) for word in self._suffix_words)):
                     # If it's a suffix word (First, Last, On, In, etc.), append to name
-                    if (literal_name.lower() in {"first", "last", "on", "in", "out", "up", "down"} or
-                        any(literal_name.lower().startswith(word) for word in ["first", "last", "on", "in", "out", "up", "down"])):
+                    # Loaded from YAML configuration (SWR_PARSER_00101)
+                    if (literal_name.lower() in self._suffix_words or
+                        any(literal_name.lower().startswith(word) for word in self._suffix_words)):
                         is_continuation = True
                         append_to_name = True
                     else:
@@ -330,8 +410,18 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 # Check for multi-line literal name scenario (enum3.png from master):
                 # When consecutive lines have the same description and the literal name
                 # continues the previous name (e.g., "reportingIn", "ChronologicalOrder", "OldestFirst")
+                #
+                # Clean the current description before comparing (remove tags) to handle
+                # cases where some lines have tags and others don't (SWR_PARSER_00101)
+                clean_current_desc = literal_description
+                if "atp.EnumerationLiteralIndex" in clean_current_desc:
+                    clean_current_desc = re.sub(r"\s*atp\.EnumerationLiteralIndex=\d+", "", clean_current_desc)
+                if "xml.name" in clean_current_desc:
+                    clean_current_desc = re.sub(r"\s*xml\.name=[^\s,]+", "", clean_current_desc)
+                clean_current_desc = clean_current_desc.strip()
+
                 if (literal_description and previous_literal and previous_literal.description and
-                      literal_description == previous_literal.description):
+                      clean_current_desc == previous_literal.description):
                     # Append to previous literal's name (stacked names with same description)
                     self._pending_literals[-1].name += literal_name
                     # Don't create a new literal, continue processing
@@ -358,8 +448,9 @@ class AutosarEnumerationParser(AbstractTypeParser):
                     literal_description != "Tags:" and
                     "atp.EnumerationLiteralIndex" in previous_literal.tags and
                     not append_to_name and  # Not a continuation line (append_to_name=False)
-                    # Only treat as Pattern 2/5 if name is NOT a small suffix word (First, Last, etc.)
-                    (len(literal_name) > 5 or literal_name not in {"first", "last", "on", "in", "out", "up", "down"})
+                    # Only treat as Pattern 2/5 if name is NOT a small suffix word
+                    # Loaded from YAML configuration (SWR_PARSER_00101)
+                    (len(literal_name) > 5 or literal_name not in self._suffix_words)
                 )
                 is_new_literal_by_uppercase = (
                     previous_literal and
@@ -433,25 +524,21 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 # This is a new literal - create it
                 # Filter out common header words and phrases that are not valid enumeration literals
                 # These often appear in PDF headers around enumeration tables
-                header_exclusion_patterns = {
-                    "extract template", "cp r23-11", "r23-11", "template",
-                    "autosar ", "diagnostic "
-                }
-                # Check if literal name or description matches header exclusion patterns
+                # Loaded from YAML configuration (SWR_PARSER_00101)
                 skip_literal = False
                 literal_lower = literal_name.lower()
                 desc_lower = literal_description.lower() if literal_description else ""
 
                 # Check if description contains header patterns (e.g., "Extract Template")
-                for pattern in header_exclusion_patterns:
+                for pattern in self._header_exclusion_patterns:
                     if pattern in desc_lower or pattern in literal_lower:
                         skip_literal = True
                         break
 
                 # Also check if name is a single common header word with generic description
                 # e.g., "Diagnostic" with description "Extract Template"
-                if (literal_name in ["Diagnostic", "AUTOSAR", "Generic", "Structure", "Timing"] and
-                    any(p in desc_lower for p in ["extract", "template", "r23-11", "structure", "timing"])):
+                if (literal_name in self._header_words and
+                    any(p in desc_lower for p in self._header_exclusion_patterns)):
                     skip_literal = True
 
                 if skip_literal:

@@ -140,3 +140,4 @@ Desktop.ini
 # data
 data
 cov_report.json
+autosar_pdf_warnings.log

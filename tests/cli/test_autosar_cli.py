@@ -124,7 +124,8 @@ class TestAutosarCli:
 
     @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md", "--include-class-details"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
-    def test_output_file_option_with_class_files(self, mock_path: MagicMock) -> None:
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging.FileHandler")
+    def test_output_file_option_with_class_files(self, mock_file_handler: MagicMock, mock_path: MagicMock) -> None:
         """SWUT_CLI_00005: Test CLI writes output to specified file and creates class files when flag is set.
 
         Requirements:
@@ -137,7 +138,18 @@ class TestAutosarCli:
         mock_path_instance.is_file.return_value = True
         type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
         mock_path_instance.absolute.return_value = MagicMock()
-        mock_path.return_value = mock_path_instance
+
+        # Mock warning log file path
+        mock_warning_log_path = MagicMock()
+
+        # Mock Path for output file
+        output_path = MagicMock()
+        output_path.write_text = MagicMock()
+        output_path.parent = MagicMock()
+
+        # Configure Path mock to return different mocks based on call order
+        # Order: warning log file, then PDF file, then output file, then output parent
+        mock_path.side_effect = [mock_warning_log_path, mock_path_instance, output_path, output_path.parent]
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
@@ -151,11 +163,9 @@ class TestAutosarCli:
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
-            # Mock Path for output file
-            output_path = MagicMock()
-            output_path.write_text = MagicMock()
-            output_path.parent = MagicMock()
-            mock_path.side_effect = [mock_path_instance, output_path, output_path.parent]
+            # Mock FileHandler
+            mock_handler = MagicMock()
+            mock_file_handler.return_value = mock_handler
 
             result = main()
 
@@ -167,7 +177,8 @@ class TestAutosarCli:
 
     @patch("sys.argv", ["autosar-extract", "test.pdf", "-o", "output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
-    def test_output_file_option_without_class_files(self, mock_path: MagicMock) -> None:
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging.FileHandler")
+    def test_output_file_option_without_class_files(self, mock_file_handler: MagicMock, mock_path: MagicMock) -> None:
         """SWUT_CLI_00006: Test CLI writes output to specified file but does not create class files when flag is not set.
 
         Requirements:
@@ -179,7 +190,17 @@ class TestAutosarCli:
         mock_path_instance.is_file.return_value = True
         type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
         mock_path_instance.absolute.return_value = MagicMock()
-        mock_path.return_value = mock_path_instance
+
+        # Mock warning log file path
+        mock_warning_log_path = MagicMock()
+
+        # Mock Path for output file
+        output_path = MagicMock()
+        output_path.write_text = MagicMock()
+
+        # Configure Path mock to return different mocks based on call order
+        # Order: warning log file, then PDF file, then output file
+        mock_path.side_effect = [mock_warning_log_path, mock_path_instance, output_path]
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
@@ -193,10 +214,9 @@ class TestAutosarCli:
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
-            # Mock Path for output file
-            output_path = MagicMock()
-            output_path.write_text = MagicMock()
-            mock_path.side_effect = [mock_path_instance, output_path]
+            # Mock FileHandler
+            mock_handler = MagicMock()
+            mock_file_handler.return_value = mock_handler
 
             result = main()
 
@@ -220,7 +240,13 @@ class TestAutosarCli:
         mock_path_instance.is_file.return_value = True
         type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
         mock_path_instance.absolute.return_value = MagicMock()
-        mock_path.return_value = mock_path_instance
+
+        # Mock warning log file path
+        mock_warning_log_path = MagicMock()
+
+        # Configure Path mock to return different mocks based on call order
+        # Order: warning log file, then PDF file
+        mock_path.side_effect = [mock_warning_log_path, mock_path_instance]
 
         mock_logging.DEBUG = 10
         mock_logging.INFO = 20
@@ -238,13 +264,20 @@ class TestAutosarCli:
 
             main()
 
-            # Verify root logger was configured with INFO level (not verbose)
+            # Verify root logger was configured with DEBUG level (to capture all levels)
             root_logger = mock_logging.getLogger.return_value
-            # Check that INFO was set (may be called multiple times due to pdfminer suppression)
-            assert any(call[0][0] == mock_logging.INFO for call in root_logger.setLevel.call_args_list)
+            # Check that DEBUG was set
+            assert any(call[0][0] == mock_logging.DEBUG for call in root_logger.setLevel.call_args_list)
 
-            # Verify console handler was created with INFO level
+            # Verify console handler was created with INFO level (normal mode shows INFO+, WARNING goes to file)
             assert any(call[0][0].setLevel.call_args[0][0] == mock_logging.INFO
+                      for call in root_logger.addHandler.call_args_list)
+
+            # Verify warning file handler was created (to log warnings to file)
+            # Check that FileHandler was called to create the warning handler
+            mock_logging.FileHandler.assert_called_once()
+            # Verify the handler was added to root logger
+            assert any(call[0][0] == mock_logging.FileHandler.return_value
                       for call in root_logger.addHandler.call_args_list)
 
     @patch("sys.argv", ["autosar-extract", "test.pdf"])
@@ -395,8 +428,8 @@ class TestAutosarCli:
             result = main()
 
             assert result == 0
-            # Verify FileHandler was created
-            mock_logging.FileHandler.assert_called_once()
+            # Verify FileHandler was created twice (warning log + --log-file)
+            assert mock_logging.FileHandler.call_count == 2
             # Verify FileHandler was added to root logger
             mock_logging.getLogger.return_value.addHandler.assert_called()
 

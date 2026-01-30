@@ -39,7 +39,11 @@ Check pull request status, merge it, and return to master branch.
 ### 5. Cleanup (Optional)
 - Remote branch is deleted via `--delete-branch` flag during merge
 - Ask if you want to delete the local feature branch
-- Delete local branch: `git branch -d <feature-branch>`
+- Check if the local feature branch exists before attempting to delete:
+  - List local branches: `git branch --list <feature-branch>`
+  - Only attempt deletion if the branch exists: `git branch -d <feature-branch>`
+- Handle the case where the branch was already cleaned up by the merge operation
+- Report success or skip if branch doesn't exist (not an error)
 
 ## Arguments
 

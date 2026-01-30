@@ -13,7 +13,6 @@ from typing import Optional
 import pytest
 
 from autosar_pdf2txt.models import AutosarClass, AutosarDoc, AutosarEnumeration, AutosarPrimitive
-from autosar_pdf2txt.parser import PdfParser
 
 
 # Import helper functions from conftest

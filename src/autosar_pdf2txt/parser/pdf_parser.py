@@ -20,7 +20,7 @@ import logging
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, cast
 
 from autosar_pdf2txt.models import (
     AutosarClass,
@@ -354,13 +354,11 @@ class PdfParser:
                 # Extract the name from the match
                 if class_match:
                     name = class_match.group(1)
-                    expected_type = "class"
                 elif primitive_match:
                     name = primitive_match.group(1)
-                    expected_type = "primitive"
                 else:  # enumeration_match
+                    assert enumeration_match is not None
                     name = enumeration_match.group(1)
-                    expected_type = "enumeration"
 
                 # Check if this model is already being parsed (multi-page definition)
                 # This handles the case where table headers are repeated on subsequent pages
@@ -374,6 +372,7 @@ class PdfParser:
 
                 if existing_model is not None:
                     # Continue parsing the existing model
+                    assert existing_model_index is not None
                     parser_type = model_parsers[existing_model_index]
                     i += 1
                     is_complete = False
@@ -410,7 +409,9 @@ class PdfParser:
                             del model_parsers[existing_model_index]
                         # Finalize the model (apply patches, etc.) before adding to models list
                         if parser_type == "enumeration":
-                            self._enum_parser._finalize_enumeration(existing_model)
+                            self._enum_parser._finalize_enumeration(
+                                cast(AutosarEnumeration, existing_model)
+                            )
                         # Add the continued model to the models list
                         models.append(existing_model)
                     continue

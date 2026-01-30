@@ -275,9 +275,17 @@ class MarkdownWriter:
             level: Current indentation level.
             output: StringIO buffer to write to.
         """
-        # Write class line (without abstract marker)
+        # Write class line with appropriate marker
         indent = "  " * level
-        output.write(f"{indent}* {cls.name}\n")
+        if cls.atp_type != ATPType.NONE:
+            # ATP interface: use interface marker
+            output.write(f"{indent}* {cls.name} (interface)\n")
+        elif cls.is_abstract:
+            # Abstract class: use abstract marker
+            output.write(f"{indent}* {cls.name} (abstract)\n")
+        else:
+            # Concrete class: no marker
+            output.write(f"{indent}* {cls.name}\n")
 
     def _write_package_to_files(self, pkg: AutosarPackage, parent_dir: Path, parent_path: Optional[List[str]] = None) -> None:
         """Write a package to directory structure with class files.
@@ -347,19 +355,31 @@ class MarkdownWriter:
             OSError: If file writing fails.
         """
         output = StringIO()
-        abstract_suffix = " (abstract)" if cls.is_abstract else ""
-        output.write(f"# {cls.name}{abstract_suffix}\n\n")
+        
+        # Determine class type indicator
+        if cls.atp_type != ATPType.NONE:
+            # ATP interface
+            type_indicator = " (interface)"
+        elif cls.is_abstract:
+            type_indicator = " (abstract)"
+        else:
+            type_indicator = ""
+        
+        output.write(f"# {cls.name}{type_indicator}\n\n")
 
         # Write package information
         output.write("## Package\n\n")
         output.write(f"{package_path_str}\n\n")
 
-        # Write abstract indicator
+        # Write type indicator
         output.write("## Type\n\n")
-        output.write(f"{'Abstract' if cls.is_abstract else 'Concrete'}\n\n")
+        if cls.atp_type != ATPType.NONE:
+            output.write("ATP Interface\n\n")
+        else:
+            output.write(f"{'Abstract' if cls.is_abstract else 'Concrete'}\n\n")
 
-        # Write parent if present
-        if cls.parent:
+        # Write parent if present (NOT for ATP interfaces)
+        if cls.parent and cls.atp_type == ATPType.NONE:
             output.write("## Parent\n\n")
             output.write(f"{cls.parent}\n\n")
 
@@ -376,18 +396,25 @@ class MarkdownWriter:
                 output.write("* atpPrototype\n")
             output.write("\n")
 
-        # Write base classes if present
-        if cls.bases:
+        # Write base classes if present (NOT for ATP interfaces)
+        if cls.bases and cls.atp_type == ATPType.NONE:
             output.write("## Base Classes\n\n")
             for base in cls.bases:
                 output.write(f"* {base}\n")
             output.write("\n")
 
-        # Write implements if present
-        if cls.implements:
+        # Write implements if present (NOT for ATP interfaces)
+        if cls.implements and cls.atp_type == ATPType.NONE:
             output.write("## Implements\n\n")
             for interface in cls.implements:
                 output.write(f"* {interface}\n")
+            output.write("\n")
+
+        # Write implemented by if present (ONLY for ATP interfaces)
+        if cls.implemented_by and cls.atp_type != ATPType.NONE:
+            output.write("## Implemented By\n\n")
+            for implementer in sorted(cls.implemented_by):
+                output.write(f"* {implementer}\n")
             output.write("\n")
 
         # Write subclasses if present
@@ -410,8 +437,8 @@ class MarkdownWriter:
                 output.write(f"| {source.pdf_file} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
             output.write("\n")
 
-        # Write children if present
-        if cls.children:
+        # Write children if present (NOT for ATP interfaces)
+        if cls.children and cls.atp_type == ATPType.NONE:
             output.write("## Children\n\n")
             for child in sorted(cls.children):
                 output.write(f"* {child}\n")

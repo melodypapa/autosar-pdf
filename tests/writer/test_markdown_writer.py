@@ -76,7 +76,7 @@ class TestMarkdownWriter:
         pkg.add_class(AutosarClass(name="AbstractClass", package="M2::Test", is_abstract=True))
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
-        expected = "* TestPackage\n  * AbstractClass\n"
+        expected = "* TestPackage\n  * AbstractClass (abstract)\n"
         assert result == expected
 
     def test_write_package_with_multiple_classes(self) -> None:
@@ -95,7 +95,7 @@ class TestMarkdownWriter:
         expected = (
             "* TestPackage\n"
             "  * Class1\n"
-            "  * Class2\n"
+            "  * Class2 (abstract)\n"
             "  * Class3\n"
         )
         assert result == expected
@@ -148,7 +148,7 @@ class TestMarkdownWriter:
             "  * BswModuleTemplate\n"
             "    * BswBehavior\n"
             "      * BswInternalBehavior\n"
-            "      * ExecutableEntity\n"
+            "      * ExecutableEntity (abstract)\n"
         )
         assert result == expected
 
@@ -169,7 +169,7 @@ class TestMarkdownWriter:
             "* Package1\n"
             "  * Class1\n"
             "* Package2\n"
-            "  * Class2\n"
+            "  * Class2 (abstract)\n"
         )
         assert result == expected
 
@@ -224,7 +224,7 @@ class TestMarkdownWriter:
             "* ParentPackage\n"
             "  * DirectClass\n"
             "  * ChildPackage\n"
-            "    * ChildClass\n"
+            "    * ChildClass (abstract)\n"
         )
         assert result == expected
 
@@ -1229,7 +1229,7 @@ class TestMarkdownWriterFiles:
         """
         pkg = AutosarPackage(name="TestPackage")
         cls = AutosarClass(name="MyClass", package="M2::Test",
-    is_abstract=True,
+            is_abstract=True,
             atp_type=ATPType.ATP_VARIATION,
             bases=["BaseClass"]
         )
@@ -1244,14 +1244,12 @@ class TestMarkdownWriterFiles:
         # Find section positions
         type_idx = content.find("## Type\n\n")
         atp_idx = content.find("## ATP Type\n\n")
-        base_idx = content.find("## Base Classes\n\n")
+        # ATP classes don't have Base Classes section
 
-        # Verify order: Type < ATP Type < Base Classes
+        # Verify order: Type < ATP Type
         assert type_idx != -1
         assert atp_idx != -1
-        assert base_idx != -1
         assert type_idx < atp_idx
-        assert atp_idx < base_idx
 
     def test_write_class_with_children(self, tmp_path: Path) -> None:
         """SWUT_WRITER_00047: Test writing a class with children to a file.
@@ -1365,11 +1363,9 @@ class TestMarkdownWriterFiles:
         writer = MarkdownWriter()
         result = writer.write_packages([pkg])
 
-        # Should only show class name, no ATP markers
-        expected = "* TestPackage\n  * MyClass\n"
+        # Should show class name with interface marker
+        expected = "* TestPackage\n  * MyClass (interface)\n"
         assert result == expected
-        assert "atpVariation" not in result
-        assert "atpMixedString" not in result
 
     def test_write_packages_with_enumeration(self) -> None:
         """Test write_packages correctly handles enumerations.
@@ -1799,3 +1795,84 @@ class TestMarkdownWriterFiles:
         assert "  * Description without tags\n" in content
         assert "**Tags**:" not in content
         assert "| Tag | Value |" not in content
+
+    def test_write_class_with_implements(self, tmp_path: Path) -> None:
+        """Test write_packages_to_files correctly writes Implements section for regular classes.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_MODEL_00027: AUTOSAR Type Abstract Base Class
+
+        This test verifies that regular classes show their implemented interfaces.
+        """
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create ATP interface
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION,
+            implemented_by=["ImplementingClass"]
+        )
+
+        # Create regular class that implements the interface
+        implementing_class = AutosarClass(
+            name="ImplementingClass",
+            package="TestPackage",
+            is_abstract=False,
+            implements=["AtpTestInterface"]
+        )
+
+        pkg.add_type(atp_interface)
+        pkg.add_type(implementing_class)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        class_file = tmp_path / "TestPackage" / "ImplementingClass.md"
+        content = class_file.read_text(encoding="utf-8")
+
+        # Verify Implements section is present for regular class
+        assert "## Implements\n\n" in content
+        assert "* AtpTestInterface\n" in content
+
+        # Verify Implemented By section is NOT present for regular class
+        assert "## Implemented By" not in content
+
+    def test_write_atp_interface_with_implemented_by(self, tmp_path: Path) -> None:
+        """Test write_packages_to_files correctly writes Implemented By section for ATP interfaces.
+
+        Requirements:
+            SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_MODEL_00027: AUTOSAR Type Abstract Base Class
+
+        This test verifies that ATP interfaces show their implementing classes.
+        """
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create ATP interface with multiple implementers
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION,
+            implemented_by=["ClassA", "ClassB", "ClassC"]
+        )
+
+        pkg.add_type(atp_interface)
+
+        writer = MarkdownWriter()
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        interface_file = tmp_path / "TestPackage" / "AtpTestInterface.md"
+        content = interface_file.read_text(encoding="utf-8")
+
+        # Verify Implemented By section is present for ATP interface
+        assert "## Implemented By\n\n" in content
+        assert "* ClassA\n" in content
+        assert "* ClassB\n" in content
+        assert "* ClassC\n" in content
+
+        # Verify Implements section is NOT present for ATP interface
+        assert "## Implements" not in content

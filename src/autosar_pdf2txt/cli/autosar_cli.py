@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from autosar_pdf2txt import PdfParser, MarkdownWriter
+from autosar_pdf2txt.models import AutosarClass, AutosarEnumeration, AutosarPrimitive
 
 
 def main() -> int:
@@ -123,7 +124,7 @@ def main() -> int:
                 logging.warning(f"No PDF files found in directory: {input_path}")
                 continue
             pdf_paths.extend(pdf_files_in_dir)
-            logging.info(f"Found {len(pdf_files_in_dir)} PDF file(s) in directory: {input_path}")
+            logging.info(f"📂 Found {len(pdf_files_in_dir)} PDF file(s) in directory: {input_path}")
         else:
             logging.error(f"Not a file or directory: {input_path}")
             return 1
@@ -138,15 +139,31 @@ def main() -> int:
         pdf_parser = PdfParser()
 
         # SWR_CLI_00007: CLI Progress Feedback
-        logging.info(f"Parsing {len(pdf_paths)} PDF file(s)...")
+        logging.info(f"🔄 Parsing {len(pdf_paths)} PDF file(s)...")
 
         pdf_path_strings = [str(pdf_path) for pdf_path in pdf_paths]
 
         # Parse all PDFs at once - parent/children resolution happens on complete model
         doc = pdf_parser.parse_pdfs(pdf_path_strings)
 
-        logging.info(f"Total: {len(doc.packages)} top-level packages")
-        logging.info(f"Total: {len(doc.root_classes)} root classes")
+        # Calculate statistics
+        total_classes = 0
+        total_enums = 0
+        total_primitives = 0
+        total_types = 0
+        for pkg in doc.packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass):
+                    total_classes += 1
+                elif isinstance(typ, AutosarEnumeration):
+                    total_enums += 1
+                elif isinstance(typ, AutosarPrimitive):
+                    total_primitives += 1
+                total_types += 1
+
+        logging.info(f"📦 Total: {len(doc.packages)} top-level packages")
+        logging.info(f"🏛️  Total: {len(doc.root_classes)} root classes")
+        logging.info(f"📊 Extracted: {total_classes} classes, {total_enums} enumerations, {total_primitives} primitives ({total_types} total types)")
 
         if args.verbose:
             for pkg in doc.packages:
@@ -160,19 +177,19 @@ def main() -> int:
         # Generate class hierarchy if requested
         class_hierarchy = None
         if args.include_class_hierarchy:
-            logging.info("Generating class hierarchy...")
+            logging.info("📊 Generating class hierarchy...")
             # Collect all classes from packages for building hierarchy
             all_classes = []
             for pkg in doc.packages:
                 classes_from_pkg = writer._collect_classes_from_package(pkg)
                 all_classes.extend(classes_from_pkg)
 
-            logging.info(f"Collected {len(all_classes)} classes from {len(doc.packages)} packages")
-            logging.debug(f"Root classes for hierarchy: {len(doc.root_classes)}")
+            logging.info(f"📊 Collected {len(all_classes)} classes from {len(doc.packages)} packages")
+            logging.debug(f"📊 Root classes for hierarchy: {len(doc.root_classes)}")
 
             class_hierarchy = writer.write_class_hierarchy(doc.root_classes, all_classes)
             if class_hierarchy:
-                logging.info(f"Generated class hierarchy for {len(doc.root_classes)} root classes")
+                logging.info(f"✅ Generated class hierarchy for {len(doc.root_classes)} root classes")
 
         # SWR_CLI_00004: CLI Output File Option
         if args.output:
@@ -180,7 +197,7 @@ def main() -> int:
             # Create parent directory if it doesn't exist
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(markdown, encoding="utf-8")
-            logging.info(f"Output written to: {args.output}")
+            logging.info(f"✍️  Output written to: {args.output}")
 
             # SWR_CLI_00012: CLI Class Hierarchy Flag
             # Write class hierarchy to separate file if flag is enabled
@@ -189,16 +206,19 @@ def main() -> int:
                 # Replace hyphens with underscores in the package name
                 hierarchy_path = output_path.with_stem(f"{output_path.stem.replace('-', '_')}_hierarchy")
                 hierarchy_path.write_text(class_hierarchy, encoding="utf-8")
-                logging.info(f"Class hierarchy written to: {hierarchy_path}")
+                logging.info(f"📊 Class hierarchy written to: {hierarchy_path}")
 
             # SWR_CLI_00010: CLI Class File Output
             # SWR_CLI_00011: CLI Class Files Flag
             # Write each class to separate files if flag is enabled
             if args.include_class_details:
                 writer.write_packages_to_files(doc.packages, output_path=output_path)
-                logging.info(f"Class files written to directory: {output_path.parent}")
+                logging.info(f"📁 Class files written to directory: {output_path.parent}")
         else:
             print(markdown, end="")
+
+        # SWR_CLI_00009: CLI Error Handling
+        logging.info("✅ All PDF files processed successfully!")
 
         return 0
 

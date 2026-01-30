@@ -10,11 +10,14 @@ Requirements:
     SWR_MODEL_00020: AUTOSAR Package Type Support
     SWR_MODEL_00023: AUTOSAR Document Representation
     SWR_MODEL_00025: AUTOSAR Package Primitive Type Support
+    SWR_MODEL_00028: Query Classes Implementing Interface
+    SWR_MODEL_00029: Query Interfaces for Class
 """
 
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
 
+from autosar_pdf2txt.models.enums import ATPType
 from autosar_pdf2txt.models.types import AutosarClass, AutosarEnumeration, AutosarPrimitive
 
 
@@ -257,6 +260,71 @@ class AutosarPackage:
         """
         return any(typ.name == name for typ in self.types)
 
+    def get_classes_implementing_interface(self, interface_name: str) -> List[AutosarClass]:
+        """Get all classes in this package that implement a specific ATP interface.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+
+        Args:
+            interface_name: Name of the ATP interface to filter by.
+
+        Returns:
+            List of classes implementing the specified interface.
+        """
+        implementing_classes = []
+        for typ in self.types:
+            if isinstance(typ, AutosarClass):
+                if interface_name in typ.implements:
+                    implementing_classes.append(typ)
+        return implementing_classes
+
+    def get_interfaces_for_class(self, class_name: str) -> List[AutosarClass]:
+        """Get all ATP interfaces implemented by a specific class.
+
+        Requirements:
+            SWR_MODEL_00029: Query Interfaces for Class
+
+        Args:
+            class_name: Name of the class to get interfaces for.
+
+        Returns:
+            List of ATP interface classes implemented by the specified class.
+        """
+        cls = self.get_class(class_name)
+        if not cls:
+            return []
+
+        interfaces = []
+        for interface_name in cls.implements:
+            # Search for interface in this package and subpackages
+            interface = self._find_interface_recursive(interface_name)
+            if interface:
+                interfaces.append(interface)
+        return interfaces
+
+    def _find_interface_recursive(self, interface_name: str) -> Optional[AutosarClass]:
+        """Recursively search for an ATP interface by name.
+
+        Args:
+            interface_name: Name of the ATP interface to find.
+
+        Returns:
+            The ATP interface class or None if not found.
+        """
+        # Check this package
+        interface = self.get_class(interface_name)
+        if interface and interface.atp_type != ATPType.NONE:
+            return interface
+
+        # Check subpackages
+        for subpkg in self.subpackages:
+            result = subpkg._find_interface_recursive(interface_name)
+            if result:
+                return result
+
+        return None
+
     def has_class(self, name: str) -> bool:
         """Check if a class exists in the package.
 
@@ -352,6 +420,8 @@ class AutosarDoc:
 
     Requirements:
         SWR_MODEL_00023: AUTOSAR Document Representation
+        SWR_MODEL_00030: Query Classes Implementing Interface (Document Level)
+        SWR_MODEL_00031: Query Interface Implementers
 
     This class encapsulates the complete AUTOSAR model structure including
     the package hierarchy and root classes (classes with no bases).
@@ -418,6 +488,93 @@ class AutosarDoc:
         for cls in self.root_classes:
             if cls.name == name:
                 return cls
+        return None
+
+    def get_classes_implementing_interface(self, interface_name: str) -> List[AutosarClass]:
+        """Get all classes in the document that implement a specific ATP interface.
+
+        Requirements:
+            SWR_MODEL_00030: Query Classes Implementing Interface (Document Level)
+
+        Args:
+            interface_name: Name of the ATP interface to filter by.
+
+        Returns:
+            List of classes implementing the specified interface.
+        """
+        implementing_classes = []
+        for pkg in self.packages:
+            implementing_classes.extend(
+                pkg.get_classes_implementing_interface(interface_name)
+            )
+        return implementing_classes
+
+    def get_interface_implementers(self, interface_name: str) -> List[AutosarClass]:
+        """Get all classes that implement a specific ATP interface.
+
+        This method uses the interface's implemented_by attribute for O(1) lookup.
+
+        Requirements:
+            SWR_MODEL_00031: Query Interface Implementers
+
+        Args:
+            interface_name: Name of the ATP interface.
+
+        Returns:
+            List of classes implementing the interface.
+        """
+        # Find the interface
+        for pkg in self.packages:
+            interface = pkg.get_class(interface_name)
+            if interface and interface.atp_type != ATPType.NONE:
+                # Look up implementers using the implemented_by attribute
+                implementers = []
+                for implementer_name in interface.implemented_by:
+                    cls = self.get_class_by_name(implementer_name)
+                    if cls:
+                        implementers.append(cls)
+                return implementers
+        return []
+
+    def get_class_by_name(self, class_name: str) -> Optional[AutosarClass]:
+        """Get a class by name from any package.
+
+        Args:
+            class_name: Name of the class to find.
+
+        Returns:
+            The AutosarClass if found, None otherwise.
+        """
+        for pkg in self.packages:
+            cls = pkg.get_class(class_name)
+            if cls:
+                return cls
+            # Check subpackages recursively
+            for subpkg in pkg.subpackages:
+                cls = self._find_class_recursive(subpkg, class_name)
+                if cls:
+                    return cls
+        return None
+
+    def _find_class_recursive(self, pkg: AutosarPackage, class_name: str) -> Optional[AutosarClass]:
+        """Recursively search for a class in a package.
+
+        Args:
+            pkg: The package to search.
+            class_name: Name of the class to find.
+
+        Returns:
+            The AutosarClass if found, None otherwise.
+        """
+        cls = pkg.get_class(class_name)
+        if cls:
+            return cls
+
+        for subpkg in pkg.subpackages:
+            cls = self._find_class_recursive(subpkg, class_name)
+            if cls:
+                return cls
+
         return None
 
     def __str__(self) -> str:

@@ -1416,6 +1416,297 @@ class TestAutosarPrimitive:
             AutosarPrimitive(name="   ", package="M2::DataTypes")
 
 
+class TestATPInterfaceFunctionality:
+    """Tests for ATP interface functionality including implemented_by tracking and query methods.
+
+    Requirements:
+        SWR_MODEL_00028: Query Classes Implementing Interface
+        SWR_MODEL_00029: Query Interfaces for Class
+        SWR_MODEL_00030: Query Classes Implementing Interface (Document Level)
+        SWR_MODEL_00031: Query Interface Implementers
+        SWR_PARSER_00031: ATP Interface Implementation Tracking
+    """
+
+    def test_atp_interface_with_implemented_by(self) -> None:
+        """Test ATP interface can track implementing classes.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+        """
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="M2::Test",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION,
+            implemented_by=["Class1", "Class2", "Class3"]
+        )
+        
+        assert len(atp_interface.implemented_by) == 3
+        assert "Class1" in atp_interface.implemented_by
+        assert "Class2" in atp_interface.implemented_by
+        assert "Class3" in atp_interface.implemented_by
+
+    def test_atp_interface_with_empty_implemented_by(self) -> None:
+        """Test ATP interface with no implementers.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+        """
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="M2::Test",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION,
+            implemented_by=[]
+        )
+        
+        assert len(atp_interface.implemented_by) == 0
+
+    def test_regular_class_with_empty_implemented_by(self) -> None:
+        """Test regular class has empty implemented_by list.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+        """
+        regular_class = AutosarClass(
+            name="RegularClass",
+            package="M2::Test",
+            is_abstract=False
+        )
+        
+        assert len(regular_class.implemented_by) == 0
+
+    def test_get_classes_implementing_interface(self) -> None:
+        """Test querying classes that implement a specific ATP interface.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        
+        # Create ATP interface
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        
+        # Create implementing classes
+        implementing_class1 = AutosarClass(
+            name="ImplementingClass1",
+            package="TestPackage",
+            is_abstract=False,
+            implements=["AtpTestInterface"]
+        )
+        
+        implementing_class2 = AutosarClass(
+            name="ImplementingClass2",
+            package="TestPackage",
+            is_abstract=False,
+            implements=["AtpTestInterface", "AnotherInterface"]
+        )
+        
+        # Create non-implementing class
+        non_implementing_class = AutosarClass(
+            name="NonImplementingClass",
+            package="TestPackage",
+            is_abstract=False
+        )
+        
+        pkg.add_type(atp_interface)
+        pkg.add_type(implementing_class1)
+        pkg.add_type(implementing_class2)
+        pkg.add_type(non_implementing_class)
+        
+        # Query for classes implementing the interface
+        result = pkg.get_classes_implementing_interface("AtpTestInterface")
+        
+        assert len(result) == 2
+        class_names = {cls.name for cls in result}
+        assert class_names == {"ImplementingClass1", "ImplementingClass2"}
+
+    def test_get_classes_implementing_interface_no_matches(self) -> None:
+        """Test querying classes when no classes implement the interface.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        
+        regular_class = AutosarClass(
+            name="RegularClass",
+            package="TestPackage",
+            is_abstract=False
+        )
+        
+        pkg.add_type(atp_interface)
+        pkg.add_type(regular_class)
+        
+        result = pkg.get_classes_implementing_interface("AtpTestInterface")
+        
+        assert len(result) == 0
+
+    def test_get_interfaces_for_class(self) -> None:
+        """Test getting interfaces implemented by a class.
+
+        Requirements:
+            SWR_MODEL_00029: Query Interfaces for Class
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        
+        # Create ATP interfaces
+        atp_interface1 = AutosarClass(
+            name="AtpInterface1",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        
+        atp_interface2 = AutosarClass(
+            name="AtpInterface2",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_MIXED
+        )
+        
+        # Create implementing class
+        implementing_class = AutosarClass(
+            name="ImplementingClass",
+            package="TestPackage",
+            is_abstract=False,
+            implements=["AtpInterface1", "AtpInterface2"]
+        )
+        
+        pkg.add_type(atp_interface1)
+        pkg.add_type(atp_interface2)
+        pkg.add_type(implementing_class)
+        
+        # Query for interfaces
+        result = pkg.get_interfaces_for_class("ImplementingClass")
+        
+        assert len(result) == 2
+        interface_names = {cls.name for cls in result}
+        assert interface_names == {"AtpInterface1", "AtpInterface2"}
+
+    def test_get_interfaces_for_class_no_interfaces(self) -> None:
+        """Test getting interfaces for a class with no interfaces.
+
+        Requirements:
+            SWR_MODEL_00029: Query Interfaces for Class
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        
+        regular_class = AutosarClass(
+            name="RegularClass",
+            package="TestPackage",
+            is_abstract=False
+        )
+        
+        pkg.add_type(regular_class)
+        
+        result = pkg.get_interfaces_for_class("RegularClass")
+        
+        assert len(result) == 0
+
+    def test_get_classes_implementing_interface_at_doc_level(self) -> None:
+        """Test querying classes implementing interface at document level.
+
+        Requirements:
+            SWR_MODEL_00030: Query Classes Implementing Interface (Document Level)
+        """
+        pkg1 = AutosarPackage(name="Package1")
+        pkg2 = AutosarPackage(name="Package2")
+        
+        # Create ATP interface in package 1
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="Package1",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        
+        # Create implementing classes in both packages
+        implementing_class1 = AutosarClass(
+            name="ImplementingClass1",
+            package="Package1",
+            is_abstract=False,
+            implements=["AtpTestInterface"]
+        )
+        
+        implementing_class2 = AutosarClass(
+            name="ImplementingClass2",
+            package="Package2",
+            is_abstract=False,
+            implements=["AtpTestInterface"]
+        )
+        
+        pkg1.add_type(atp_interface)
+        pkg1.add_type(implementing_class1)
+        pkg2.add_type(implementing_class2)
+        
+        doc = AutosarDoc(packages=[pkg1, pkg2], root_classes=[])
+        
+        # Query at document level
+        result = doc.get_classes_implementing_interface("AtpTestInterface")
+        
+        assert len(result) == 2
+        class_names = {cls.name for cls in result}
+        assert class_names == {"ImplementingClass1", "ImplementingClass2"}
+
+    def test_get_interface_implementers_using_implemented_by(self) -> None:
+        """Test getting implementers using implemented_by attribute for O(1) lookup.
+
+        Requirements:
+            SWR_MODEL_00031: Query Interface Implementers
+        """
+        pkg = AutosarPackage(name="TestPackage")
+        
+        # Create ATP interface with implementers
+        atp_interface = AutosarClass(
+            name="AtpTestInterface",
+            package="TestPackage",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION,
+            implemented_by=["Class1", "Class2"]
+        )
+        
+        # Create the implementing classes
+        class1 = AutosarClass(
+            name="Class1",
+            package="TestPackage",
+            is_abstract=False,
+            implements=["AtpTestInterface"]
+        )
+        
+        class2 = AutosarClass(
+            name="Class2",
+            package="TestPackage",
+            is_abstract=False,
+            implements=["AtpTestInterface"]
+        )
+        
+        pkg.add_type(atp_interface)
+        pkg.add_type(class1)
+        pkg.add_type(class2)
+        
+        doc = AutosarDoc(packages=[pkg], root_classes=[])
+        
+        # Query using implemented_by attribute
+        result = doc.get_interface_implementers("AtpTestInterface")
+        
+        assert len(result) == 2
+        class_names = {cls.name for cls in result}
+        assert class_names == {"Class1", "Class2"}
+
+
 class TestAutosarPackage:
     """Tests for AutosarPackage class.
 
@@ -2355,3 +2646,215 @@ class TestAutosarDocumentSource:
         assert source.page_number == 15
         assert source.autosar_standard is None
         assert source.standard_release is None
+
+    def test_str_with_autosar_standard_only(self) -> None:
+        """Test __str__ method with AUTOSAR standard only.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+        """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
+
+        source = AutosarDocumentSource(
+            pdf_file="AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
+            page_number=42,
+            autosar_standard="TPS_BSWModuleDescriptionTemplate",
+            standard_release=None,
+        )
+        result = str(source)
+        expected = "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42\nAUTOSAR Standard: TPS_BSWModuleDescriptionTemplate"
+        assert result == expected
+
+    def test_str_with_autosar_standard_and_release(self) -> None:
+        """Test __str__ method with both AUTOSAR standard and release.
+
+        Requirements:
+            SWR_MODEL_00027: AUTOSAR Source Location Representation
+        """
+        from autosar_pdf2txt.models.base import AutosarDocumentSource
+
+        source = AutosarDocumentSource(
+            pdf_file="AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf",
+            page_number=42,
+            autosar_standard="TPS_BSWModuleDescriptionTemplate",
+            standard_release="R21-11",
+        )
+        result = str(source)
+        expected = "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf, page 42\nAUTOSAR Standard: TPS_BSWModuleDescriptionTemplate\nStandard Release: R21-11"
+        assert result == expected
+
+
+class TestAutosarPackageInterfaceRecursive:
+    """Tests for recursive interface search in AutosarPackage.
+
+    Requirements:
+        SWR_MODEL_00029: Query Interfaces for Class
+    """
+
+    def test_find_interface_recursive_with_nested_subpackages(self) -> None:
+        """Test _find_interface_recursive with nested subpackages.
+
+        Requirements:
+            SWR_MODEL_00029: Query Interfaces for Class
+        """
+        # Create nested package structure: Root -> Sub1 -> Sub2
+        root_pkg = AutosarPackage(name="RootPackage")
+        sub_pkg1 = AutosarPackage(name="SubPackage1")
+        sub_pkg2 = AutosarPackage(name="SubPackage2")
+
+        root_pkg.add_subpackage(sub_pkg1)
+        sub_pkg1.add_subpackage(sub_pkg2)
+
+        # Create ATP interface in the deepest subpackage
+        atp_interface = AutosarClass(
+            name="DeepInterface",
+            package="RootPackage::SubPackage1::SubPackage2",
+            is_abstract=False,
+            atp_type=ATPType.ATP_VARIATION
+        )
+        sub_pkg2.add_type(atp_interface)
+
+        # Search from root package should find it recursively
+        result = root_pkg._find_interface_recursive("DeepInterface")
+        assert result is not None
+        assert result.name == "DeepInterface"
+        assert result.atp_type == ATPType.ATP_VARIATION
+
+    def test_find_interface_recursive_not_found(self) -> None:
+        """Test _find_interface_recursive when interface is not found.
+
+        Requirements:
+            SWR_MODEL_00029: Query Interfaces for Class
+        """
+        root_pkg = AutosarPackage(name="RootPackage")
+        sub_pkg = AutosarPackage(name="SubPackage")
+        root_pkg.add_subpackage(sub_pkg)
+
+        # Create regular class (not ATP interface)
+        regular_class = AutosarClass(
+            name="RegularClass",
+            package="RootPackage::SubPackage",
+            is_abstract=False
+        )
+        sub_pkg.add_type(regular_class)
+
+        # Search for non-existent interface
+        result = root_pkg._find_interface_recursive("NonExistentInterface")
+        assert result is None
+
+    def test_get_classes_implementing_interface_with_regular_class(self) -> None:
+        """Test get_classes_implementing_interface when queried name is a regular class.
+
+        Requirements:
+            SWR_MODEL_00028: Query Classes Implementing Interface
+        """
+        pkg = AutosarPackage(name="TestPackage")
+
+        # Create regular class (not ATP interface)
+        regular_class = AutosarClass(
+            name="RegularClass",
+            package="TestPackage",
+            is_abstract=False
+        )
+        pkg.add_type(regular_class)
+
+        # Query for regular class should return empty list
+        result = pkg.get_classes_implementing_interface("RegularClass")
+        assert len(result) == 0
+
+
+class TestAutosarPackageClassRecursive:
+    """Tests for recursive class search in AutosarPackage.
+
+    Requirements:
+        SWR_MODEL_00008: Query Package Contents
+    """
+
+    def test_get_class_by_name_from_nested_packages(self) -> None:
+        """Test get_class_by_name finding class in nested package hierarchy.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+        """
+        root_pkg = AutosarPackage(name="RootPackage")
+        sub_pkg1 = AutosarPackage(name="SubPackage1")
+        sub_pkg2 = AutosarPackage(name="SubPackage2")
+
+        root_pkg.add_subpackage(sub_pkg1)
+        sub_pkg1.add_subpackage(sub_pkg2)
+
+        # Create class in deepest subpackage
+        deep_class = AutosarClass(
+            name="DeepClass",
+            package="RootPackage::SubPackage1::SubPackage2",
+            is_abstract=False
+        )
+        sub_pkg2.add_type(deep_class)
+
+        # Create document with nested packages and empty root_classes
+        doc = AutosarDoc(packages=[root_pkg], root_classes=[])
+
+        # Search from document level should find it
+        result = doc.get_class_by_name("DeepClass")
+        assert result is not None
+        assert result.name == "DeepClass"
+
+    def test_get_class_by_name_not_found(self) -> None:
+        """Test get_class_by_name when class is not found.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+        """
+        root_pkg = AutosarPackage(name="RootPackage")
+        root_pkg.add_type(AutosarClass(name="ExistingClass", package="RootPackage", is_abstract=False))
+
+        doc = AutosarDoc(packages=[root_pkg], root_classes=[])
+
+        # Search for non-existent class
+        result = doc.get_class_by_name("NonExistentClass")
+        assert result is None
+
+    def test_find_class_recursive_with_deep_nesting(self) -> None:
+        """Test _find_class_recursive with deeply nested package structure.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+        """
+        # Create deeply nested structure: Root -> L1 -> L2 -> L3
+        root_pkg = AutosarPackage(name="RootPackage")
+        l1_pkg = AutosarPackage(name="Level1")
+        l2_pkg = AutosarPackage(name="Level2")
+        l3_pkg = AutosarPackage(name="Level3")
+
+        root_pkg.add_subpackage(l1_pkg)
+        l1_pkg.add_subpackage(l2_pkg)
+        l2_pkg.add_subpackage(l3_pkg)
+
+        # Create class in deepest level
+        deep_class = AutosarClass(
+            name="DeepClass",
+            package="RootPackage::Level1::Level2::Level3",
+            is_abstract=False
+        )
+        l3_pkg.add_type(deep_class)
+
+        # Create document and search recursively
+        doc = AutosarDoc(packages=[root_pkg], root_classes=[])
+        result = doc._find_class_recursive(l1_pkg, "DeepClass")
+        assert result is not None
+        assert result.name == "DeepClass"
+
+    def test_find_class_recursive_not_found(self) -> None:
+        """Test _find_class_recursive when class is not found.
+
+        Requirements:
+            SWR_MODEL_00008: Query Package Contents
+        """
+        root_pkg = AutosarPackage(name="RootPackage")
+        sub_pkg = AutosarPackage(name="SubPackage")
+        root_pkg.add_subpackage(sub_pkg)
+
+        # Create document and search for non-existent class
+        doc = AutosarDoc(packages=[root_pkg], root_classes=[])
+        result = doc._find_class_recursive(sub_pkg, "NonExistentClass")
+        assert result is None

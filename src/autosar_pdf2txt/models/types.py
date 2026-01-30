@@ -10,6 +10,8 @@ Requirements:
     SWR_MODEL_00024: AUTOSAR Primitive Type Representation
     SWR_MODEL_00026: AUTOSAR Class Children Attribute
     SWR_MODEL_00027: AUTOSAR Source Location Representation
+    SWR_MODEL_00028: ATP Interface Implementation Tracking
+    SWR_MODEL_00029: ATP Interface Pure Interface Validation
 """
 
 from dataclasses import dataclass, field
@@ -46,6 +48,7 @@ class AutosarClass(AbstractAutosarBase):
         subclasses: List of subclass names explicitly listed in the PDF.
         aggregated_by: List of class names that aggregate this class.
         implements: List of interface names (starting with "Atp") that this class implements.
+        implemented_by: List of class names that implement this ATP interface (for ATP interfaces only).
         sources: List of source locations for the class definition itself (inherited).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
@@ -71,6 +74,7 @@ class AutosarClass(AbstractAutosarBase):
     subclasses: List[str] = field(default_factory=list)
     aggregated_by: List[str] = field(default_factory=list)
     implements: List[str] = field(default_factory=list)
+    implemented_by: List[str] = field(default_factory=list)
 
     def __init__(
         self,
@@ -85,6 +89,7 @@ class AutosarClass(AbstractAutosarBase):
         subclasses: Optional[List[str]] = None,
         aggregated_by: Optional[List[str]] = None,
         implements: Optional[List[str]] = None,
+        implemented_by: Optional[List[str]] = None,
         note: Optional[str] = None,
         sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
@@ -108,6 +113,7 @@ class AutosarClass(AbstractAutosarBase):
             subclasses: List of subclass names explicitly listed in the PDF.
             aggregated_by: List of class names that aggregate this class.
             implements: List of interface names (starting with "Atp") that this class implements.
+            implemented_by: List of class names that implement this ATP interface (for ATP interfaces only).
             note: Optional documentation.
             sources: Optional list of source locations for this class definition.
 
@@ -124,6 +130,7 @@ class AutosarClass(AbstractAutosarBase):
         self.subclasses = subclasses or []
         self.aggregated_by = aggregated_by or []
         self.implements = implements or []
+        self.implemented_by = implemented_by or []
 
     def __str__(self) -> str:
         """Return string representation of the class.

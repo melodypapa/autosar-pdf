@@ -20,7 +20,7 @@ import logging
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, cast
 
 from autosar_pdf2txt.models import (
     AutosarClass,
@@ -351,6 +351,71 @@ class PdfParser:
             enumeration_match = self._enum_parser.ENUMERATION_PATTERN.match(line)
 
             if class_match or primitive_match or enumeration_match:
+                # Extract the name from the match
+                if class_match:
+                    name = class_match.group(1)
+                elif primitive_match:
+                    name = primitive_match.group(1)
+                else:  # enumeration_match
+                    assert enumeration_match is not None
+                    name = enumeration_match.group(1)
+
+                # Check if this model is already being parsed (multi-page definition)
+                # This handles the case where table headers are repeated on subsequent pages
+                existing_model_index = None
+                existing_model = None
+                for model_index, current_model in current_models.items():
+                    if current_model.name == name:
+                        existing_model_index = model_index
+                        existing_model = current_model
+                        break
+
+                if existing_model is not None:
+                    # Continue parsing the existing model
+                    assert existing_model_index is not None
+                    parser_type = model_parsers[existing_model_index]
+                    i += 1
+                    is_complete = False
+                    while i < len(lines):
+                        if parser_type == "class":
+                            new_i, is_complete = self._class_parser.continue_parsing(
+                                existing_model, lines, i
+                            )
+                        elif parser_type == "primitive":
+                            new_i, is_complete = self._primitive_parser.continue_parsing(
+                                existing_model, lines, i
+                            )
+                        else:  # enumeration
+                            new_i, is_complete = self._enum_parser.continue_parsing(
+                                existing_model, lines, i
+                            )
+
+                        i = new_i
+
+                        if is_complete:
+                            # Remove from current_models as parsing is complete
+                            if existing_model_index in current_models:
+                                del current_models[existing_model_index]
+                                del model_parsers[existing_model_index]
+                            # Add the continued model to the models list
+                            models.append(existing_model)
+                            # Don't increment i - continue_parsing already returned the correct line index
+                            break
+                    else:
+                        # Loop completed without break (end of lines reached)
+                        # Remove from current_models as parsing is complete
+                        if existing_model_index in current_models:
+                            del current_models[existing_model_index]
+                            del model_parsers[existing_model_index]
+                        # Finalize the model (apply patches, etc.) before adding to models list
+                        if parser_type == "enumeration":
+                            self._enum_parser._finalize_enumeration(
+                                cast(AutosarEnumeration, existing_model)
+                            )
+                        # Add the continued model to the models list
+                        models.append(existing_model)
+                    continue
+
                 # This is a new type definition
                 # Reset parser state before parsing new type
                 # SWR_PARSER_00030: Ensure clean state for each new type definition

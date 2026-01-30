@@ -219,6 +219,13 @@ class AutosarEnumerationParser(AbstractTypeParser):
 
             # Check for new class/primitive/enumeration definition
             if self._is_new_type_definition(line):
+                # Special handling: If this is an enumeration with the same name as current,
+                # it's likely a table header repeated on subsequent pages. Skip it.
+                enum_match = self.ENUMERATION_PATTERN.match(line)
+                if enum_match and enum_match.group(1) == current_model.name:
+                    # Skip this line - it's a repeated header
+                    i += 1
+                    continue
                 # New type definition - finalize and return
                 self._finalize_enumeration(current_model)
                 return i, True
@@ -305,8 +312,19 @@ class AutosarEnumerationParser(AbstractTypeParser):
         # Apply patches to pending literals
         for literal in self._pending_literals:
             if literal.name in enum_patches:
-                # Apply patch: replace wrong name with correct name
-                literal.name = enum_patches[literal.name]
+                patch_value = enum_patches[literal.name]
+                
+                # Check if patch_value is a dict (index-based patches) or string (apply to all)
+                if isinstance(patch_value, dict):
+                    # Index-based patches: {correct_name: target_index}
+                    for correct_name, target_index in patch_value.items():
+                        if literal.index == target_index:
+                            # Apply patch only for this specific index
+                            literal.name = correct_name
+                            break
+                else:
+                    # String patch: apply to all occurrences
+                    literal.name = patch_value
 
     def _process_enumeration_literal_line(self, line: str, current_model: AutosarEnumeration) -> bool:
         """Process a line in the enumeration literal section.
@@ -331,15 +349,37 @@ class AutosarEnumerationParser(AbstractTypeParser):
         # They don't match the ENUMERATION_LITERAL_PATTERN because they have a colon
         if line.strip().startswith("Tags:"):
             if self._pending_literals:
-                # Extract tags from the line
+                # Initialize tags dictionary if not exists
+                if self._pending_literals[-1].tags is None:
+                    self._pending_literals[-1].tags = {}
+                # Extract tags from the line (may contain some tags inline)
                 tags = self._extract_literal_tags(line)
-                index = None
+                # Merge tags into the literal's tags
+                self._pending_literals[-1].tags.update(tags)
+                # Update index if found
                 if "atp.EnumerationLiteralIndex" in tags:
-                    index = int(tags["atp.EnumerationLiteralIndex"])
-                # Update the most recent literal with tags and index
-                self._pending_literals[-1].index = index
-                self._pending_literals[-1].tags = tags
+                    self._pending_literals[-1].index = int(tags["atp.EnumerationLiteralIndex"])
             return False
+
+        # Check if this line looks like a tag continuation line (contains tag patterns)
+        # This handles the case where tag data is on separate lines after "Tags:"
+        # Only treat as tag continuation if the line doesn't look like a literal definition
+        if self._pending_literals and self._pending_literals[-1].tags is not None:
+            # Check if line looks like pure tag data (contains atp. or xml. patterns)
+            # and is short (< 50 chars) or starts with tag pattern
+            # Don't treat as tag continuation if it matches literal pattern (looks like a new literal)
+            line_lower = line.lower()
+            is_tag_data = ("atp.enumerationliteralindex=" in line_lower or "xml.name=" in line_lower)
+            is_literal_pattern = self.ENUMERATION_LITERAL_PATTERN.match(line) is not None
+            
+            if is_tag_data and not is_literal_pattern and len(line) < 50:
+                # Extract and merge tags
+                tags = self._extract_literal_tags(line)
+                self._pending_literals[-1].tags.update(tags)
+                # Update index if found
+                if "atp.EnumerationLiteralIndex" in tags:
+                    self._pending_literals[-1].index = int(tags["atp.EnumerationLiteralIndex"])
+                return False  # Don't process this line as a literal
 
         # Try to match enumeration literal pattern
         literal_match = self.ENUMERATION_LITERAL_PATTERN.match(line)

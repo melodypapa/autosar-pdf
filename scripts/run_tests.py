@@ -345,9 +345,9 @@ and saved to scripts/report/coverage.md
         parser.print_help()
         return 1
 
+    # Set default to --all if no arguments provided
     if not any([args.all, args.integration, args.unit, args.test_id]):
-        parser.print_help()
-        return 0
+        args.all = True
 
     # Execute requested action and generate coverage report
     if args.all:

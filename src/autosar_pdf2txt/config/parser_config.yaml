@@ -70,10 +70,15 @@ enumeration_literals:
 
   # Manual patches for enumeration literals that don't merge correctly
   # even after improved multiline logic. Use sparingly - only for edge cases.
-  # Format: enumeration_name: { wrong_name: correct_name }
+  # Format: enumeration_name: { wrong_name: correct_name } (applies to all occurrences)
+  #        or { wrong_name: {correct_name: target_index} } (applies only to specific index)
   patches:
     DiagnosticEventCombinationReportingBehaviorEnum:
       reportingInChronlogicalOrder: reportingInChronlogicalOrderOldestFirst
+    ByteOrderEnum:
+      mostSignificantByte:
+        mostSignificantByteFirst: 0
+        mostSignificantByteLast: 1
 
 # Future sections for other parsers can be added here
 #

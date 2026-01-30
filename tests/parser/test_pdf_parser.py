@@ -795,6 +795,24 @@ class TestPdfParser:
         assert class_defs[0].name == "MyClass"
         assert class_defs[0].atp_type == ATPType.ATP_MIXED
 
+    def test_extract_class_with_atp_proto(self) -> None:
+        """Test extracting class with <<atpPrototype>> pattern.
+
+        SWUT_PARSER_00025: Test Extracting Class with ATP Prototype
+
+        Requirements:
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+        """
+        PdfParser()
+        text = """
+        Class MyPrototype <<atpPrototype>>
+        Package M2::AUTOSAR::PortPrototype
+        """
+        class_defs = _parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "MyPrototype"
+        assert class_defs[0].atp_type == ATPType.ATP_PROTO
+
     def test_extract_class_with_both_atp_patterns_raises_error(self) -> None:
         """Test extracting class with both ATP patterns raises validation error.
 
@@ -3107,11 +3125,11 @@ that should be captured
         pkg.add_class(class_a)
         pkg.add_class(class_b)
 
-        # Validation should pass without warnings
+        # Validation should pass without debug messages
         parser = PdfParser()
         with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
             parser._validate_subclasses([pkg])
-            mock_logger.warning.assert_not_called()
+            mock_logger.debug.assert_not_called()
 
     def test_validate_subclasses_missing_subclass(self) -> None:
         """Test _validate_subclasses with non-existent subclass.
@@ -3134,13 +3152,13 @@ that should be captured
         # Add class to package
         pkg.add_class(class_a)
 
-        # Validation should log warning
+        # Validation should log debug message
         parser = PdfParser()
         with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
             parser._validate_subclasses([pkg])
-            mock_logger.warning.assert_called_once()
+            mock_logger.debug.assert_called_once()
             # Check the formatted message
-            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            formatted_msg = mock_logger.debug.call_args[0][0] % mock_logger.debug.call_args[0][1:]
             assert "NonExistentClass" in formatted_msg
             assert "ClassA" in formatted_msg
             assert "does not exist" in formatted_msg
@@ -3173,13 +3191,13 @@ that should be captured
         pkg.add_class(class_a)
         pkg.add_class(class_b)
 
-        # Validation should log warning
+        # Validation should log debug message
         parser = PdfParser()
         with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
             parser._validate_subclasses([pkg])
-            mock_logger.warning.assert_called_once()
+            mock_logger.debug.assert_called_once()
             # Check the formatted message
-            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            formatted_msg = mock_logger.debug.call_args[0][0] % mock_logger.debug.call_args[0][1:]
             assert "ClassB" in formatted_msg
             assert "ClassA" in formatted_msg
             assert "does not inherit" in formatted_msg
@@ -3215,13 +3233,13 @@ that should be captured
         pkg.add_class(class_a)
         pkg.add_class(class_b)
 
-        # Validation should log warning
+        # Validation should log debug message
         parser = PdfParser()
         with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
             parser._validate_subclasses([pkg])
-            mock_logger.warning.assert_called_once()
+            mock_logger.debug.assert_called_once()
             # Check the formatted message
-            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            formatted_msg = mock_logger.debug.call_args[0][0] % mock_logger.debug.call_args[0][1:]
             assert "ClassB" in formatted_msg
             assert "ClassA" in formatted_msg
             assert "Circular inheritance" in formatted_msg
@@ -3267,13 +3285,13 @@ that should be captured
         pkg.add_class(class_b)
         pkg.add_class(class_c)
 
-        # Validation should log warning because ClassC is in ClassA's parent's (ClassB's) bases list
+        # Validation should log debug message because ClassC is in ClassA's parent's (ClassB's) bases list
         parser = PdfParser()
         with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
             parser._validate_subclasses([pkg])
-            mock_logger.warning.assert_called_once()
+            mock_logger.debug.assert_called_once()
             # Check the formatted message
-            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            formatted_msg = mock_logger.debug.call_args[0][0] % mock_logger.debug.call_args[0][1:]
             assert "ClassC" in formatted_msg
             assert "ClassA" in formatted_msg
             assert "ancestor" in formatted_msg
@@ -3312,13 +3330,13 @@ that should be captured
         pkg.add_class(class_a)
         pkg.add_class(class_b)
 
-        # Validation should log warning for circular inheritance
+        # Validation should log debug message for circular inheritance
         parser = PdfParser()
         with patch('autosar_pdf2txt.parser.pdf_parser.logger') as mock_logger:
             parser._validate_subclasses([pkg])
-            mock_logger.warning.assert_called_once()
+            mock_logger.debug.assert_called_once()
             # Check the formatted message
-            formatted_msg = mock_logger.warning.call_args[0][0] % mock_logger.warning.call_args[0][1:]
+            formatted_msg = mock_logger.debug.call_args[0][0] % mock_logger.debug.call_args[0][1:]
             assert "ClassB" in formatted_msg
             assert "ClassA" in formatted_msg
             assert "Circular inheritance" in formatted_msg
@@ -3462,228 +3480,6 @@ that should be captured
         # Validation should pass
         parser = PdfParser()
         parser._validate_subclasses([pkg])  # Should not raise
-
-
-class TestATPParentResolution:
-    """Tests for ATP class parent resolution from implements field.
-
-    Requirements:
-        SWR_PARSER_00034: ATP Class Parent Resolution from Implements
-    """
-
-    def test_atp_parent_resolution_from_implements(self) -> None:
-        """Test that ATP parent is resolved from implements field.
-
-        SWUT_PARSER_00079: Test ATP Parent Resolution from Implements
-
-        Requirements:
-            SWR_PARSER_00034: ATP Class Parent Resolution from Implements
-        """
-        parser = PdfParser()
-
-        # Create package
-        pkg = AutosarPackage(name="M2::AUTOSAR")
-
-        # Create ATP classes with hierarchy
-        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
-
-        atp_feature = AutosarClass(
-            name="AtpFeature",
-            package="M2::AUTOSAR",
-            bases=[],
-            implements=["ARObject"]
-        )
-
-        atp_prototype = AutosarClass(
-            name="AtpPrototype",
-            package="M2::AUTOSAR",
-            bases=["ARObject"],
-            implements=["AtpFeature", "Identifiable"]
-        )
-
-        # Add classes to package
-        pkg.add_class(ar_object)
-        pkg.add_class(atp_feature)
-        pkg.add_class(atp_prototype)
-
-        # Resolve parent references
-        parser._resolve_parent_references([pkg])
-
-        # ARObject should have no parent (root)
-        assert ar_object.parent is None
-
-        # AtpFeature should have ARObject as parent
-        assert atp_feature.parent == "ARObject"
-
-        # AtpPrototype should have AtpFeature as parent (from implements)
-        assert atp_prototype.parent == "AtpFeature"
-
-    def test_atp_parent_ignores_non_atp_in_implements(self) -> None:
-        """Test that non-ATP interfaces in implements are ignored.
-
-        SWUT_PARSER_00080: Test ATP Parent Ignores Non-ATP in Implements
-
-        Requirements:
-            SWR_PARSER_00034: ATP Class Parent Resolution from Implements
-        """
-        parser = PdfParser()
-
-        # Create package
-        pkg = AutosarPackage(name="M2::AUTOSAR")
-
-        # Create classes
-        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
-
-        atp_feature = AutosarClass(
-            name="AtpFeature",
-            package="M2::AUTOSAR",
-            bases=[],
-            implements=["ARObject"]
-        )
-
-        atp_prototype = AutosarClass(
-            name="AtpPrototype",
-            package="M2::AUTOSAR",
-            bases=["ARObject"],
-            implements=["AtpFeature", "Identifiable", "Referrable"]
-        )
-
-        identifiable = AutosarClass(
-            name="Identifiable",
-            package="M2::AUTOSAR",
-            bases=["ARObject"]
-        )
-
-        referrable = AutosarClass(
-            name="Referrable",
-            package="M2::AUTOSAR",
-            bases=["ARObject", "Identifiable"]
-        )
-
-        # Add classes to package
-        pkg.add_class(ar_object)
-        pkg.add_class(atp_feature)
-        pkg.add_class(atp_prototype)
-        pkg.add_class(identifiable)
-        pkg.add_class(referrable)
-
-        # Resolve parent references
-        parser._resolve_parent_references([pkg])
-
-        # AtpPrototype should have AtpFeature as parent (only ATP class considered)
-        assert atp_prototype.parent == "AtpFeature"
-
-        # Non-ATP classes should use regular parent resolution from bases
-        assert referrable.parent == "Identifiable"
-
-    def test_atp_parent_ancestry_based_selection(self) -> None:
-        """Test that ATP parent selection uses ancestry-based analysis.
-
-        SWUT_PARSER_00081: Test ATP Parent Ancestry Based Selection
-
-        Requirements:
-            SWR_PARSER_00034: ATP Class Parent Resolution from Implements
-        """
-        parser = PdfParser()
-
-        # Create package
-        pkg = AutosarPackage(name="M2::AUTOSAR")
-
-        # Create ATP hierarchy
-        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
-
-        atp_feature = AutosarClass(
-            name="AtpFeature",
-            package="M2::AUTOSAR",
-            bases=[],
-            implements=["ARObject"]
-        )
-
-        atp_prototype = AutosarClass(
-            name="AtpPrototype",
-            package="M2::AUTOSAR",
-            bases=["ARObject"],
-            implements=["AtpFeature"]
-        )
-
-        atp_blueprint = AutosarClass(
-            name="AtpBlueprint",
-            package="M2::AUTOSAR",
-            bases=["ARObject"],
-            implements=["AtpFeature", "AtpPrototype"]  # Both ATP, AtpPrototype is more specific
-        )
-
-        # Add classes to package
-        pkg.add_class(ar_object)
-        pkg.add_class(atp_feature)
-        pkg.add_class(atp_prototype)
-        pkg.add_class(atp_blueprint)
-
-        # Resolve parent references
-        parser._resolve_parent_references([pkg])
-
-        # AtpFeature parent is ARObject
-        assert atp_feature.parent == "ARObject"
-
-        # AtpPrototype parent is AtpFeature
-        assert atp_prototype.parent == "AtpFeature"
-
-        # AtpBlueprint parent should be AtpPrototype (most specific, not ancestor)
-        # AtpFeature is an ancestor of AtpPrototype, so AtpPrototype is selected
-        assert atp_blueprint.parent == "AtpPrototype"
-
-    def test_atp_parent_no_existing_parent(self) -> None:
-        """Test that ATP parent resolution only sets parent if not already set.
-
-        SWUT_PARSER_00082: Test ATP Parent No Existing Parent
-
-        Requirements:
-            SWR_PARSER_00034: ATP Class Parent Resolution from Implements
-        """
-        parser = PdfParser()
-
-        # Create package
-        pkg = AutosarPackage(name="M2::AUTOSAR")
-
-        # Create classes
-        ar_object = AutosarClass(name="ARObject", package="M2::AUTOSAR", bases=[])
-
-        atp_feature = AutosarClass(
-            name="AtpFeature",
-            package="M2::AUTOSAR",
-            bases=[],
-            implements=["ARObject"]
-        )
-
-        # Create a non-ATP class that will get parent from regular bases
-        regular_class = AutosarClass(
-            name="RegularClass",
-            package="M2::AUTOSAR",
-            bases=["ARObject"],
-            implements=[]  # No implements
-        )
-
-        # Create an ATP-like class with both bases and implements
-        # but parent should be set from bases first (regular parent resolution)
-        mixed_class = AutosarClass(
-            name="MixedClass",
-            package="M2::AUTOSAR",
-            bases=["RegularClass"],  # Will set parent to RegularClass
-            implements=["AtpFeature"]
-        )
-
-        # Add classes to package
-        pkg.add_class(ar_object)
-        pkg.add_class(atp_feature)
-        pkg.add_class(regular_class)
-        pkg.add_class(mixed_class)
-
-        # Resolve parent references
-        parser._resolve_parent_references([pkg])
-
-        # MixedClass parent should be RegularClass (from bases)
-        # ATP parent resolution should not override it
-        assert mixed_class.parent == "RegularClass"
 
 
 class TestPdfParserPageTracking:

@@ -13,7 +13,8 @@ Requirements:
     SWR_PARSER_00019: Backend Warning Suppression
     SWR_PARSER_00022: PDF Source Location Extraction
     SWR_PARSER_00027: Parser Backward Compatibility
-    SWR_PARSER_00034: ATP Class Parent Resolution from Implements
+    SWR_PARSER_00031: ATP Interface Implementation Tracking
+    SWR_PARSER_00032: ATP Interface Pure Interface Validation
 """
 
 import logging
@@ -29,6 +30,8 @@ from autosar_pdf2txt.models import (
     AutosarPackage,
     AutosarPrimitive,
 )
+
+from autosar_pdf2txt.models.enums import ATPType
 
 from autosar_pdf2txt.parser.class_parser import AutosarClassParser
 from autosar_pdf2txt.parser.enumeration_parser import AutosarEnumerationParser
@@ -172,8 +175,8 @@ class PdfParser:
         """
         # Phase 1: Extract all model objects from ALL PDFs first
         all_models: List[Union[AutosarClass, AutosarEnumeration, AutosarPrimitive]] = []
-        for pdf_path in pdf_paths:
-            logger.info(f"  - {pdf_path}")
+        for i, pdf_path in enumerate(pdf_paths, 1):
+            logger.info(f"  [{i}/{len(pdf_paths)}] 📄 {pdf_path}")
             models = self._extract_models(pdf_path)
             all_models.extend(models)
 
@@ -570,6 +573,12 @@ class PdfParser:
         all_packages = list(packages_dict.values())
         self._resolve_parent_references(all_packages)
 
+        # Build interface implementation map
+        interface_map = self._build_interface_implementation_map(all_packages)
+
+        # Update ATP interfaces with implementers
+        self._update_interface_implementers(all_packages, interface_map)
+
         return doc
 
     def _get_or_create_package_chain(
@@ -624,6 +633,10 @@ class PdfParser:
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
             SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
             SWR_PARSER_00029: Subclasses Contradiction Validation
+            SWR_PARSER_00031: ATP Interface Pure Interface Semantics
+
+        ATP classes are pure interfaces and do not have parent/children relationships.
+        Only regular classes resolve parent from their bases list.
 
         Args:
             packages: List of packages to process.
@@ -636,27 +649,26 @@ class PdfParser:
         warned_parent_bases: set[str] = set()
         ancestry_cache = self._build_ancestry_cache(packages, warned_ancestry_bases)
 
-        # Resolve ATP class parent references from implements field (SWR_PARSER_00034)
-        # This must happen BEFORE regular parent resolution for ATP classes
-        # so that ATP classes get their parent from implements, not from bases
-        self._resolve_atp_parent_references(packages)
-
-        # Set parent references for all classes
+        # Set parent references for all classes (skip ATP classes - they are pure interfaces)
         root_classes: List[AutosarClass] = []
         for pkg in packages:
             for typ in pkg.types:
                 if isinstance(typ, AutosarClass):
-                    # Skip if parent already set by ATP parent resolution
-                    if typ.parent is not None:
+                    # Skip ATP classes - they are pure interfaces with no parent/children
+                    if typ.atp_type != ATPType.NONE:
                         continue
                     self._set_parent_references(typ, ancestry_cache, packages, warned_parent_bases)
                     if typ.parent is None:
                         root_classes.append(typ)
 
-        # Populate children lists
+        # Populate children lists (skip ATP classes)
         self._populate_children_lists(packages)
 
+        # Validate ATP interfaces are pure (SWR_PARSER_00032)
+        self._validate_atp_interfaces(packages)
+
         # Validate subclasses contradictions (SWR_PARSER_00029)
+        # Skip ATP classes - they have no inheritance
         self._validate_subclasses(packages)
 
         return root_classes
@@ -821,6 +833,59 @@ class PdfParser:
                 if isinstance(typ, AutosarClass) and typ.name in parent_to_children:
                     typ.children = parent_to_children[typ.name]
 
+    def _build_interface_implementation_map(
+        self, packages: List[AutosarPackage]
+    ) -> Dict[str, List[str]]:
+        """Build reverse lookup map from ATP interfaces to their implementers.
+
+        This method builds a dictionary mapping each ATP interface name to a list
+        of class names that implement that interface. This is used to populate
+        the implemented_by attribute of ATP interfaces.
+
+        Requirements:
+            SWR_PARSER_00031: ATP Interface Implementation Tracking
+
+        Args:
+            packages: List of all packages to process.
+
+        Returns:
+            Dictionary mapping ATP interface names to lists of implementing class names.
+        """
+        interface_map: Dict[str, List[str]] = {}
+
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass):
+                    # For each class that implements ATP interfaces
+                    for interface_name in typ.implements:
+                        if interface_name not in interface_map:
+                            interface_map[interface_name] = []
+                        if typ.name not in interface_map[interface_name]:
+                            interface_map[interface_name].append(typ.name)
+
+        return interface_map
+
+    def _update_interface_implementers(
+        self, packages: List[AutosarPackage], interface_map: Dict[str, List[str]]
+    ) -> None:
+        """Update ATP interface classes with their implementers.
+
+        This method populates the implemented_by attribute of each ATP interface
+        with the list of classes that implement it.
+
+        Requirements:
+            SWR_PARSER_00031: ATP Interface Implementation Tracking
+
+        Args:
+            packages: List of all packages to process.
+            interface_map: Map from interface names to implementers.
+        """
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass) and typ.atp_type != ATPType.NONE:
+                    implementers = interface_map.get(typ.name, [])
+                    typ.implemented_by = implementers
+
     def _find_class_in_all_packages(
         self, class_name: str, packages: List[AutosarPackage]
     ) -> Optional[AutosarClass]:
@@ -838,6 +903,45 @@ class PdfParser:
             if cls is not None:
                 return cls
         return None
+
+    def _validate_atp_interfaces(self, packages: List[AutosarPackage]) -> None:
+        """Validate that ATP classes are pure interfaces.
+
+        ATP classes should have no inheritance relationships (no bases, parent, or children).
+        However, we log warnings instead of raising errors to accommodate real-world
+        PDF data where ATP classes may have inheritance relationships.
+
+        Requirements:
+            SWR_PARSER_00032: ATP Interface Pure Interface Validation
+
+        Args:
+            packages: List of all packages to validate.
+        """
+        for pkg in packages:
+            for typ in pkg.types:
+                if isinstance(typ, AutosarClass) and typ.atp_type != ATPType.NONE:
+                    if typ.bases:
+                        logger.debug(
+                            "ATP interface '%s' in package '%s' has bases %s. "
+                            "ATP interfaces should be pure interfaces with no inheritance relationships.",
+                            typ.name,
+                            pkg.name,
+                            typ.bases,
+                        )
+                    if typ.parent is not None:
+                        logger.debug(
+                            "ATP interface '%s' has parent '%s'. "
+                            "ATP interfaces should have no parent relationships.",
+                            typ.name,
+                            typ.parent,
+                        )
+                    if typ.children:
+                        logger.debug(
+                            "ATP interface '%s' has children %s. "
+                            "ATP interfaces should have no child relationships.",
+                            typ.name,
+                            typ.children,
+                        )
 
     def _validate_subclasses(self, packages: List[AutosarPackage]) -> None:
         """Validate that subclasses attribute does not contain contradictions.
@@ -869,7 +973,7 @@ class PdfParser:
                         # Rule 1: Subclass must exist in the model
                         subclass = self._find_class_in_all_packages(subclass_name, packages)
                         if subclass is None:
-                            logger.warning(
+                            logger.debug(
                                 "Class '%s' is listed as a subclass of '%s' but does not exist in the model",
                                 subclass_name,
                                 typ.name,
@@ -878,7 +982,7 @@ class PdfParser:
 
                         # Rule 2: Subclass must have this class in its bases list
                         if typ.name not in subclass.bases:
-                            logger.warning(
+                            logger.debug(
                                 "Class '%s' is listed as a subclass of '%s' but does not inherit from it (bases: %s)",
                                 subclass_name,
                                 typ.name,
@@ -888,7 +992,7 @@ class PdfParser:
 
                         # Rule 3: Subclass cannot be in this class's bases list (circular)
                         if subclass_name in typ.bases:
-                            logger.warning(
+                            logger.debug(
                                 "Circular inheritance detected: '%s' is both a subclass and a base of '%s'",
                                 subclass_name,
                                 typ.name,
@@ -899,7 +1003,7 @@ class PdfParser:
                         if typ.parent:
                             parent_class = self._find_class_in_all_packages(typ.parent, packages)
                             if parent_class and subclass_name in parent_class.bases:
-                                logger.warning(
+                                logger.debug(
                                     "Class '%s' is listed as a subclass of '%s' but is an ancestor (in bases of parent '%s')",
                                     subclass_name,
                                     typ.name,
@@ -909,7 +1013,7 @@ class PdfParser:
 
                         # Rule 5: Subclass cannot be the parent class itself
                         if typ.parent and subclass_name == typ.parent:
-                            logger.warning(
+                            logger.debug(
                                 "Class '%s' is listed as a subclass of '%s' but is the parent of '%s'",
                                 subclass_name,
                                 typ.name,

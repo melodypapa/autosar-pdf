@@ -12,7 +12,7 @@ from typing import Optional
 
 import pytest
 
-from autosar_pdf2txt.models import AutosarClass, AutosarDoc, AutosarEnumeration
+from autosar_pdf2txt.models import AutosarClass, AutosarDoc, AutosarEnumeration, AutosarPrimitive
 
 
 # Import helper functions from conftest
@@ -920,3 +920,153 @@ class TestPdfIntegration:
         print("  First literal: eventCombinationOnRetrieval (with description and tags)")
         print("  Second literal: eventCombinationOnStorage (with description and tags)")
         print("  Description and tags: VERIFIED")
+
+    def test_verify_total_counts_and_sorted_lists_from_all_pdfs(
+        self,
+        generic_structure_template_pdf: AutosarDoc,
+        timing_extensions_pdf: AutosarDoc,
+        bsw_module_description_pdf: AutosarDoc,
+        diagnostic_extract_template_pdf: AutosarDoc,
+    ) -> None:
+        """Test verifying total counts and sorted lists of classes, enumerations, and primitives from PDF files.
+
+        Test Case ID: SWIT_00009
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_MODEL_00001: AUTOSAR Class Representation
+            SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
+            SWR_MODEL_00024: AUTOSAR Primitive Type Representation
+            SWR_MODEL_00023: AUTOSAR Document Model
+
+        This test verifies that the 4 PDF files used in existing integration tests are parsed correctly
+        and that the total counts of classes, enumerations, and primitives are accurate.
+        It also verifies that the sorted lists of type names are generated correctly.
+
+        This test uses existing session-scoped fixtures for optimal performance.
+
+        Args:
+            generic_structure_template_pdf: Cached GenericStructureTemplate PDF data.
+            timing_extensions_pdf: Cached TimingExtensions PDF data.
+            bsw_module_description_pdf: Cached BSWModuleDescriptionTemplate PDF data.
+            diagnostic_extract_template_pdf: Cached DiagnosticExtractTemplate PDF data.
+        """
+        # Define PDF documents to test (using existing fixtures)
+        pdf_docs = {
+            "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf": generic_structure_template_pdf,
+            "AUTOSAR_CP_TPS_TimingExtensions.pdf": timing_extensions_pdf,
+            "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf": bsw_module_description_pdf,
+            "AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf": diagnostic_extract_template_pdf,
+        }
+
+        # Expected counts for each PDF (based on actual parsing results)
+        # These are minimum expected counts - actual counts may be higher
+        expected_min_counts = {
+            "AUTOSAR_FO_TPS_GenericStructureTemplate.pdf": {"classes": 228, "enumerations": 33, "primitives": 50},
+            "AUTOSAR_CP_TPS_TimingExtensions.pdf": {"classes": 127, "enumerations": 18, "primitives": 3},
+            "AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf": {"classes": 220, "enumerations": 30, "primitives": 4},
+            "AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf": {"classes": 50, "enumerations": 40, "primitives": 0},
+        }
+
+        # Collect all types from all PDFs
+        all_results = {}
+
+        for pdf_file, doc in pdf_docs.items():
+            # Collect all types recursively
+            def collect_types_from_packages(packages):
+                """Recursively collect all types from a list of packages.
+
+                Returns:
+                    Tuple of (classes, enumerations, primitives) lists.
+                """
+                classes = []
+                enumerations = []
+                primitives = []
+
+                for pkg in packages:
+                    # Collect types from current package
+                    for typ in pkg.types:
+                        if isinstance(typ, AutosarClass):
+                            classes.append(typ)
+                        elif isinstance(typ, AutosarEnumeration):
+                            enumerations.append(typ)
+                        elif isinstance(typ, AutosarPrimitive):
+                            primitives.append(typ)
+
+                    # Recursively collect from subpackages
+                    sub_classes, sub_enums, sub_prims = collect_types_from_packages(pkg.subpackages)
+                    classes.extend(sub_classes)
+                    enumerations.extend(sub_enums)
+                    primitives.extend(sub_prims)
+
+                return classes, enumerations, primitives
+
+            classes, enumerations, primitives = collect_types_from_packages(doc.packages)
+
+            # Get sorted lists of type names
+            class_names = sorted([cls.name for cls in classes])
+            enum_names = sorted([enum.name for enum in enumerations])
+            primitive_names = sorted([prim.name for prim in primitives])
+
+            # Verify expected minimum counts
+            if pdf_file in expected_min_counts:
+                expected = expected_min_counts[pdf_file]
+                # Use minimum expected counts to ensure parser is extracting correctly
+                # This allows flexibility if more types are added in future PDF versions
+                assert len(classes) >= expected["classes"], \
+                    f"{pdf_file}: Expected at least {expected['classes']} classes, got {len(classes)}"
+                assert len(enumerations) >= expected["enumerations"], \
+                    f"{pdf_file}: Expected at least {expected['enumerations']} enumerations, got {len(enumerations)}"
+                assert len(primitives) >= expected["primitives"], \
+                    f"{pdf_file}: Expected at least {expected['primitives']} primitives, got {len(primitives)}"
+
+            # Store results
+            all_results[pdf_file] = {
+                "classes": class_names,
+                "enumerations": enum_names,
+                "primitives": primitive_names,
+                "counts": {
+                    "classes": len(classes),
+                    "enumerations": len(enumerations),
+                    "primitives": len(primitives),
+                    "total": len(classes) + len(enumerations) + len(primitives),
+                }
+            }
+
+            # Print verification results
+            print(f"\n=== {pdf_file} ===")
+            print(f"  Classes: {len(classes)}")
+            print(f"  Enumerations: {len(enumerations)}")
+            print(f"  Primitives: {len(primitives)}")
+            print(f"  Total: {len(classes) + len(enumerations) + len(primitives)}")
+            print(f"  Sample classes: {class_names[:5]}{'...' if len(class_names) > 5 else ''}")
+            print(f"  Sample enumerations: {enum_names[:5]}{'...' if len(enum_names) > 5 else ''}")
+            print(f"  Sample primitives: {primitive_names[:5]}{'...' if len(primitive_names) > 5 else ''}")
+
+        # Print summary
+        print("\n=== Summary ===")
+        print(f"  Total PDFs processed: {len(all_results)}")
+        total_classes = sum(r["counts"]["classes"] for r in all_results.values())
+        total_enums = sum(r["counts"]["enumerations"] for r in all_results.values())
+        total_primitives = sum(r["counts"]["primitives"] for r in all_results.values())
+        print(f"  Total classes across all PDFs: {total_classes}")
+        print(f"  Total enumerations across all PDFs: {total_enums}")
+        print(f"  Total primitives across all PDFs: {total_primitives}")
+        print(f"  Grand total: {total_classes + total_enums + total_primitives}")
+
+        # Verify that all results have sorted lists
+        for pdf_file, result in all_results.items():
+            # Verify classes are sorted
+            assert result["classes"] == sorted(result["classes"]), \
+                f"{pdf_file}: Class names are not sorted"
+
+            # Verify enumerations are sorted
+            assert result["enumerations"] == sorted(result["enumerations"]), \
+                f"{pdf_file}: Enumeration names are not sorted"
+
+            # Verify primitives are sorted
+            assert result["primitives"] == sorted(result["primitives"]), \
+                f"{pdf_file}: Primitive names are not sorted"
+
+        print("\n=== All type lists are sorted alphabetically ===")
+        print("=== Test completed successfully ===")

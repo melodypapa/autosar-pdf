@@ -72,13 +72,32 @@ def main() -> int:
 
     # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
+    root_logger.setLevel(logging.DEBUG)  # Set to DEBUG to capture all levels
 
     # Console handler (stderr)
+    # In verbose mode: show DEBUG and above
+    # In normal mode: show INFO and above (WARNING goes to file only)
     console_handler = logging.StreamHandler(sys.stderr)
-    console_handler.setLevel(log_level)
+    console_handler.setLevel(log_level if args.verbose else logging.INFO)
+    # Filter out WARNING level messages from console (they go to file instead)
+    if not args.verbose:
+        console_handler.addFilter(lambda record: record.levelno != logging.WARNING)
     console_handler.setFormatter(logging.Formatter(log_format))
     root_logger.addHandler(console_handler)
+
+    # WARNING file handler - always log WARNING messages to a file
+    # In normal mode, this keeps console output clean while preserving warnings for debugging
+    # In verbose mode, warnings are shown on console AND logged to file
+    if not args.verbose:
+        warning_log_file = Path("autosar_pdf_warnings.log")
+        try:
+            warning_handler = logging.FileHandler(warning_log_file, mode='w', encoding='utf-8')
+            warning_handler.setLevel(logging.WARNING)
+            warning_handler.setFormatter(logging.Formatter(log_file_format, datefmt=log_date_format))
+            root_logger.addHandler(warning_handler)
+        except Exception as e:
+            # If we can't create the warning log, just log to console
+            logging.error(f"Failed to create warning log file '{warning_log_file}': {e}")
 
     # File handler (if --log-file is specified)
     # SWR_CLI_00014: CLI Logger File Specification

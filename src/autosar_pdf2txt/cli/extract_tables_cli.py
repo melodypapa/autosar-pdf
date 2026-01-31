@@ -109,6 +109,10 @@ def extract_tables_from_pdf(pdf_path: Path, output_dir: Path) -> List[Path]:
 def main() -> int:
     """Main entry point for the CLI.
 
+    Requirements:
+        SWR_CLI_00002: CLI File Input Support
+        SWR_CLI_00013: CLI Table Extraction
+
     Returns:
         Exit code (0 for success, 1 for error).
     """

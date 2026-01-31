@@ -62,7 +62,7 @@ The writer requirements define how AUTOSAR models are converted to Markdown outp
 
 **Document**: [requirements_writer.md](requirements_writer.md)
 
-**Requirements**: SWR_WRITER_00001 - SWR_WRITER_00008
+**Requirements**: SWR_WRITER_00001 - SWR_WRITER_00009
 
 **Key Areas**:
 - Markdown Writer Initialization
@@ -73,6 +73,7 @@ The writer requirements define how AUTOSAR models are converted to Markdown outp
 - Individual Class Markdown File Content
 - Class Hierarchy Output
 - Markdown Source Information Output
+- Enumeration Literal Table Output Format
 
 ---
 

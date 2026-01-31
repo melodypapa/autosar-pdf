@@ -182,6 +182,8 @@ The AttributeKind enum shall define the following values:
 - `name`: The name of the enumeration literal (non-empty string)
 - `index`: The optional index of the literal (int | None, defaults to None)
 - `description`: Optional description of the literal (str | None, defaults to None)
+- `tags`: Optional dictionary of metadata tags (Dict[str, str], defaults to empty dict)
+- `value`: Optional value of the literal extracted from xml.name tag (str | None, defaults to None)
 
 ---
 

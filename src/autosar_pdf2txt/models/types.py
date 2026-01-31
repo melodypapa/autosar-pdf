@@ -5,10 +5,14 @@ Requirements:
     SWR_MODEL_00002: AUTOSAR Class Name Validation
     SWR_MODEL_00003: AUTOSAR Class String Representation
     SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
+    SWR_MODEL_00021: AUTOSAR Class Multi-Level Inheritance Hierarchy
+
     SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
     SWR_MODEL_00022: AUTOSAR Class Parent Attribute
     SWR_MODEL_00024: AUTOSAR Primitive Type Representation
     SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        SWR_MODEL_00021: AUTOSAR Class Multi-Level Inheritance Hierarchy
+
     SWR_MODEL_00027: AUTOSAR Source Location Representation
     SWR_MODEL_00028: ATP Interface Implementation Tracking
     SWR_MODEL_00029: ATP Interface Pure Interface Validation
@@ -31,6 +35,8 @@ class AutosarClass(AbstractAutosarBase):
         SWR_MODEL_00018: AUTOSAR Type Abstract Base Class
         SWR_MODEL_00022: AUTOSAR Class Parent Attribute
         SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        SWR_MODEL_00021: AUTOSAR Class Multi-Level Inheritance Hierarchy
+
         SWR_MODEL_00027: AUTOSAR Source Location Representation
 
     Inherits from AbstractAutosarBase to provide common type properties (name, package, note)
@@ -99,6 +105,8 @@ class AutosarClass(AbstractAutosarBase):
             SWR_MODEL_00001: AUTOSAR Class Representation
             SWR_MODEL_00002: AUTOSAR Class Name Validation
             SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        SWR_MODEL_00021: AUTOSAR Class Multi-Level Inheritance Hierarchy
+
             SWR_MODEL_00027: AUTOSAR Source Location Representation
 
         Args:
@@ -151,6 +159,8 @@ class AutosarClass(AbstractAutosarBase):
             SWR_MODEL_00003: AUTOSAR Class String Representation
             SWR_MODEL_00022: AUTOSAR Class Parent Attribute
             SWR_MODEL_00026: AUTOSAR Class Children Attribute
+        SWR_MODEL_00021: AUTOSAR Class Multi-Level Inheritance Hierarchy
+
         """
         attrs_count = len(self.attributes)
         bases_count = len(self.bases)

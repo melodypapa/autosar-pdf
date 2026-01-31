@@ -8,6 +8,8 @@ Requirements:
     SWR_PARSER_00002: Backend Validation
     SWR_PARSER_00003: PDF File Parsing
     SWR_PARSER_00006: Package Hierarchy Building
+    SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)
+
     SWR_PARSER_00017: AUTOSAR Class Parent Resolution
     SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
     SWR_PARSER_00019: Backend Warning Suppression
@@ -161,6 +163,8 @@ class PdfParser:
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00006: Package Hierarchy Building
+    SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)
+
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
         Args:
@@ -203,6 +207,8 @@ class PdfParser:
         Requirements:
             SWR_PARSER_00003: PDF File Parsing
             SWR_PARSER_00007: PDF Backend Support - pdfplumber
+    SWR_PARSER_00008: PDF Backend Support - pdfplumber
+
             SWR_PARSER_00009: Proper Word Spacing in PDF Text Extraction
             SWR_PARSER_00019: PDF Backend Warning Suppression
             SWR_MODEL_00027: AUTOSAR Source Location Representation
@@ -630,6 +636,8 @@ class PdfParser:
         """Resolve parent and children references for all classes.
 
         Requirements:
+    SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)
+
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
             SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
             SWR_PARSER_00029: Subclasses Contradiction Validation
@@ -746,6 +754,8 @@ class PdfParser:
         """Set parent reference for a class by finding the actual direct parent.
 
         Requirements:
+    SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)
+
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
             SWR_PARSER_00018: Ancestry Analysis for Parent Resolution
 
@@ -813,6 +823,8 @@ class PdfParser:
         """Populate children lists for all classes.
 
         Requirements:
+    SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)
+
             SWR_PARSER_00017: AUTOSAR Class Parent Resolution
 
         Args:

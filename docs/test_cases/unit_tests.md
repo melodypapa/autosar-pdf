@@ -5126,6 +5126,147 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_MODEL_00100
+**Title**: Test AutosarEnumLiteral Value Field Initialization
+
+**Maturity**: accept
+
+**Description**: Verify that AutosarEnumLiteral can be initialized with a value field extracted from xml.name tag.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="iso11992_4"
+2. Set description="ISO 11992-4 DTC format"
+3. Set index=0
+4. Set tags={"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"}
+5. Set value="ISO-11992-4"
+6. Verify name is "iso11992_4"
+7. Verify description is "ISO 11992-4 DTC format"
+8. Verify index is 0
+9. Verify value is "ISO-11992-4"
+10. Verify tags["xml.name"] == "ISO-11992-4"
+11. Verify value matches tags["xml.name"]
+
+**Expected Result**: AutosarEnumLiteral is created with value field matching xml.name tag
+
+**Requirements Coverage**: SWR_MODEL_00014
+
+---
+
+#### SWUT_MODEL_00101
+**Title**: Test AutosarEnumLiteral Value Field Default is None
+
+**Maturity**: accept
+
+**Description**: Verify that value field defaults to None when not provided.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="TestLiteral"
+2. Verify value attribute is None
+3. Create another AutosarEnumLiteral with name="Literal2", tags={}
+4. Verify value attribute is None
+
+**Expected Result**: Value field defaults to None when not provided
+
+**Requirements Coverage**: SWR_MODEL_00014
+
+---
+
+#### SWUT_MODEL_00102
+**Title**: Test AutosarEnumLiteral String Representation With Value
+
+**Maturity**: accept
+
+**Description**: Verify that __str__ method includes value in the string representation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="iso11992_4", index=0, value="ISO-11992-4"
+2. Call str(literal)
+3. Verify result contains "iso11992_4 (index=0) [value: ISO-11992-4]"
+4. Create another AutosarEnumLiteral with name="test" and no value
+5. Call str(literal)
+6. Verify result does not contain "[value:]" suffix
+
+**Expected Result**: String representation includes value when value is present
+
+**Requirements Coverage**: SWR_MODEL_00016
+
+---
+
+#### SWUT_MODEL_00103
+**Title**: Test AutosarEnumLiteral Debug Representation With Value
+
+**Maturity**: accept
+
+**Description**: Verify that __repr__ method includes value in the debug representation.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create an AutosarEnumLiteral with name="TestLiteral", index=0, value="TEST-VALUE"
+2. Call repr(literal)
+3. Verify result contains "value='TEST-VALUE'"
+4. Verify result contains "AutosarEnumLiteral"
+5. Verify result contains "name='TestLiteral'"
+
+**Expected Result**: Debug representation includes value field
+
+**Requirements Coverage**: SWR_MODEL_00016
+
+---
+
+#### SWUT_MODEL_00104
+**Title**: Test Enumeration Literal Table Output Format
+
+**Maturity**: accept
+
+**Description**: Verify that enumeration literals are output in table format with Name, Value, and Description columns.
+
+**Precondition**: An AutosarEnumeration with literals exists
+
+**Test Steps**:
+1. Create an AutosarEnumeration with name="TestEnum"
+2. Add two literals with values and tags:
+   - Literal 1: name="VALUE1", value="VAL1", description="First value", tags={"atp.EnumerationLiteralIndex": "0"}
+   - Literal 2: name="VALUE2", value="VAL2", description="Second value", tags={"atp.EnumerationLiteralIndex": "1"}
+3. Write enumeration to markdown file
+4. Verify file contains table header: "| Name | Value | Description |"
+5. Verify file contains table separator: "|------|-------|-------------|"
+6. Verify first literal row contains: "| VALUE1 | VAL1 | First value<br>Tags: atp.EnumerationLiteralIndex=0 |"
+7. Verify second literal row contains: "| VALUE2 | VAL2 | Second value<br>Tags: atp.EnumerationLiteralIndex=1 |"
+
+**Expected Result**: Enumeration literals are output in table format with Name, Value, and Description columns
+
+**Requirements Coverage**: SWR_WRITER_00009
+
+---
+
+#### SWUT_MODEL_00105
+**Title**: Test Enumeration Literal Table Output Without Value
+
+**Maturity**: accept
+
+**Description**: Verify that enumeration literals without value display "-" in Value column.
+
+**Precondition**: An AutosarEnumeration with literals exists
+
+**Test Steps**:
+1. Create an AutosarEnumeration with name="TestEnum"
+2. Add one literal without value: name="NOVALUE", description="No value literal"
+3. Write enumeration to markdown file
+4. Verify file contains: "| NOVALUE | - | No value literal |"
+
+**Expected Result**: Enumeration literals without value display "-" in Value column
+
+**Requirements Coverage**: SWR_WRITER_00009
+
+---
+
 #### SWUT_MODEL_00095
 **Title**: Test AutosarClass Initialization With Implements Field
 

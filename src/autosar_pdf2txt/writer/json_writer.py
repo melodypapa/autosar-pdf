@@ -1,7 +1,9 @@
 """JSON writer for AUTOSAR packages and classes."""
 
+import json
+from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from autosar_pdf2txt.models import AutosarPackage
 
@@ -39,6 +41,7 @@ class JsonWriter:
 
         Requirements:
             SWR_WRITER_00011: JSON Directory Structure Creation
+            SWR_WRITER_00013: JSON Index File Output
 
         For each package:
         - Creates a packages/ directory in the output location
@@ -91,8 +94,82 @@ class JsonWriter:
         packages_dir = base_path / "packages"
         packages_dir.mkdir(parents=True, exist_ok=True)
 
+        # Write all packages
         for pkg in packages:
             self._write_package_to_files(pkg, packages_dir)
+
+        # Write index.json
+        self._write_index(packages, base_path)
+
+    def _write_index(self, packages: List[AutosarPackage], base_path: Path) -> None:
+        """Write the root index.json file.
+
+        Requirements:
+            SWR_WRITER_00013: JSON Index File Output
+
+        Args:
+            packages: List of top-level AutosarPackage objects.
+            base_path: Base directory where index.json will be written.
+        """
+        # Collect metadata
+        total_classes = 0
+        total_enums = 0
+        total_primitives = 0
+        source_files = set()
+
+        def count_entities(pkg: AutosarPackage) -> None:
+            nonlocal total_classes, total_enums, total_primitives
+            for typ in pkg.types:
+                if hasattr(typ, "attributes"):  # AutosarClass or AutosarPrimitive
+                    if typ.__class__.__name__ == "AutosarClass":
+                        total_classes += 1
+                    elif typ.__class__.__name__ == "AutosarPrimitive":
+                        total_primitives += 1
+                elif hasattr(typ, "enumeration_literals"):  # AutosarEnumeration
+                    total_enums += 1
+
+            # Collect source files
+            for typ in pkg.types:
+                if typ.sources:
+                    for source in typ.sources:
+                        source_files.add(source.pdf_file)
+
+            # Recursively count subpackages
+            for subpkg in pkg.subpackages:
+                count_entities(subpkg)
+
+        for pkg in packages:
+            count_entities(pkg)
+
+        # Build package references
+        package_refs = []
+        for pkg in packages:
+            ref = {
+                "name": pkg.name,
+                "file": f"packages/{self._sanitize_filename(pkg.name)}.json",
+                "class_count": 0,  # Will be calculated in package metadata
+                "subpackages": [subpkg.name for subpkg in pkg.subpackages],
+            }
+            package_refs.append(ref)
+
+        # Build index
+        index = {
+            "version": "1.0",
+            "metadata": {
+                "generated_at": datetime.utcnow().isoformat() + "Z",
+                "source_files": sorted(list(source_files)),
+                "total_packages": sum(1 for _ in packages),
+                "total_classes": total_classes,
+                "total_enumerations": total_enums,
+                "total_primitives": total_primitives,
+            },
+            "packages": package_refs,
+        }
+
+        # Write index.json
+        index_file = base_path / "index.json"
+        with open(index_file, "w", encoding="utf-8") as f:
+            json.dump(index, f, indent=2, ensure_ascii=False)
 
     def _write_package_to_files(self, pkg: AutosarPackage, parent_dir: Path, parent_path: Optional[List[str]] = None) -> None:
         """Write a package to directory structure with entity files.

@@ -45,7 +45,7 @@ jobs:
         TWINE_USERNAME: __token__
         # No TWINE_PASSWORD needed - uses OIDC ID token
       run: |
-        twine upload dist/* --attestation-format attestation --sign-with-signing-url
+        twine upload dist/*
 
     - name: Publish to TestPyPI
       if: false  # Enable this to publish to TestPyPI first for testing

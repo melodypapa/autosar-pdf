@@ -437,8 +437,72 @@ class JsonWriter:
             parent_dir: Parent directory for the file.
             sanitized_name: Sanitized package name for filename.
         """
-        # Placeholder for now - will implement in Task 7
-        pass
+        enums_data = {
+            "package": package_path,
+            "enumerations": [self._serialize_enumeration(enum) for enum in enums]
+        }
+
+        enums_file = parent_dir / f"{sanitized_name}.enums.json"
+        with open(enums_file, 'w', encoding='utf-8') as f:
+            json.dump(enums_data, f, indent=2, ensure_ascii=False)
+
+    def _serialize_enumeration_literal(self, literal) -> Dict:
+        """Serialize AutosarEnumLiteral to dictionary.
+
+        Requirements:
+            SWR_WRITER_00020: JSON Enumeration Serialization
+
+        Merges tags into description field with <br>Tags: format.
+
+        Args:
+            literal: AutosarEnumLiteral object.
+
+        Returns:
+            Dictionary with literal information.
+        """
+        # Build description with tags merged
+        description_parts = []
+        if literal.description:
+            description_parts.append(literal.description)
+        if literal.tags:
+            # Merge all tags as "Tags: key=value, key2=value2"
+            tag_strings = [f"{k}={v}" for k, v in sorted(literal.tags.items())]
+            description_parts.append(f"<br>Tags: {', '.join(tag_strings)}")
+
+        description = "".join(description_parts) if description_parts else ""
+
+        return {
+            "name": literal.name,
+            "index": literal.index,
+            "description": description
+        }
+
+    def _serialize_enumeration(self, enum: AutosarEnumeration) -> Dict:
+        """Serialize AutosarEnumeration to dictionary.
+
+        Requirements:
+            SWR_WRITER_00020: JSON Enumeration Serialization
+            SWR_WRITER_00017: JSON Source Information Encoding
+
+        Args:
+            enum: AutosarEnumeration object.
+
+        Returns:
+            Dictionary with all enumeration information.
+        """
+        # Serialize sources
+        sources = [self._serialize_source(source) for source in enum.sources] if enum.sources else []
+
+        # Serialize literals
+        literals = [self._serialize_enumeration_literal(lit) for lit in enum.enumeration_literals]
+
+        return {
+            "name": enum.name,
+            "package": enum.package,
+            "note": enum.note,
+            "sources": sources,
+            "literals": literals
+        }
 
     def _write_primitives_file(self, primitives: List[AutosarPrimitive], package_path: str, parent_dir: Path, sanitized_name: str) -> None:
         """Write primitives to a dedicated JSON file.

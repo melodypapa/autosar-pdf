@@ -150,3 +150,56 @@ class TestJsonWriter:
         assert len(cls_data["sources"]) == 1
         assert cls_data["sources"][0]["pdf_file"] == "test.pdf"
         assert cls_data["sources"][0]["page_number"] == 42
+
+    def test_write_enums_file(self, tmp_path):
+        """Test enumerations JSON file with literal values.
+
+        Requirements:
+            SWR_WRITER_00020: JSON Enumeration Serialization
+        """
+        import json
+        from autosar_pdf2txt.models import AutosarEnumeration, AutosarEnumLiteral, AutosarDocumentSource
+
+        writer = JsonWriter()
+        pkg = AutosarPackage(name="TestPackage")
+        enum = AutosarEnumeration(
+            "TestEnum",
+            "TestPackage",
+            enumeration_literals=[
+                AutosarEnumLiteral("VALUE1", index=0, description="First value"),
+                AutosarEnumLiteral("VALUE2", index=1, description="Second value<br>Tags: key=val")
+            ]
+        )
+        enum.sources = [
+            AutosarDocumentSource("test.pdf", 50, "AUTOSAR", "R22-11")
+        ]
+        pkg.add_type(enum)
+
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        # Verify enums file was created
+        enums_file = tmp_path / "packages" / "TestPackage.enums.json"
+        assert enums_file.exists()
+
+        # Verify enumeration structure
+        with open(enums_file) as f:
+            data = json.load(f)
+
+        assert data["package"] == "TestPackage"
+        assert len(data["enumerations"]) == 1
+
+        enum_data = data["enumerations"][0]
+        assert enum_data["name"] == "TestEnum"
+        assert len(enum_data["literals"]) == 2
+
+        # Check first literal
+        lit1 = enum_data["literals"][0]
+        assert lit1["name"] == "VALUE1"
+        assert lit1["index"] == 0
+        assert lit1["description"] == "First value"
+
+        # Check second literal with merged tags
+        lit2 = enum_data["literals"][1]
+        assert lit2["name"] == "VALUE2"
+        assert lit2["index"] == 1
+        assert "Tags: key=val" in lit2["description"]

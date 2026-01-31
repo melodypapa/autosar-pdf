@@ -176,11 +176,11 @@ class JsonWriter:
 
         Requirements:
             SWR_WRITER_00011: JSON Directory Structure Creation
+            SWR_WRITER_00014: JSON Package Metadata File Output
 
-        Args:
-            pkg: The package to write.
-            parent_dir: Parent directory path where the package directory will be created.
-            parent_path: List of parent package names for constructing full package path.
+        Creates:
+        - Package metadata JSON file with summary and file references
+        - Separate entity files for classes, enumerations, primitives
         """
         if parent_path is None:
             parent_path = []
@@ -189,11 +189,50 @@ class JsonWriter:
         full_package_path = parent_path + [pkg.name]
         package_path_str = "::".join(full_package_path)
 
-        # For now, just create a placeholder file
-        # Will implement full functionality in subsequent tasks
-        sanitized_name = self._sanitize_filename(pkg.name)
+        # Sanitize package name for filename
+        sanitized_name = self._sanitize_filename("::".join(full_package_path))
+
+        # Count entities in this package
+        class_count = sum(1 for typ in pkg.types if typ.__class__.__name__ == "AutosarClass")
+        enum_count = sum(1 for typ in pkg.types if typ.__class__.__name__ == "AutosarEnumeration")
+        primitive_count = sum(1 for typ in pkg.types if typ.__class__.__name__ == "AutosarPrimitive")
+
+        # Build entity file references
+        entity_files = {}
+        if class_count > 0:
+            entity_files["classes"] = f"packages/{sanitized_name}.classes.json"
+        if enum_count > 0:
+            entity_files["enumerations"] = f"packages/{sanitized_name}.enums.json"
+        if primitive_count > 0:
+            entity_files["primitives"] = f"packages/{sanitized_name}.primitives.json"
+
+        # Build subpackage references
+        subpackage_refs = []
+        for subpkg in pkg.subpackages:
+            sub_full_path = "::".join(full_package_path + [subpkg.name])
+            subpackage_refs.append({
+                "name": subpkg.name,
+                "full_path": sub_full_path,
+                "file": f"packages/{self._sanitize_filename(sub_full_path)}.json"
+            })
+
+        # Build package metadata
+        package_metadata = {
+            "name": package_path_str,
+            "path": package_path_str,
+            "files": entity_files,
+            "subpackages": subpackage_refs,
+            "summary": {
+                "class_count": class_count,
+                "enumeration_count": enum_count,
+                "primitive_count": primitive_count
+            }
+        }
+
+        # Write package metadata file
         package_file = parent_dir / f"{sanitized_name}.json"
-        package_file.write_text('{"name": "' + pkg.name + '"}', encoding="utf-8")
+        with open(package_file, "w", encoding="utf-8") as f:
+            json.dump(package_metadata, f, indent=2, ensure_ascii=False)
 
         # Recursively write subpackages
         for subpkg in pkg.subpackages:
@@ -222,14 +261,20 @@ class JsonWriter:
         """
         import re
 
-        # Replace invalid filename characters with underscores
+        # Replace :: delimiter with single underscore
+        sanitized = name.replace("::", "_")
+
+        # Replace other invalid filename characters with underscores
         # Invalid chars: < > : " / \ | ? * and control characters
         # Note: using \\ in pattern to match literal backslash
         invalid_chars = r'[<>:"/|?*\x00-\x1f]'
         # First handle backslash separately since it's tricky in regex
-        sanitized = name.replace("\\", "_")
+        sanitized = sanitized.replace("\\", "_")
         # Then replace all other invalid characters
         sanitized = re.sub(invalid_chars, "_", sanitized)
+
+        # Collapse multiple underscores into single underscore
+        sanitized = re.sub(r"_+", "_", sanitized)
 
         # Ensure name doesn't start or end with spaces or dots
         sanitized = sanitized.strip(". ")

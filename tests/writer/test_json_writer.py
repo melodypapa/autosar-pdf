@@ -69,3 +69,30 @@ class TestJsonWriter:
         assert index["version"] == "1.0"
         assert "metadata" in index
         assert "packages" in index
+
+    def test_write_package_metadata_file(self, tmp_path):
+        """Test package metadata JSON file has correct structure.
+
+        Requirements:
+            SWR_WRITER_00014: JSON Package Metadata File Output
+        """
+        import json
+
+        writer = JsonWriter()
+        pkg = AutosarPackage(name="M2::AUTOSAR::DataTypes")
+        pkg.add_class(AutosarClass("TestClass", "M2::AUTOSAR::DataTypes", False))
+
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        # Verify package file was created
+        package_file = tmp_path / "packages" / "M2_AUTOSAR_DataTypes.json"
+        assert package_file.exists()
+
+        # Verify package structure
+        with open(package_file) as f:
+            data = json.load(f)
+
+        assert data["name"] == "M2::AUTOSAR::DataTypes"
+        assert data["path"] == "M2::AUTOSAR::DataTypes"
+        assert "files" in data
+        assert "summary" in data

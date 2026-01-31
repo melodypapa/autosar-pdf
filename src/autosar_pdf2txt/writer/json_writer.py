@@ -516,6 +516,42 @@ class JsonWriter:
             parent_dir: Parent directory for the file.
             sanitized_name: Sanitized package name for filename.
         """
-        # Placeholder for now - will implement in Task 8
-        pass
+        primitives_data = {
+            "package": package_path,
+            "primitives": [self._serialize_primitive(prim) for prim in primitives]
+        }
+
+        primitives_file = parent_dir / f"{sanitized_name}.primitives.json"
+        with open(primitives_file, 'w', encoding='utf-8') as f:
+            json.dump(primitives_data, f, indent=2, ensure_ascii=False)
+
+    def _serialize_primitive(self, prim: AutosarPrimitive) -> Dict:
+        """Serialize AutosarPrimitive to dictionary.
+
+        Requirements:
+            SWR_WRITER_00021: JSON Primitive Serialization
+            SWR_WRITER_00018: JSON Attribute Encoding
+            SWR_WRITER_00017: JSON Source Information Encoding
+
+        Args:
+            prim: AutosarPrimitive object.
+
+        Returns:
+            Dictionary with all primitive information.
+        """
+        # Serialize attributes
+        attributes = {}
+        for attr_name, attr in prim.attributes.items():
+            attributes[attr_name] = self._serialize_attribute(attr)
+
+        # Serialize sources
+        sources = [self._serialize_source(source) for source in prim.sources] if prim.sources else []
+
+        return {
+            "name": prim.name,
+            "package": prim.package,
+            "note": prim.note,
+            "sources": sources,
+            "attributes": attributes
+        }
 

@@ -203,3 +203,45 @@ class TestJsonWriter:
         assert lit2["name"] == "VALUE2"
         assert lit2["index"] == 1
         assert "Tags: key=val" in lit2["description"]
+
+    def test_write_primitives_file(self, tmp_path):
+        """Test primitives JSON file with attributes.
+
+        Requirements:
+            SWR_WRITER_00021: JSON Primitive Serialization
+        """
+        import json
+        from autosar_pdf2txt.models import AutosarPrimitive, AutosarAttribute, AttributeKind
+
+        writer = JsonWriter()
+        pkg = AutosarPackage(name="TestPackage")
+        prim = AutosarPrimitive("Limit", "TestPackage")
+        prim.attributes = {
+            "interval_type": AutosarAttribute(
+                "interval_type",
+                "String",
+                False,
+                "1",
+                AttributeKind.ATTR,
+                "Open or closed interval"
+            )
+        }
+        pkg.add_type(prim)
+
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        # Verify primitives file was created
+        primitives_file = tmp_path / "packages" / "TestPackage.primitives.json"
+        assert primitives_file.exists()
+
+        # Verify primitive structure
+        with open(primitives_file) as f:
+            data = json.load(f)
+
+        assert data["package"] == "TestPackage"
+        assert len(data["primitives"]) == 1
+
+        prim_data = data["primitives"][0]
+        assert prim_data["name"] == "Limit"
+        assert "attributes" in prim_data
+        assert "interval_type" in prim_data["attributes"]

@@ -141,3 +141,6 @@ Desktop.ini
 data
 cov_report.json
 autosar_pdf_warnings.log
+
+# Git worktrees
+.worktrees/

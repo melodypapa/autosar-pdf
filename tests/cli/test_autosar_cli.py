@@ -72,7 +72,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = []
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "test"
 
             result = main()
@@ -108,7 +108,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             main()
@@ -159,7 +159,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
@@ -210,7 +210,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
@@ -259,7 +259,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             main()
@@ -386,7 +386,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
             mock_logging.basicConfig = MagicMock()
 
@@ -422,7 +422,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             result = main()
@@ -462,7 +462,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             result = main()
@@ -500,7 +500,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             result = main()
@@ -536,7 +536,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             result = main()
@@ -578,7 +578,7 @@ class TestAutosarCli:
             mock_doc = MagicMock(spec=AutosarDoc)
             mock_doc.packages = [mock_pkg]
             mock_doc.root_classes = []
-            mock_parser.return_value.parse_pdf.return_value = mock_doc
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
             mock_writer.return_value.write_packages.return_value = "* TestPackage\n"
 
             result = main()

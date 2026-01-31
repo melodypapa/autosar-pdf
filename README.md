@@ -327,6 +327,65 @@ The class hierarchy shows inheritance relationships from root classes:
 - Child classes indented 2 spaces per inheritance level
 - Circular references detected and marked with "(cycle detected)"
 
+### JSON Output Format
+
+The tool also supports JSON output for machine-readable data extraction and programmatic processing:
+
+```bash
+# Explicit format selection
+autosar-extract input.pdf -o output.json --format json
+autosar-extract input.pdf -o output.md --format markdown
+
+# Automatic format inference from file extension
+autosar-extract input.pdf -o output.json    # Creates JSON output
+autosar-extract input.pdf -o output.md      # Creates markdown output
+autosar-extract input.pdf -o output         # Default: markdown
+```
+
+#### JSON File Structure
+
+JSON output creates a multi-file structure with separate files for different entity types:
+
+```
+output/
+├── index.json                              # Root index with overview
+└── packages/
+    ├── M2.json                              # Package metadata
+    ├── M2.classes.json                      # All classes in M2
+    ├── M2.enums.json                        # All enumerations in M2
+    ├── M2_AUTOSAR.json                      # Subpackage metadata
+    ├── M2_AUTOSAR.classes.json              # Classes in subpackage
+    └── ...
+```
+
+#### JSON Schema
+
+**index.json** - Root index with:
+- `version`: Schema version
+- `metadata`: Generation timestamp, source files, entity counts
+- `packages`: List of package references
+
+**Package metadata file** (`packages/{name}.json`):
+- `name`: Package name
+- `path`: Full package path with `::` separator
+- `files`: References to entity files
+- `subpackages`: Child package metadata
+- `summary`: Entity counts
+
+**Classes file** (`packages/{name}.classes.json`):
+- Complete class data including attributes, sources, inheritance hierarchy
+- `atp_type`: ATP marker type or null
+- `implements`, `implemented_by`: ATP interface relationships
+
+**Enumerations file** (`packages/{name}.enums.json`):
+- Enumeration literals with `index` and `description`
+- Tags merged into description with `<br>Tags:` format
+
+**Primitives file** (`packages/{name}.primitives.json`):
+- Primitive types with attributes (no inheritance fields)
+
+For complete JSON schema details, see [JSON Writer Design Document](docs/plans/2026-01-31-json-writer-design.md).
+
 ### Individual Class Files
 
 Each class file contains detailed information:

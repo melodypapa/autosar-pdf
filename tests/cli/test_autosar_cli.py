@@ -148,8 +148,8 @@ class TestAutosarCli:
         output_path.parent = MagicMock()
 
         # Configure Path mock to return different mocks based on call order
-        # Order: warning log file, then PDF file, then output file, then output parent
-        mock_path.side_effect = [mock_warning_log_path, mock_path_instance, output_path, output_path.parent]
+        # Order: warning log file, then PDF file, then output file, then output file again (for format inference), then output parent
+        mock_path.side_effect = [mock_warning_log_path, mock_path_instance, output_path, output_path, output_path.parent]
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \
@@ -199,8 +199,8 @@ class TestAutosarCli:
         output_path.write_text = MagicMock()
 
         # Configure Path mock to return different mocks based on call order
-        # Order: warning log file, then PDF file, then output file
-        mock_path.side_effect = [mock_warning_log_path, mock_path_instance, output_path]
+        # Order: warning log file, then PDF file, then output file, then output file again (for format inference)
+        mock_path.side_effect = [mock_warning_log_path, mock_path_instance, output_path, output_path]
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.logging") as mock_logging, \

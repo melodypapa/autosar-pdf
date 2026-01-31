@@ -1,10 +1,7 @@
 """Tests for JsonWriter class."""
 
 import json
-from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 from autosar_pdf2txt.writer import JsonWriter
 from autosar_pdf2txt.models import AutosarPackage, AutosarClass
 
@@ -49,7 +46,6 @@ class TestJsonWriter:
         Requirements:
             SWR_WRITER_00013: JSON Index File Output
         """
-        import json
 
         writer = JsonWriter()
         pkg = AutosarPackage(name="M2")
@@ -76,7 +72,6 @@ class TestJsonWriter:
         Requirements:
             SWR_WRITER_00014: JSON Package Metadata File Output
         """
-        import json
 
         writer = JsonWriter()
         pkg = AutosarPackage(name="M2::AUTOSAR::DataTypes")
@@ -103,7 +98,6 @@ class TestJsonWriter:
         Requirements:
             SWR_WRITER_00015: JSON Class Serialization
         """
-        import json
         from autosar_pdf2txt.models import AutosarAttribute, AutosarDocumentSource, AttributeKind
 
         writer = JsonWriter()
@@ -157,7 +151,6 @@ class TestJsonWriter:
         Requirements:
             SWR_WRITER_00020: JSON Enumeration Serialization
         """
-        import json
         from autosar_pdf2txt.models import AutosarEnumeration, AutosarEnumLiteral, AutosarDocumentSource
 
         writer = JsonWriter()
@@ -210,7 +203,6 @@ class TestJsonWriter:
         Requirements:
             SWR_WRITER_00021: JSON Primitive Serialization
         """
-        import json
         from autosar_pdf2txt.models import AutosarPrimitive, AutosarAttribute, AttributeKind
 
         writer = JsonWriter()

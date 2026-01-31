@@ -96,3 +96,57 @@ class TestJsonWriter:
         assert data["path"] == "M2::AUTOSAR::DataTypes"
         assert "files" in data
         assert "summary" in data
+
+    def test_write_classes_file(self, tmp_path):
+        """Test classes JSON file with complete class data.
+
+        Requirements:
+            SWR_WRITER_00015: JSON Class Serialization
+        """
+        import json
+        from autosar_pdf2txt.models import AutosarAttribute, AutosarDocumentSource, AttributeKind
+
+        writer = JsonWriter()
+        pkg = AutosarPackage(name="TestPackage")
+        cls = AutosarClass(
+            "TestClass",
+            "TestPackage",
+            is_abstract=False,
+            note="Test class note"
+        )
+        cls.attributes = {
+            "test_attr": AutosarAttribute(
+                "test_attr",
+                "String",
+                False,
+                "1",
+                AttributeKind.ATTR,
+                "Test attribute"
+            )
+        }
+        cls.sources = [
+            AutosarDocumentSource("test.pdf", 42, "AUTOSAR", "R22-11")
+        ]
+        pkg.add_class(cls)
+
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        # Verify classes file was created
+        classes_file = tmp_path / "packages" / "TestPackage.classes.json"
+        assert classes_file.exists()
+
+        # Verify class structure
+        with open(classes_file) as f:
+            data = json.load(f)
+
+        assert data["package"] == "TestPackage"
+        assert len(data["classes"]) == 1
+
+        cls_data = data["classes"][0]
+        assert cls_data["name"] == "TestClass"
+        assert cls_data["is_abstract"] is False
+        assert cls_data["note"] == "Test class note"
+        assert "sources" in cls_data
+        assert len(cls_data["sources"]) == 1
+        assert cls_data["sources"][0]["pdf_file"] == "test.pdf"
+        assert cls_data["sources"][0]["page_number"] == 42

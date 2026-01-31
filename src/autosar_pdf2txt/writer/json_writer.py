@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from autosar_pdf2txt.models import AutosarPackage
+from autosar_pdf2txt.models import AutosarPackage, AutosarClass, AutosarEnumeration, AutosarPrimitive, ATPType
 
 
 class JsonWriter:
@@ -175,8 +175,8 @@ class JsonWriter:
         """Write a package to directory structure with entity files.
 
         Requirements:
-            SWR_WRITER_00011: JSON Directory Structure Creation
             SWR_WRITER_00014: JSON Package Metadata File Output
+            SWR_WRITER_00015: JSON Class Serialization
 
         Creates:
         - Package metadata JSON file with summary and file references
@@ -192,18 +192,26 @@ class JsonWriter:
         # Sanitize package name for filename
         sanitized_name = self._sanitize_filename("::".join(full_package_path))
 
-        # Count entities in this package
-        class_count = sum(1 for typ in pkg.types if typ.__class__.__name__ == "AutosarClass")
-        enum_count = sum(1 for typ in pkg.types if typ.__class__.__name__ == "AutosarEnumeration")
-        primitive_count = sum(1 for typ in pkg.types if typ.__class__.__name__ == "AutosarPrimitive")
+        # Separate entities by type
+        classes = [typ for typ in pkg.types if isinstance(typ, AutosarClass)]
+        enums = [typ for typ in pkg.types if isinstance(typ, AutosarEnumeration)]
+        primitives = [typ for typ in pkg.types if isinstance(typ, AutosarPrimitive)]
+
+        # Write entity files
+        if classes:
+            self._write_classes_file(classes, package_path_str, parent_dir, sanitized_name)
+        if enums:
+            self._write_enums_file(enums, package_path_str, parent_dir, sanitized_name)
+        if primitives:
+            self._write_primitives_file(primitives, package_path_str, parent_dir, sanitized_name)
 
         # Build entity file references
         entity_files = {}
-        if class_count > 0:
+        if classes:
             entity_files["classes"] = f"packages/{sanitized_name}.classes.json"
-        if enum_count > 0:
+        if enums:
             entity_files["enumerations"] = f"packages/{sanitized_name}.enums.json"
-        if primitive_count > 0:
+        if primitives:
             entity_files["primitives"] = f"packages/{sanitized_name}.primitives.json"
 
         # Build subpackage references
@@ -223,9 +231,9 @@ class JsonWriter:
             "files": entity_files,
             "subpackages": subpackage_refs,
             "summary": {
-                "class_count": class_count,
-                "enumeration_count": enum_count,
-                "primitive_count": primitive_count
+                "class_count": len(classes),
+                "enumeration_count": len(enums),
+                "primitive_count": len(primitives)
             }
         }
 
@@ -284,3 +292,166 @@ class JsonWriter:
             sanitized = "UnnamedPackage"
 
         return sanitized
+
+    def _serialize_atp_type(self, atp_type: ATPType) -> Optional[str]:
+        """Serialize ATP type enum to string value.
+
+        Requirements:
+            SWR_WRITER_00016: JSON ATP Type Encoding
+
+        Args:
+            atp_type: ATPType enum value.
+
+        Returns:
+            String value or None if ATPType.NONE.
+        """
+        if atp_type == ATPType.NONE:
+            return None
+        elif atp_type == ATPType.ATP_VARIATION:
+            return "atpVariation"
+        elif atp_type == ATPType.ATP_MIXED_STRING:
+            return "atpMixedString"
+        elif atp_type == ATPType.ATP_MIXED:
+            return "atpMixed"
+        elif atp_type == ATPType.ATP_PROTO:
+            return "atpPrototype"
+        return None
+
+    def _serialize_source(self, source) -> Dict:
+        """Serialize AutosarDocumentSource to dictionary.
+
+        Requirements:
+            SWR_WRITER_00017: JSON Source Information Encoding
+
+        Args:
+            source: AutosarDocumentSource object.
+
+        Returns:
+            Dictionary with source information.
+        """
+        return {
+            "pdf_file": source.pdf_file,
+            "page_number": source.page_number,
+            "autosar_standard": source.autosar_standard,
+            "standard_release": source.standard_release
+        }
+
+    def _serialize_attribute(self, attr) -> Dict:
+        """Serialize AutosarAttribute to dictionary.
+
+        Requirements:
+            SWR_WRITER_00018: JSON Attribute Encoding
+
+        Args:
+            attr: AutosarAttribute object.
+
+        Returns:
+            Dictionary with attribute information.
+        """
+        from autosar_pdf2txt.models import AttributeKind
+
+        kind_map = {
+            AttributeKind.ATTR: "attribute",
+            AttributeKind.REF: "reference"
+        }
+
+        return {
+            "type": attr.type,
+            "multiplicity": attr.multiplicity,
+            "kind": kind_map.get(attr.kind, "attribute"),
+            "is_ref": attr.is_ref,
+            "note": attr.note
+        }
+
+    def _serialize_class(self, cls: AutosarClass) -> Dict:
+        """Serialize AutosarClass to dictionary.
+
+        Requirements:
+            SWR_WRITER_00015: JSON Class Serialization
+            SWR_WRITER_00016: JSON ATP Type Encoding
+            SWR_WRITER_00017: JSON Source Information Encoding
+            SWR_WRITER_00018: JSON Attribute Encoding
+            SWR_WRITER_00019: JSON Inheritance Hierarchy Encoding
+
+        Args:
+            cls: AutosarClass object.
+
+        Returns:
+            Dictionary with all class information.
+        """
+        # Serialize attributes
+        attributes = {}
+        for attr_name, attr in cls.attributes.items():
+            attributes[attr_name] = self._serialize_attribute(attr)
+
+        # Serialize sources
+        sources = [self._serialize_source(source) for source in cls.sources] if cls.sources else []
+
+        return {
+            "name": cls.name,
+            "package": cls.package,
+            "is_abstract": cls.is_abstract,
+            "atp_type": self._serialize_atp_type(cls.atp_type),
+            "parent": cls.parent,
+            "bases": cls.bases,
+            "children": cls.children,
+            "subclasses": cls.subclasses,
+            "aggregated_by": cls.aggregated_by,
+            "implements": cls.implements,
+            "implemented_by": cls.implemented_by,
+            "note": cls.note,
+            "sources": sources,
+            "attributes": attributes
+        }
+
+    def _write_classes_file(self, classes: List[AutosarClass], package_path: str, parent_dir: Path, sanitized_name: str) -> None:
+        """Write classes to a dedicated JSON file.
+
+        Requirements:
+            SWR_WRITER_00015: JSON Class Serialization
+
+        Args:
+            classes: List of AutosarClass objects.
+            package_path: Full package path string.
+            parent_dir: Parent directory for the file.
+            sanitized_name: Sanitized package name for filename.
+        """
+        classes_data = {
+            "package": package_path,
+            "classes": [self._serialize_class(cls) for cls in classes]
+        }
+
+        classes_file = parent_dir / f"{sanitized_name}.classes.json"
+        with open(classes_file, 'w', encoding='utf-8') as f:
+            json.dump(classes_data, f, indent=2, ensure_ascii=False)
+
+    def _write_enums_file(self, enums: List[AutosarEnumeration], package_path: str, parent_dir: Path, sanitized_name: str) -> None:
+        """Write enumerations to a dedicated JSON file.
+
+        Requirements:
+            SWR_WRITER_00020: JSON Enumeration Serialization
+
+        Args:
+            enums: List of AutosarEnumeration objects.
+            package_path: Full package path string.
+            parent_dir: Parent directory for the file.
+            sanitized_name: Sanitized package name for filename.
+        """
+        # Placeholder for now - will implement in Task 7
+        pass
+
+    def _write_primitives_file(self, primitives: List[AutosarPrimitive], package_path: str, parent_dir: Path, sanitized_name: str) -> None:
+        """Write primitives to a dedicated JSON file.
+
+        Requirements:
+            SWR_WRITER_00021: JSON Primitive Serialization
+
+        Args:
+            primitives: List of AutosarPrimitive objects.
+            package_path: Full package path string.
+            parent_dir: Parent directory for the file.
+            sanitized_name: Sanitized package name for filename.
+        """
+        # Placeholder for now - will implement in Task 8
+        pass
+

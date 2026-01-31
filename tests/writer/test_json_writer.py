@@ -24,3 +24,21 @@ class TestJsonWriter:
         """
         writer = JsonWriter()
         assert writer is not None
+
+    def test_write_packages_to_files_creates_directories(self, tmp_path):
+        """Test write_packages_to_files creates package directories.
+
+        Requirements:
+            SWR_WRITER_00011: JSON Directory Structure Creation
+        """
+        writer = JsonWriter()
+        pkg = AutosarPackage(name="TestPackage")
+        pkg.add_class(AutosarClass("TestClass", "TestPackage", False))
+
+        # Write to temporary directory
+        writer.write_packages_to_files([pkg], base_dir=tmp_path)
+
+        # Verify packages directory was created
+        packages_dir = tmp_path / "packages"
+        assert packages_dir.exists()
+        assert packages_dir.is_dir()

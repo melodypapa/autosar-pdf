@@ -214,3 +214,193 @@ This requirement enables complete traceability of AUTOSAR type definitions to th
 ```
 
 This requirement provides a clean, tabular format for enumeration literals that separates the literal name from its value and description, making it easier to read and parse programmatically while maintaining all metadata information in a structured manner.
+
+---
+
+### JSON Writer Requirements
+
+The following requirements define JSON output format for AUTOSAR class extraction.
+
+**Document**: [requirements_writer.md](requirements_writer.md)
+
+**Requirements**: SWR_WRITER_00010 - SWR_WRITER_00023
+
+**Key Areas**:
+- JSON Writer Initialization
+- JSON Package Metadata File Output
+- JSON Entity File Output (Classes, Enumerations, Primitives)
+- JSON Index File Output
+- JSON File Naming and Sanitization
+- JSON Source Information Encoding
+- JSON Attribute Encoding
+- JSON Inheritance Hierarchy Encoding
+- JSON CLI Integration
+
+---
+
+### SWR_WRITER_00010
+**Title**: JSON Writer Initialization
+
+**Maturity**: draft
+
+**Description**: The system shall provide a JSON writer class (JsonWriter) for writing AUTOSAR packages and classes to JSON format. The JsonWriter class shall:
+- Be parallel in structure to the existing MarkdownWriter class
+- Require no parameters for initialization
+- Support multi-file JSON output organized by entity type and package
+
+---
+
+### SWR_WRITER_00011
+**Title**: JSON Directory Structure Creation
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall create a packages/ directory in the output location and maintain a nested directory structure for subpackages. The root directory for the file structure shall be the same as the output JSON file location.
+
+---
+
+### SWR_WRITER_00012
+**Title**: JSON File Naming and Sanitization
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall sanitize package names for filesystem safety by replacing invalid characters (< > : " / \ | ? *) with underscores. The file naming pattern shall be {sanitized_package_name}.classes.json for class files.
+
+---
+
+### SWR_WRITER_00013
+**Title**: JSON Index File Output
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall create an index.json file in the root output directory containing:
+- version: Schema version string ("1.0")
+- metadata: Object with generated_at timestamp, source_files array, total entity counts
+- packages: Array of package references with name, file path, class_count, and subpackages
+
+---
+
+### SWR_WRITER_00014
+**Title**: JSON Package Metadata File Output
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall create a package metadata JSON file (packages/{name}.json) containing:
+- name: Package short name
+- path: Full package path with :: separator
+- files: Object with references to classes, enumerations, primitives files
+- subpackages: Array of child package metadata objects
+- summary: Object with class_count, enumeration_count, primitive_count
+
+---
+
+### SWR_WRITER_00015
+**Title**: JSON Class Serialization
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall serialize AUTOSAR classes to JSON format with all class fields:
+- name, package, is_abstract, atp_type
+- parent, bases, children, subclasses, aggregated_by
+- implements, implemented_by, note, sources
+- attributes: Object with attribute names as keys
+
+---
+
+### SWR_WRITER_00016
+**Title**: JSON ATP Type Encoding
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall encode ATP type enum values as strings or null:
+- "atpVariation" for ATP_VARIATION
+- "atpMixedString" for ATP_MIXED_STRING
+- "atpMixed" for ATP_MIXED
+- "atpPrototype" for ATP_PROTO
+- null for ATP_NONE
+
+---
+
+### SWR_WRITER_00017
+**Title**: JSON Source Information Encoding
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall encode AutosarDocumentSource objects as dictionaries with:
+- pdf_file: PDF filename string
+- page_number: Integer page number
+- autosar_standard: AUTOSAR standard name string or null
+- standard_release: Release version string or null
+
+---
+
+### SWR_WRITER_00018
+**Title**: JSON Attribute Encoding
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall encode AutosarAttribute objects as dictionaries with:
+- type: Attribute type name string
+- multiplicity: Multiplicity string (e.g., "1", "0..1", "0..")
+- kind: String "attribute" or "reference"
+- is_ref: Boolean indicating if it's a reference
+- note: Attribute description string
+
+---
+
+### SWR_WRITER_00019
+**Title**: JSON Inheritance Hierarchy Encoding
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall encode inheritance-related class fields:
+- parent: Immediate parent class name or null
+- bases: Array of all base class names
+- children: Array of child class names
+- subclasses: Array of subclass names from PDF
+- implements: Array of interface names this class implements
+- implemented_by: Array of class names implementing this ATP interface
+
+---
+
+### SWR_WRITER_00020
+**Title**: JSON Enumeration Serialization
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall serialize AUTOSAR enumerations to JSON format with:
+- name, package, note, sources
+- literals: Array of literal objects with name, value, description
+- Enumeration literal tags merged into description field with <br>Tags: format
+
+---
+
+### SWR_WRITER_00021
+**Title**: JSON Primitive Serialization
+
+**Maturity**: draft
+
+**Description**: The JSON writer shall serialize AUTOSAR primitives to JSON format with:
+- name, package, note, sources
+- attributes: Object with attribute names as keys (no inheritance fields)
+
+---
+
+### SWR_WRITER_00022
+**Title**: JSON CLI Format Argument
+
+**Maturity**: draft
+
+**Description**: The CLI shall provide a --format option with choices: "markdown", "json". Default format shall be inferred from file extension.
+
+---
+
+### SWR_WRITER_00023
+**Title**: JSON Format Inference from Extension
+
+**Maturity**: draft
+
+**Description**: The CLI shall infer output format from file extension:
+- .json extension → JSON format
+- .md extension → Markdown format
+- No extension or unknown → Markdown (default)

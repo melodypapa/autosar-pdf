@@ -1574,8 +1574,8 @@ class TestPdfParser:
                 name="MyEnum",
                 package="AUTOSAR::DataTypes",
                 enumeration_literals=[
-                    AutosarEnumLiteral("VALUE1", 0, "First value"),
-                    AutosarEnumLiteral("VALUE2", 1, "Second value")
+                    AutosarEnumLiteral("VALUE1", 0, "First value", value=None),
+                    AutosarEnumLiteral("VALUE2", 1, "Second value", value=None)
                 ]
             )
         ]

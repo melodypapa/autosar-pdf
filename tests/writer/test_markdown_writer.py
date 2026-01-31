@@ -1437,8 +1437,8 @@ class TestMarkdownWriterFiles:
         pkg = AutosarPackage(name="TestPackage")
         enum = AutosarEnumeration(name="MyEnum", package="M2::Test")
         enum.enumeration_literals = [
-            AutosarEnumLiteral(name="VALUE1", index=0),
-            AutosarEnumLiteral(name="VALUE2", index=1),
+            AutosarEnumLiteral(name="VALUE1", index=0, value=None),
+            AutosarEnumLiteral(name="VALUE2", index=1, value=None),
         ]
         pkg.add_type(enum)
 
@@ -1458,8 +1458,9 @@ class TestMarkdownWriterFiles:
             assert "# Package: TestPackage" in content
             assert "## Enumeration" in content
             assert "**MyEnum**" in content
-            assert "VALUE1" in content
-            assert "VALUE2" in content
+            assert "| Name | Value | Description |" in content
+            assert "| VALUE1 | - | - |" in content
+            assert "| VALUE2 | - | - |" in content
 
     def test_write_packages_creates_directory_if_not_exists(self, tmp_path: Path) -> None:
         """Test that directories are created automatically if they don't exist.
@@ -1591,11 +1592,12 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "TestClass.md"
         content = class_file.read_text(encoding="utf-8")
 
-        # Verify Source section with table format
+        # Verify Source section with table format and clickable links
         assert "## Document Source\n\n" in content
         assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
         assert "|----------|------|------------------|------------------|" in content
-        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |" in content
+        assert "[AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42](AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42)" in content
+        assert "| 42 | - | - |" in content
 
         # Verify Note section
         assert "## Note\n\n" in content
@@ -1607,6 +1609,7 @@ class TestMarkdownWriterFiles:
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
             SWR_WRITER_00008: Markdown Source Information Output
+            SWR_WRITER_00009: Enumeration Literal Table Output Format
         """
         from autosar_pdf2txt.models.base import AutosarDocumentSource
 
@@ -1619,8 +1622,8 @@ class TestMarkdownWriterFiles:
             note="This is a test note for the enumeration."
         )
         enum.enumeration_literals = [
-            AutosarEnumLiteral(name="LITERAL1", index=0, description="First literal"),
-            AutosarEnumLiteral(name="LITERAL2", index=1, description="Second literal"),
+            AutosarEnumLiteral(name="LITERAL1", index=0, description="First literal", value=None),
+            AutosarEnumLiteral(name="LITERAL2", index=1, description="Second literal", value=None),
         ]
         pkg.add_enumeration(enum)
 
@@ -1630,22 +1633,23 @@ class TestMarkdownWriterFiles:
         enum_file = tmp_path / "TestPackage" / "TestEnum.md"
         content = enum_file.read_text(encoding="utf-8")
 
-        # Verify Source section with table format
+        # Verify Source section with table format and clickable links
         assert "## Document Source\n\n" in content
         assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
         assert "|----------|------|------------------|------------------|" in content
-        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |" in content
+        assert "[AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42](AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42)" in content
+        assert "| 42 | - | - |" in content
 
         # Verify Note section
         assert "## Note\n\n" in content
         assert "This is a test note for the enumeration." in content
 
-        # Verify Enumeration Literals section
+        # Verify Enumeration Literals section with table format
         assert "## Enumeration Literals\n\n" in content
-        assert "* LITERAL1 (index=0)" in content
-        assert "  * First literal" in content
-        assert "* LITERAL2 (index=1)" in content
-        assert "  * Second literal" in content
+        assert "| Name | Value | Description |" in content
+        assert "|------|-------|-------------|" in content
+        assert "| LITERAL1 | - | First literal |" in content
+        assert "| LITERAL2 | - | Second literal |" in content
 
     def test_write_class_with_multiple_sources(self, tmp_path: Path) -> None:
         """Test writing a class with multiple sources in table format.
@@ -1673,13 +1677,15 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "TestClass.md"
         content = class_file.read_text(encoding="utf-8")
 
-        # Verify Source section with table format
+        # Verify Source section with table format and clickable links
         assert "## Document Source\n\n" in content
         assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
         assert "|----------|------|------------------|------------------|" in content
         # Verify both sources are present (sorted alphabetically by PDF filename)
-        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | - | - |" in content
-        assert "| AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf | 15 | - | - |" in content
+        assert "[AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42](AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42)" in content
+        assert "[AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf#page=15](AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf#page=15)" in content
+        assert "| 42 | - | - |" in content
+        assert "| 15 | - | - |" in content
 
     def test_write_class_with_source_and_standard_info(self, tmp_path: Path) -> None:
         """Test writing a class with source including AUTOSAR standard information.
@@ -1711,17 +1717,19 @@ class TestMarkdownWriterFiles:
         class_file = tmp_path / "TestPackage" / "TestClass.md"
         content = class_file.read_text(encoding="utf-8")
 
-        # Verify Source section with table format including standard info
+        # Verify Source section with table format including standard info and clickable link
         assert "## Document Source\n\n" in content
         assert "| PDF File | Page | AUTOSAR Standard | Standard Release |" in content
         assert "|----------|------|------------------|------------------|" in content
-        assert "| AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf | 42 | Classic Platform | R23-11 |" in content
+        assert "[AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42](AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf#page=42)" in content
+        assert "| 42 | Classic Platform | R23-11 |" in content
 
     def test_write_enumeration_literal_with_tags_to_file(self, tmp_path: Path) -> None:
         """Test write_packages_to_files correctly handles enumeration literals with tags.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00009: Enumeration Literal Table Output Format
             SWR_WRITER_00031: Enumeration Literal Tags Extraction
 
         This test verifies that tags are written in table format in enumeration files.
@@ -1733,13 +1741,15 @@ class TestMarkdownWriterFiles:
                 name="VALUE1",
                 index=0,
                 description="ISO 11992-4 DTC format",
-                tags={"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"}
+                tags={"atp.EnumerationLiteralIndex": "0", "xml.name": "ISO-11992-4"},
+                value="ISO-11992-4"
             ),
             AutosarEnumLiteral(
                 name="VALUE2",
                 index=1,
                 description="ISO 14229-1 DTC format",
-                tags={"atp.EnumerationLiteralIndex": "1", "xml.name": "ISO-14229-1"}
+                tags={"atp.EnumerationLiteralIndex": "1", "xml.name": "ISO-14229-1"},
+                value="ISO-14229-1"
             ),
         ]
         pkg.add_type(enum)
@@ -1750,25 +1760,19 @@ class TestMarkdownWriterFiles:
         enum_file = tmp_path / "TestPackage" / "TestEnum.md"
         content = enum_file.read_text(encoding="utf-8")
 
-        # Verify Tags section is present
+        # Verify table format with Name | Value | Description columns
         assert "## Enumeration Literals\n\n" in content
-        assert "* VALUE1 (index=0)\n" in content
-        assert "* VALUE2 (index=1)\n" in content
-        assert "  * ISO 11992-4 DTC format\n" in content
-        assert "  * ISO 14229-1 DTC format\n" in content
-        assert "  * **Tags**:\n" in content
-        assert "    | Tag | Value |\n" in content
-        assert "    |-----|-------|\n" in content
-        assert "    | atp.EnumerationLiteralIndex | 0 |\n" in content
-        assert "    | xml.name | ISO-11992-4 |\n" in content
-        assert "    | atp.EnumerationLiteralIndex | 1 |\n" in content
-        assert "    | xml.name | ISO-14229-1 |\n" in content
+        assert "| Name | Value | Description |" in content
+        assert "|------|-------|-------------|" in content
+        assert "| VALUE1 | ISO-11992-4 | ISO 11992-4 DTC format<br>Tags: atp.EnumerationLiteralIndex=0, xml.name=ISO-11992-4 |" in content
+        assert "| VALUE2 | ISO-14229-1 | ISO 14229-1 DTC format<br>Tags: atp.EnumerationLiteralIndex=1, xml.name=ISO-14229-1 |" in content
 
     def test_write_enumeration_literal_without_tags_to_file(self, tmp_path: Path) -> None:
         """Test write_packages_to_files correctly handles enumeration literals without tags.
 
         Requirements:
             SWR_WRITER_00005: Directory-Based Class File Output
+            SWR_WRITER_00009: Enumeration Literal Table Output Format
 
         This test verifies that literals without tags don't show Tags section.
         """
@@ -1778,7 +1782,8 @@ class TestMarkdownWriterFiles:
             AutosarEnumLiteral(
                 name="VALUE1",
                 index=0,
-                description="Description without tags"
+                description="Description without tags",
+                value=None
             ),
         ]
         pkg.add_type(enum)
@@ -1789,10 +1794,11 @@ class TestMarkdownWriterFiles:
         enum_file = tmp_path / "TestPackage" / "TestEnum.md"
         content = enum_file.read_text(encoding="utf-8")
 
-        # Verify Tags section is NOT present when no tags exist
+        # Verify table format without tags
         assert "## Enumeration Literals\n\n" in content
-        assert "* VALUE1 (index=0)\n" in content
-        assert "  * Description without tags\n" in content
+        assert "| Name | Value | Description |" in content
+        assert "|------|-------|-------------|" in content
+        assert "| VALUE1 | - | Description without tags |" in content
         assert "**Tags**:" not in content
         assert "| Tag | Value |" not in content
 

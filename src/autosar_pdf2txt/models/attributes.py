@@ -28,17 +28,20 @@ class AutosarEnumLiteral:
         index: The optional index of the literal (e.g., atp.EnumerationLiteralIndex=0).
         description: Optional description of the literal.
         tags: Optional dictionary of metadata tags (e.g., xml.name, atp.*).
+        value: Optional value of the literal (extracted from xml.name tag).
 
     Examples:
         >>> literal = AutosarEnumLiteral("leafOfTargetContainer", 0, "Elements directly owned by target container")
         >>> literal_no_index = AutosarEnumLiteral("targetContainer", description="Target container")
         >>> literal_with_tags = AutosarEnumLiteral("iso11992_4", description="ISO 11992-4 DTC format", tags={"xml.name": "ISO-11992-4"})
+        >>> literal_with_value = AutosarEnumLiteral("iso11992_4", description="ISO 11992-4 DTC format", value="ISO-11992-4")
     """
 
     name: str
     index: Optional[int] = None
     description: Optional[str] = None
     tags: Dict[str, str] = field(default_factory=dict)
+    value: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Validate the literal fields.
@@ -63,7 +66,8 @@ class AutosarEnumLiteral:
         """
         suffix = f" (index={self.index})" if self.index is not None else ""
         tags_suffix = f" [tags: {len(self.tags)}]" if self.tags else ""
-        return f"{self.name}{suffix}{tags_suffix}"
+        value_suffix = f" [value: {self.value}]" if self.value is not None else ""
+        return f"{self.name}{suffix}{tags_suffix}{value_suffix}"
 
     def __repr__(self) -> str:
         """Return detailed representation for debugging.
@@ -74,7 +78,7 @@ class AutosarEnumLiteral:
         return (
             f"AutosarEnumLiteral(name='{self.name}', "
             f"index={self.index}, description={self.description is not None}, "
-            f"tags={len(self.tags)})"
+            f"tags={len(self.tags)}, value={self.value})"
         )
 
 

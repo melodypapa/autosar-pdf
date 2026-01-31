@@ -193,7 +193,7 @@ class TestEnumerationParserYamlConfig:
         # Create a test enumeration with a literal
         enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
         parser._pending_literals = [
-            AutosarEnumLiteral(name="WrongName", description="Test description")
+            AutosarEnumLiteral(name="WrongName", description="Test description", value=None)
         ]
 
         # Set up a patch for this enumeration
@@ -221,7 +221,7 @@ class TestEnumerationParserYamlConfig:
         # Create a test enumeration with a literal
         enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
         parser._pending_literals = [
-            AutosarEnumLiteral(name="CorrectName", description="Test description")
+            AutosarEnumLiteral(name="CorrectName", description="Test description", value=None)
         ]
 
         # Set up a patch for a different enumeration
@@ -250,7 +250,7 @@ class TestEnumerationParserYamlConfig:
         enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
         original_name = "SomeLiteral"
         parser._pending_literals = [
-            AutosarEnumLiteral(name=original_name, description="Test description")
+            AutosarEnumLiteral(name=original_name, description="Test description", value=None)
         ]
 
         # Ensure patches are empty

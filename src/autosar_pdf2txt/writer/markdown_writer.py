@@ -333,6 +333,8 @@ class MarkdownWriter:
             SWR_WRITER_00005: Directory-Based Class File Output
             SWR_WRITER_00006: Individual Class Markdown File Content
             SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_WRITER_00008: Markdown Source Information Output
+
 
         The markdown file contains:
         - Package path (full parent hierarchy)
@@ -427,14 +429,17 @@ class MarkdownWriter:
         # Write source section if available
         if cls.sources:
             output.write("## Document Source\n\n")
-            # Table header
+            # Table header with clickable source links
             output.write("| PDF File | Page | AUTOSAR Standard | Standard Release |\n")
             output.write("|----------|------|------------------|------------------|\n")
             # Sort sources by PDF filename
             for source in sorted(cls.sources, key=lambda s: s.pdf_file):
                 autosar_standard = source.autosar_standard if source.autosar_standard else "-"
                 standard_release = source.standard_release if source.standard_release else "-"
-                output.write(f"| {source.pdf_file} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
+                # Create clickable link to PDF with page anchor
+                # Format: [filename#page=N](filename.pdf#page=N)
+                source_link = f"[{source.pdf_file}#page={source.page_number}]({source.pdf_file}#page={source.page_number})"
+                output.write(f"| {source_link} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
             output.write("\n")
 
         # Write children if present (NOT for ATP interfaces)
@@ -495,8 +500,11 @@ class MarkdownWriter:
 
         Requirements:
             SWR_WRITER_00006: Individual Class Markdown File Content
+            SWR_WRITER_00009: Enumeration Literal Table Output Format
             SWR_MODEL_00019: AUTOSAR Enumeration Type Representation
             SWR_MODEL_00027: AUTOSAR Source Location Representation
+            SWR_WRITER_00008: Markdown Source Information Output
+
 
         Args:
             enum: The enumeration to write.
@@ -518,14 +526,17 @@ class MarkdownWriter:
         # Write source if available
         if enum.sources:
             output.write("## Document Source\n\n")
-            # Table header
+            # Table header with clickable source links
             output.write("| PDF File | Page | AUTOSAR Standard | Standard Release |\n")
             output.write("|----------|------|------------------|------------------|\n")
             # Sort sources by PDF filename
             for source in sorted(enum.sources, key=lambda s: s.pdf_file):
                 autosar_standard = source.autosar_standard if source.autosar_standard else "-"
                 standard_release = source.standard_release if source.standard_release else "-"
-                output.write(f"| {source.pdf_file} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
+                # Create clickable link to PDF with page anchor
+                # Format: [filename#page=N](filename.pdf#page=N)
+                source_link = f"[{source.pdf_file}#page={source.page_number}]({source.pdf_file}#page={source.page_number})"
+                output.write(f"| {source_link} | {source.page_number} | {autosar_standard} | {standard_release} |\n")
             output.write("\n")
 
         # Write note if present
@@ -536,19 +547,24 @@ class MarkdownWriter:
         # Write enumeration literals if present
         if enum.enumeration_literals:
             output.write("## Enumeration Literals\n\n")
+            # Write table header (Name | Value | Description)
+            output.write("| Name | Value | Description |\n")
+            output.write("|------|-------|-------------|\n")
+            # Write each literal as a table row
             for literal in enum.enumeration_literals:
-                index_suffix = f" (index={literal.index})" if literal.index is not None else ""
-                output.write(f"* {literal.name}{index_suffix}\n")
+                # Use literal.value for the Value column
+                value = literal.value if literal.value is not None else "-"
+                # Build description with original description and merged tags
+                description_parts = []
                 if literal.description:
-                    output.write(f"  * {literal.description}\n")
-                # Write Tags table if tags exist
-                # Requirements: SWR_PARSER_00031: Enumeration Literal Tags Extraction
+                    description_parts.append(literal.description)
                 if literal.tags:
-                    output.write("  * **Tags**:\n")
-                    output.write("    | Tag | Value |\n")
-                    output.write("    |-----|-------|\n")
-                    for tag_key, tag_value in sorted(literal.tags.items()):
-                        output.write(f"    | {tag_key} | {tag_value} |\n")
+                    # Merge all tags as "Tags: key=value, key2=value2" on new line
+                    tag_strings = [f"{k}={v}" for k, v in sorted(literal.tags.items())]
+                    description_parts.append(f"<br>Tags: {', '.join(tag_strings)}")
+                description = "".join(description_parts) if description_parts else "-"
+                # Write table row
+                output.write(f"| {literal.name} | {value} | {description} |\n")
             output.write("\n")
 
         # Write to file with sanitized filename

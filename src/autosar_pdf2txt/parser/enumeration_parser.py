@@ -527,6 +527,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                         description=clean_description if clean_description else None,
                         index=index,
                         tags=tags,
+                        value=tags.get("xml.name") if tags else None,
                     )
                     self._pending_literals.append(literal)
                     return False  # Pattern 2/5 handled, don't continue
@@ -592,6 +593,9 @@ class AutosarEnumerationParser(AbstractTypeParser):
                 if "atp.EnumerationLiteralIndex" in tags:
                     index = int(tags["atp.EnumerationLiteralIndex"])
 
+                # Extract value from xml.name tag
+                value = tags.get("xml.name") if tags else None
+
                 # Clean description by removing all tag patterns
                 clean_description = literal_description
                 if "atp.EnumerationLiteralIndex" in tags:
@@ -606,6 +610,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
                     description=clean_description if clean_description else None,
                     index=index,
                     tags=tags,
+                    value=value,
                 )
                 self._pending_literals.append(literal)
 

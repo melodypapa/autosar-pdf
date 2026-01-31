@@ -167,3 +167,50 @@ The Document Source section shall:
 ```
 
 This requirement enables complete traceability of AUTOSAR type definitions to their source documents using a structured table format for easy reading and parsing, including specification document identification, version tracking, and support for types defined across multiple PDF specifications.
+
+---
+
+### SWR_WRITER_00009
+**Title**: Enumeration Literal Table Output Format
+
+**Maturity**: accept
+
+**Description**: The markdown writer shall output enumeration literals in a table format with three columns: Name, Value, and Description. The output shall:
+- Use markdown table format with column headers: Name, Value, Description
+- Display the literal name in the Name column
+- Display the literal value (extracted from xml.name tag) in the Value column, or "-" if no value is present
+- Display the literal description in the Description column
+- Append all tags to the description on a new line using `<br>` tag followed by "Tags: key=value, key2=value2" format
+- Sort tags alphabetically by key in the merged tags string
+- Display "-" in the Description column if no description or tags are present
+- Preserve the order of enumeration literals as they appear in the PDF source document
+
+**Example Output (with value and tags)**:
+```markdown
+## Enumeration Literals
+
+| Name | Value | Description |
+|------|-------|-------------|
+| PRE_R4_2 | PRE–R-4–2 | Check has the legacy behavior, before AUTOSAR Release 4.2.<br>Tags: atp.EnumerationLiteralIndex=0, xml.name=PRE–R-4–2 |
+| R4_2 | R-4–2 | Check behaves like new P4/P5/P6 profiles introduced in AUTOSAR Release 4.2.<br>Tags: atp.EnumerationLiteralIndex=1, xml.name=R-4–2 |
+```
+
+**Example Output (without value)**:
+```markdown
+## Enumeration Literals
+
+| Name | Value | Description |
+|------|-------|-------------|
+| eventCombination | - | Event combination on retrieval is used to combine events. Tags: xml.name=SOME-VALUE |
+```
+
+**Example Output (minimal)**:
+```markdown
+## Enumeration Literals
+
+| Name | Value | Description |
+|------|-------|-------------|
+| SimpleLiteral | - | - |
+```
+
+This requirement provides a clean, tabular format for enumeration literals that separates the literal name from its value and description, making it easier to read and parse programmatically while maintaining all metadata information in a structured manner.

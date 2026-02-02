@@ -486,7 +486,16 @@ class AutosarClassParser(AbstractTypeParser):
             The line index after processing the note (may have consumed multiple lines).
         """
         note_text = self._extract_note_text(note_match, lines, line_index, parser_type="class")
-        current_model.note = note_text
+
+        # Extract tags from note
+        current_model.tags = self._extract_tags(note_text)
+
+        # Only remove tags from note if ATP/XML tags were found
+        if current_model.tags:
+            current_model.note = self._remove_tags_from_note(note_text)
+        else:
+            # No ATP/XML tags found, keep the note as-is
+            current_model.note = note_text
 
         # Find where the note ended
         i = line_index + 1
@@ -623,3 +632,63 @@ class AutosarClassParser(AbstractTypeParser):
         self._pending_attr_multiplicity = None
         self._pending_attr_kind = None
         self._pending_attr_note = None
+
+    def _extract_tags(self, note: str) -> Dict[str, str]:
+        """Extract all metadata tags from note.
+
+        Extracts patterns like:
+        - atp.recommendedPackage=BswModuleDescriptions
+        - atp.*=.*
+
+        Requirements:
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction (adapted for classes)
+
+        Args:
+            note: The class note text.
+
+        Returns:
+            Dictionary of tag keys to tag values.
+        """
+        tags = {}
+
+        # Extract all atp.* tags
+        atp_pattern = re.compile(r"atp\.(\w+(?:\.\w+)*)=([^\s,]+)")
+        for match in atp_pattern.finditer(note):
+            tag_key = f"atp.{match.group(1)}"
+            tags[tag_key] = match.group(2)
+
+        # Extract all xml.* tags
+        xml_pattern = re.compile(r"xml\.(\w+(?:\.\w+)*)=([^\s,]+)")
+        for match in xml_pattern.finditer(note):
+            tag_key = f"xml.{match.group(1)}"
+            tags[tag_key] = match.group(2)
+
+        return tags
+
+    def _remove_tags_from_note(self, note: str) -> str:
+        """Remove tag patterns from note text.
+
+        Removes patterns like:
+        - Tags: atp.recommendedPackage=BswModuleDescriptions
+        - atp.*=.*
+        - xml.*=.*
+
+        Args:
+            note: The class note text.
+
+        Returns:
+            Cleaned note text without tag patterns.
+        """
+        # Remove tag patterns (atp.*=.* and xml.*=.*)
+        note = re.sub(r"atp\.\w+(?:\.\w+)*=[^\s,]+", "", note)
+        note = re.sub(r"xml\.\w+(?:\.\w+)*=[^\s,]+", "", note)
+
+        # Remove "Tags:" prefix only if it's at the start of a line or preceded by whitespace
+        # and followed by ATP/XML patterns or end of line
+        note = re.sub(r"(\s|^)Tags:\s*", r"\1", note)
+
+        # Clean up extra whitespace
+        note = re.sub(r"\s+", " ", note)
+        note = note.strip()
+
+        return note

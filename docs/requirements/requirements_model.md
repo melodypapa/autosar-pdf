@@ -28,6 +28,12 @@ Each requirement has a maturity level that indicates its status:
 - `children`: List of child class names that inherit from this class (List[str], defaults to empty list)
 - `subclasses`: List of subclass names explicitly listed in the PDF source document (List[str], defaults to empty list)
 - `aggregated_by`: List of class names that aggregate this class (List[str], defaults to empty list)
+- `implements`: List of interface names (starting with "Atp") that this class implements (List[str], defaults to empty list)
+- `implemented_by`: List of class names that implement this ATP interface (for ATP interfaces only, List[str], defaults to empty list)
+- `tags`: Optional dictionary of metadata tags extracted from note text (Dict[str, str], defaults to empty dict). Common tags include:
+  - `atp.recommendedPackage`: The recommended package for this class
+  - `xml.*`: XML-related metadata
+  - `atp.*`: Other ATP-related metadata
 - `note`: Optional free-form text for documentation or comments (str | None, defaults to None)
 
 The ATP type enum shall support the following values:

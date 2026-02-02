@@ -401,3 +401,59 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 - Test method: `test_diagnostic_event_combination_behavior_enum_swit_00008`
 - Test file: `tests/integration/test_pdf_integration.py`
 - Fixture: `diagnostic_extract_template_pdf` (session-scoped)
+
+---
+
+#### SWIT_00009
+**Title**: Test Parsing BSWModuleDescriptionTemplate PDF and Verifying BswModuleDescription Class
+
+**Maturity**: accept
+
+**Description**: Integration test that parses the AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf PDF file and verifies the BswModuleDescription class with all its attributes, base classes, and attribute types.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf using the PdfParser
+2. Find the BswModuleDescription class in the extracted packages (searching through M2 → AUTOSARTemplates → BswModuleTemplate → BswOverview)
+3. Verify the class name is "BswModuleDescription"
+4. Verify the package name is "M2::AUTOSARTemplates::BswModuleTemplate::BswOverview"
+5. Verify the note contains "Root element for the description of a single BSW module or BSW cluster. In case it describes a BSW module, the short name of this element equals the name of the BSW module."
+6. Verify the tags contain "atp.recommendedPackage=BswModuleDescriptions"
+7. Verify the base list contains all expected base classes (non-ATP interfaces): "ARElement", "ARObject", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable"
+8. Verify the total number of base classes is 7
+9. Verify the implements list contains all ATP interfaces: "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpFeature", "AtpStructureElement"
+10. Verify the total number of implements is 5
+11. Verify the attribute list contains all expected attributes (with truncated names due to SWR_PARSER_00012): "bswModule", "expectedEntry", "implemented", "internalBehavior", "moduleId", "providedClient", "providedData", "providedMode", "releasedTrigger", "requiredClient", "requiredData", "requiredMode", "requiredTrigger"
+12. Verify the total number of attributes is 13
+13. Verify attribute types match expected values (using truncated attribute names)
+
+**Expected Result**:
+
+**BswModuleDescription from BSWModuleDescriptionTemplate PDF**
+- Name: "BswModuleDescription"
+- Package: "M2::AUTOSARTemplates::BswModuleTemplate::BswOverview"
+- Note: Contains "Root element for the description of a single BSW module or BSW cluster. In case it describes a BSW module, the short name of this element equals the name of the BSW module."
+- Tags: Contains "atp.recommendedPackage=BswModuleDescriptions"
+- Bases (non-ATP interfaces): ["ARElement", "ARObject", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable"]
+- Total base classes: 7
+- Implements (ATP interfaces): ["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpFeature", "AtpStructureElement"]
+- Total implements: 5
+- Attributes (with truncated names due to SWR_PARSER_00012): ["bswModule", "expectedEntry", "implemented", "internalBehavior", "moduleId", "providedClient", "providedData", "providedMode", "releasedTrigger", "requiredClient", "requiredData", "requiredMode", "requiredTrigger"]
+- Total attributes: 13
+- Attribute types verified: YES (using truncated attribute names)
+  - bswModule: SwComponent
+  - expectedEntry: BswModuleEntry
+  - implemented: BswModuleEntry
+  - providedClient: BswModuleClientServer
+  - providedMode: ModeDeclarationGroup
+  - requiredClient: BswModuleClientServer
+  - requiredMode: ModeDeclarationGroup
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00006, SWR_PARSER_00010, SWR_PARSER_00011, SWR_MODEL_00001
+
+**Test Implementation**:
+- Test method: `test_bsw_module_description_swit_00009`
+- Test file: `tests/integration/test_pdf_integration.py`
+- Fixture: `bsw_module_description_pdf` (session-scoped)
+

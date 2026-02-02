@@ -3930,19 +3930,26 @@ All existing test cases in this document are currently at maturity level **accep
 
 **Maturity**: accept
 
-**Description**: Verify that the Tags field is included in the class note when present in PDF class definitions.
+**Description**: Verify that metadata tags are extracted from class note text and stored in the tags field, and that the note is cleaned of tag patterns.
 
 **Precondition**: None
 
 **Test Steps**:
 1. Create a PdfParser instance
-2. Parse text with class definition containing Note and Tags fields
-3. Verify that the Tags field is included in the note
-4. Verify that the note contains both the description and Tags information
+2. Parse text with class definition containing Note field with tag patterns (e.g., "Tags: atp.recommendedPackage=BswImplementations")
+3. Verify that tags are extracted into the `tags` dictionary field
+4. Verify that the note does NOT contain the "Tags:" prefix
+5. Verify that the note does NOT contain tag patterns (e.g., "atp.recommendedPackage=BswImplementations")
+6. Verify that the note still contains the actual description text
+7. Verify that multiple tags can be extracted if present
 
-**Expected Result**: The note contains both the description text and the Tags field (e.g., "Tags: atp.recommendedPackage=BswImplementations")
+**Expected Result**:
+- Tags are extracted into the `tags` dictionary (e.g., `{"atp.recommendedPackage": "BswImplementations"}`)
+- Note is cleaned of tag patterns and "Tags:" prefix
+- Note contains only the description text without tag metadata
+- If no tags are found, note remains unchanged
 
-**Requirements Coverage**: SWR_PARSER_00004
+**Requirements Coverage**: SWR_PARSER_00004, SWR_PARSER_00035
 
 ---
 

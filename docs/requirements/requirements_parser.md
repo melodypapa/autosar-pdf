@@ -1240,3 +1240,60 @@ Resolution:
 **Requirements Coverage**:
 - SWR_PARSER_00017: AUTOSAR Class Parent Resolution (extended for ATP classes)
 - SWR_PARSER_00033: ATP Interface Tracking (parent resolution from implements)
+
+---
+
+### SWR_PARSER_00035
+**Title**: AUTOSAR Class Tags Extraction
+
+**Maturity**: accept
+
+**Description**: The class parser shall extract metadata tags from class note text and store them in a structured format. The parser shall:
+
+1. **Tag Pattern Recognition**: Recognize and extract the following tag patterns from note text:
+   - `atp.*=*`: ATP metadata tags (e.g., `atp.recommendedPackage=BswImplementations`)
+   - `xml.*=*`: XML metadata tags (e.g., `xml.name=someName`)
+   - Support nested tag keys (e.g., `atp.nested.key=value`)
+
+2. **Tag Storage**: Store extracted tags in the `tags` dictionary field:
+   - Key: Full tag name including prefix (e.g., `atp.recommendedPackage`)
+   - Value: Tag value (string)
+   - Default: Empty dictionary if no tags found
+
+3. **Note Cleaning**: Remove tag patterns from the note text after extraction:
+   - Remove `Tags:` prefix if present
+   - Remove `atp.*=*` patterns
+   - Remove `xml.*=*` patterns
+   - Clean up extra whitespace
+   - Preserve the actual note content
+
+4. **Conditional Processing**: Only clean the note if tags were found:
+   - If tags exist: Remove tag patterns from note
+   - If no tags: Keep note as-is (no modification)
+
+**Tag Extraction Rules**:
+- Tags are extracted from the note text during class parsing
+- Multiple tags can be extracted from a single note
+- Tag values are extracted as strings (no type conversion)
+- Tag patterns are removed from the note for cleaner display
+
+**Example**:
+```
+Input note:
+"Contains the implementation specific information. Tags: atp.recommendedPackage=BswImplementations"
+
+Extracted tags:
+{"atp.recommendedPackage": "BswImplementations"}
+
+Cleaned note:
+"Contains the implementation specific information"
+```
+
+**Implementation Notes**:
+- Add `_extract_tags()` method to extract tag patterns using regex
+- Add `_remove_tags_from_note()` method to clean tag patterns from note
+- Call tag extraction in `_process_class_note()` method
+- Only modify note if tags were successfully extracted
+
+**Requirements Coverage**:
+- SWR_MODEL_00001: AUTOSAR Class Representation (tags field)

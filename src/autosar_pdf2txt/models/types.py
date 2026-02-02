@@ -55,6 +55,7 @@ class AutosarClass(AbstractAutosarBase):
         aggregated_by: List of class names that aggregate this class.
         implements: List of interface names (starting with "Atp") that this class implements.
         implemented_by: List of class names that implement this ATP interface (for ATP interfaces only).
+        tags: Optional dictionary of metadata tags (e.g., atp.recommendedPackage).
         sources: List of source locations for the class definition itself (inherited).
         note: Optional documentation or comments (inherited from AbstractAutosarBase).
 
@@ -81,6 +82,7 @@ class AutosarClass(AbstractAutosarBase):
     aggregated_by: List[str] = field(default_factory=list)
     implements: List[str] = field(default_factory=list)
     implemented_by: List[str] = field(default_factory=list)
+    tags: Dict[str, str] = field(default_factory=dict)
 
     def __init__(
         self,
@@ -96,6 +98,7 @@ class AutosarClass(AbstractAutosarBase):
         aggregated_by: Optional[List[str]] = None,
         implements: Optional[List[str]] = None,
         implemented_by: Optional[List[str]] = None,
+        tags: Optional[Dict[str, str]] = None,
         note: Optional[str] = None,
         sources: Optional[List[AutosarDocumentSource]] = None,
     ) -> None:
@@ -122,6 +125,7 @@ class AutosarClass(AbstractAutosarBase):
             aggregated_by: List of class names that aggregate this class.
             implements: List of interface names (starting with "Atp") that this class implements.
             implemented_by: List of class names that implement this ATP interface (for ATP interfaces only).
+            tags: Optional dictionary of metadata tags.
             note: Optional documentation.
             sources: Optional list of source locations for this class definition.
 
@@ -139,6 +143,7 @@ class AutosarClass(AbstractAutosarBase):
         self.aggregated_by = aggregated_by or []
         self.implements = implements or []
         self.implemented_by = implemented_by or []
+        self.tags = tags or {}
 
     def __str__(self) -> str:
         """Return string representation of the class.

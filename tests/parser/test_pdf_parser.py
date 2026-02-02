@@ -1118,6 +1118,7 @@ class TestPdfParser:
 
         Requirements:
             SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00031: Enumeration Literal Tags Extraction (adapted for classes)
         """
         PdfParser()
         text = """
@@ -1131,9 +1132,14 @@ class TestPdfParser:
         assert len(class_defs) == 1
         assert class_defs[0].name == "BswImplementation"
 
-        # Verify that Tags field is included in the note
-        assert "Tags:" in class_defs[0].note
-        assert "atp.recommendedPackage=BswImplementations" in class_defs[0].note
+        # Verify that tags are extracted into the tags field
+        assert class_defs[0].tags is not None
+        assert "atp.recommendedPackage" in class_defs[0].tags
+        assert class_defs[0].tags["atp.recommendedPackage"] == "BswImplementations"
+
+        # Verify that tags are removed from the note
+        assert "Tags:" not in class_defs[0].note
+        assert "atp.recommendedPackage=BswImplementations" not in class_defs[0].note
         assert "Contains the implementation specific information" in class_defs[0].note
 
     def test_extract_class_with_multi_line_attribute_notes(self) -> None:

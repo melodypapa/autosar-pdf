@@ -1070,3 +1070,123 @@ class TestPdfIntegration:
 
         print("\n=== All type lists are sorted alphabetically ===")
         print("=== Test completed successfully ===")
+
+    def test_bsw_module_description_swit_00009(
+        self, bsw_module_description_pdf: AutosarDoc
+    ) -> None:
+        """Test Parsing BSWModuleDescriptionTemplate PDF and Verifying BswModuleDescription Class.
+
+        Test Case ID: SWIT_00009
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00011: Attribute Data Model
+            SWR_MODEL_00001: AUTOSAR Class Representation
+
+        This test verifies the BswModuleDescription class from the BSWModuleDescriptionTemplate PDF
+        including its attributes, base classes, and attribute types.
+
+        Args:
+            bsw_module_description_pdf: Parsed BSWModuleDescriptionTemplate PDF data.
+        """
+        # Find M2 package (root metamodel package)
+        m2 = bsw_module_description_pdf.get_package("M2")
+        assert m2 is not None, "M2 package not found"
+
+        # Navigate to AUTOSARTemplates -> BswModuleTemplate -> BswOverview
+        autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+        assert autosar_templates is not None, "AUTOSARTemplates package not found"
+
+        bsw_module_template = autosar_templates.get_subpackage("BswModuleTemplate")
+        assert bsw_module_template is not None, "BswModuleTemplate package not found"
+
+        bsw_overview = bsw_module_template.get_subpackage("BswOverview")
+        assert bsw_overview is not None, "BswOverview package not found"
+
+        # Find BswModuleDescription class
+        bsw_module_description = bsw_overview.get_class("BswModuleDescription")
+        assert bsw_module_description is not None, "BswModuleDescription class not found"
+
+        # Verify class name
+        assert bsw_module_description.name == "BswModuleDescription", \
+            f"Expected class name 'BswModuleDescription', got '{bsw_module_description.name}'"
+
+        # Verify package name
+        expected_package = "M2::AUTOSARTemplates::BswModuleTemplate::BswOverview"
+        assert bsw_module_description.package == expected_package, \
+            f"Expected package '{expected_package}', got '{bsw_module_description.package}'"
+
+        # Verify note contains expected text
+        assert bsw_module_description.note is not None, "BswModuleDescription should have a note"
+        assert "Root element for the description of a single BSW module or BSW cluster" in bsw_module_description.note, \
+            f"Note should contain 'Root element for the description of a single BSW module or BSW cluster', got '{bsw_module_description.note}'"
+        assert "In case it describes a BSW module, the short name of this element equals the name of the BSW module" in bsw_module_description.note, \
+            "Note should contain 'In case it describes a BSW module, the short name of this element equals the name of the BSW module'"
+
+        # Verify tags
+        assert bsw_module_description.tags is not None, "BswModuleDescription should have tags"
+        assert "atp.recommendedPackage" in bsw_module_description.tags, \
+            f"Tags should contain 'atp.recommendedPackage', got {list(bsw_module_description.tags.keys())}"
+        assert bsw_module_description.tags["atp.recommendedPackage"] == "BswModuleDescriptions", \
+            f"atp.recommendedPackage should be 'BswModuleDescriptions', got '{bsw_module_description.tags['atp.recommendedPackage']}'"
+
+        # Verify base classes (non-ATP interfaces)
+        expected_bases = [
+            "ARElement", "ARObject", "CollectableElement", "Identifiable",
+            "MultilanguageReferrable", "PackageableElement", "Referrable"
+        ]
+        assert len(bsw_module_description.bases) == len(expected_bases), \
+            f"Expected {len(expected_bases)} base classes, got {len(bsw_module_description.bases)}"
+        for expected_base in expected_bases:
+            assert expected_base in bsw_module_description.bases, \
+                f"Expected base class '{expected_base}' not found in bases: {bsw_module_description.bases}"
+
+        # Verify Atp interfaces are in implements field
+        expected_implements = ["AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpFeature", "AtpStructureElement"]
+        assert len(bsw_module_description.implements) == len(expected_implements), \
+            f"Expected {len(expected_implements)} interfaces, got {len(bsw_module_description.implements)}"
+        for interface in expected_implements:
+            assert interface in bsw_module_description.implements, \
+                f"Expected '{interface}' in implements, got {bsw_module_description.implements}"
+
+        # Verify attributes (Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering)
+        expected_attributes = [
+            "bswModule", "expectedEntry", "implemented", "internalBehavior", "moduleId",
+            "providedClient", "providedData", "providedMode", "releasedTrigger",
+            "requiredClient", "requiredData", "requiredMode", "requiredTrigger"
+        ]
+        assert len(bsw_module_description.attributes) == len(expected_attributes), \
+            f"Expected {len(expected_attributes)} attributes, got {len(bsw_module_description.attributes)}"
+        for expected_attr in expected_attributes:
+            assert expected_attr in bsw_module_description.attributes, \
+                f"Expected attribute '{expected_attr}' not found in attributes: {list(bsw_module_description.attributes.keys())}"
+
+        # Verify attribute types (using truncated attribute names due to SWR_PARSER_00012)
+        expected_types = {
+            "bswModule": "SwComponent",
+            "expectedEntry": "BswModuleEntry",
+            "implemented": "BswModuleEntry",
+            "providedClient": "BswModuleClientServer",
+            "providedMode": "ModeDeclarationGroup",
+            "requiredClient": "BswModuleClientServer",
+            "requiredMode": "ModeDeclarationGroup",
+        }
+        for attr_name, expected_type in expected_types.items():
+            attr = bsw_module_description.attributes.get(attr_name)
+            assert attr is not None, f"Attribute '{attr_name}' should exist"
+            assert attr.type == expected_type, \
+                f"Expected attribute '{attr_name}' to have type '{expected_type}', got '{attr.type}'"
+
+        # Print BswModuleDescription class information for verification
+        print("\n=== BswModuleDescription class verified ===")
+        print(f"  Name: {bsw_module_description.name}")
+        print(f"  Package: {bsw_module_description.package}")
+        print(f"  Abstract: {bsw_module_description.is_abstract}")
+        print(f"  Bases ({len(bsw_module_description.bases)}): {', '.join(bsw_module_description.bases)}")
+        print(f"  Tags: {bsw_module_description.tags}")
+        print(f"  Attributes ({len(bsw_module_description.attributes)}):")
+        for attr_name, attr in bsw_module_description.attributes.items():
+            print(f"    - {attr_name}: {attr.type}")

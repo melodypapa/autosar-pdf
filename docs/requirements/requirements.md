@@ -39,7 +39,7 @@ The parser requirements define how AUTOSAR models are extracted from PDF specifi
 
 **Document**: [requirements_parser.md](requirements_parser.md)
 
-**Requirements**: SWR_PARSER_00001 - SWR_PARSER_00032
+**Requirements**: SWR_PARSER_00001 - SWR_PARSER_00035
 
 **Key Areas**:
 - PDF Parser Initialization

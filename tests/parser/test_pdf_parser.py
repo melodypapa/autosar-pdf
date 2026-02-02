@@ -1310,6 +1310,45 @@ class TestPdfParser:
         # Verify that only 1 attribute remains (dynamicArray)
         assert len(class_defs[0].attributes) == 1
 
+    def test_attribute_name_multiline_camelcase_continuation(self) -> None:
+        """Test that attribute names split across lines are correctly concatenated.
+
+        SWUT_PARSER_00038: Test CamelCase Attribute Name Continuation
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        This test verifies that when an attribute name is split across lines in camelCase
+        format (e.g., "bswModule" on one line and "Dependency" on the next), the parser
+        correctly concatenates them into "bswModuleDependency".
+
+        This is important for PDFs where the text extraction splits long camelCase words
+        at line boundaries, which can happen with narrow column layouts in PDF tables.
+
+        Note: The second line must be a single word without spaces to trigger camelCase logic.
+        This is the actual pattern seen in PDFs where the word "Dependency" appears on its
+        own line as a continuation of the attribute type "BswModuleDependency".
+        """
+        PdfParser()
+        text = """
+        Class BswModuleDescription
+        Package M2::AUTOSARTemplates::BswModuleTemplate::BswOverview
+        Attribute Type Mult. Kind Note
+        bswModule BswModuleDependency * aggr Describes the dependency
+        Dependency
+        """
+        class_defs = _parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "BswModuleDescription"
+
+        # Verify that "bswModule" and "Dependency" are concatenated
+        assert "bswModuleDependency" in class_defs[0].attributes
+        assert class_defs[0].attributes["bswModuleDependency"].type == "BswModuleDependency"
+
+        # Verify that only 1 attribute exists
+        assert len(class_defs[0].attributes) == 1
+
     def test_extract_primitive_class_definition(self) -> None:
         """Test that the parser correctly recognizes class definitions with 'Primitive' prefix.
 

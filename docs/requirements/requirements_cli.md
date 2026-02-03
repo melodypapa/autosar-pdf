@@ -228,3 +228,53 @@ autosar-extract input.pdf -o output.md --log-file logs/extraction.log
 - Timestamps enable analysis of processing time and identification of performance issues
 - Writing to both console and file ensures users see progress in real-time while maintaining a permanent record
 - Independent support for `--log-file` and `-v` allows flexible logging configuration
+
+---
+
+### SWR_CLI_00015
+**Title**: CLI Mapping Generation Flag
+
+**Maturity**: accept
+
+**Description**: The CLI shall support a `--generate-mapping` flag to generate type-to-package mappings instead of the full package hierarchy output. When this flag is specified:
+- The output format shall be inferred from the file extension (.json or .md)
+- For JSON output: Generate a single JSON file with a flat list of all types (classes, enumerations, primitives) with their package paths
+- For Markdown output: Generate a Markdown table with columns: Name | Type | Package Path
+- The flag shall require the `-o` / `--output` option to be specified
+- The output shall contain only the mapping information, not the full package hierarchy
+
+**Usage Examples**:
+```bash
+# Generate JSON mapping
+autosar-extract input.pdf -o mapping.json --generate-mapping
+
+# Generate Markdown table mapping
+autosar-extract input.pdf -o mapping.md --generate-mapping
+```
+
+---
+
+### SWR_CLI_00016
+**Title**: CLI Mapping Flag Conflict Detection
+
+**Maturity**: accept
+
+**Description**: The `--generate-mapping` flag shall be mutually exclusive with the following flags:
+- `--include-class-details`
+- `--include-class-hierarchy`
+
+When `--generate-mapping` is used with any of these conflicting flags, the CLI shall:
+- Display a clear error message indicating the conflict
+- Exit with error code 1
+- Not perform any processing
+
+**Error Message Format**:
+```
+error: --generate-mapping cannot be used with --include-class-details or --include-class-hierarchy
+```
+
+**Rationale**:
+- `--generate-mapping` generates a simple type-to-package mapping
+- `--include-class-details` and `--include-class-hierarchy` are for detailed output
+- These options represent fundamentally different output modes and should not be combined
+- Early conflict detection prevents user confusion and ensures clear intent

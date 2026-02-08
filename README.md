@@ -30,6 +30,8 @@ cd autosar-pdf
 pip install -e .
 ```
 
+**Version**: 1.0.0 (Production Release)
+
 ## Requirements
 
 - Python 3.7+
@@ -465,6 +467,16 @@ Contributions are welcome! Please ensure:
 - **Documentation**: See `docs/` directory for detailed requirements and development guidelines
 
 ## Changelog
+
+### Version 1.0.0
+- **Production Release**: Project has reached production stability with comprehensive test coverage
+- **CamelCase Attribute Extraction**: Fixed attribute parsing for camelCase names like `shortNameFragment` (SWR_PARSER_00012)
+- **Improved Attribute Name Parsing**: Resolved issues with Referrable class showing correct attributes (shortName and shortNameFragment)
+- **Modern Python Packaging**: Migrated from setup.py to pyproject.toml with PEP 621 compliance
+- **Enhanced Type Detection**: Added 34 common type suffixes to exclusion list for better camelCase detection
+- **Test Coverage**: Maintained 97%+ test coverage with 524 total tests (510 unit + 14 integration)
+- **Python 3.12 Support**: Added Python 3.12 to supported versions
+- **Development Status**: Updated from "Beta" to "4 - Production" status
 
 ### Version 0.19.0
 - Added page number tracking in two-phase parsing (SWR_PARSER_00030) for accurate source location

@@ -6,7 +6,7 @@ Requirements:
     SWR_PACKAGE_00003: Package Metadata
 """
 
-__version__ = "0.26.0"
+__version__ = "1.0.0"
 
 from autosar_pdf2txt.models import (
     AttributeKind,

@@ -30,6 +30,11 @@ classifiers = [
     "Topic :: Software Development :: Documentation",
 ]
 
+dependencies = [
+    "pdfplumber>=0.10.0",
+    "PyYAML>=5.4.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/melodypapa/autosar-pdf"
 Repository = "https://github.com/melodypapa/autosar-pdf.git"
@@ -41,6 +46,3 @@ autosar-extract-table = "autosar_pdf2txt.cli.extract_tables_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-
-[tool.setuptools.dynamic]
-dependencies = {file = "requirements.txt"}

@@ -1403,6 +1403,64 @@ class TestPdfParser:
         # Verify that only 3 attributes exist
         assert len(class_defs[0].attributes) == 3
 
+    def test_attribute_name_camelcase_extraction(self) -> None:
+        """Test that camelCase attribute names are correctly extracted from single line.
+
+        SWUT_PARSER_00102: Test CamelCase Attribute Name Extraction
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        This test verifies that when an attribute name is a camelCase word that gets
+        split during PDF text extraction (e.g., "shortName ShortNameFragment * aggr"),
+        the parser correctly extracts "shortNameFragment" as the attribute name and
+        "ShortNameFragment" as the type.
+
+        This scenario occurs in AUTOSAR PDFs where the attribute name and type have
+        the same stem (e.g., "shortNameFragment" attribute with type "ShortNameFragment"),
+        and the PDF text extraction splits the camelCase name incorrectly.
+
+        Example from Referrable class:
+        - shortName Identifier 1 attr (first attribute)
+        - shortName ShortNameFragment * aggr (second attribute - should be "shortNameFragment")
+        """
+        from autosar_pdf2txt.models import AttributeKind
+
+        PdfParser()
+        text = """
+        Class Referrable
+        Package M2::AUTOSARTemplates::GenericStructure::GeneralTemplateClasses
+        Note Instances of this class can be referred to by their identifier
+        Attribute Type Mult. Kind Note
+        shortName Identifier 1 attr This specifies an identifying short name
+        shortName ShortNameFragment * aggr This specifies how shortName is composed
+        """
+        class_defs = _parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "Referrable"
+
+        # Verify first attribute (shortName)
+        attr1 = class_defs[0].attributes.get("shortName")
+        assert attr1 is not None, "shortName attribute should exist"
+        assert attr1.name == "shortName"
+        assert attr1.type == "Identifier"
+        assert attr1.multiplicity == "1"
+        assert attr1.kind == AttributeKind.ATTR
+
+        # Verify second attribute (shortNameFragment) - this is the key test
+        # The parser should correctly extract "shortNameFragment" as the attribute name
+        # from "shortName ShortNameFragment * aggr"
+        attr2 = class_defs[0].attributes.get("shortNameFragment")
+        assert attr2 is not None, "shortNameFragment attribute should exist"
+        assert attr2.name == "shortNameFragment"
+        assert attr2.type == "ShortNameFragment"
+        assert attr2.multiplicity == "*"
+        assert attr2.kind == AttributeKind.AGGR
+
+        # Verify that only 2 attributes exist
+        assert len(class_defs[0].attributes) == 2
+
     def test_extract_primitive_class_definition(self) -> None:
         """Test that the parser correctly recognizes class definitions with 'Primitive' prefix.
 

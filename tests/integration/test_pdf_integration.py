@@ -171,9 +171,10 @@ class TestPdfIntegration:
                 f"Expected '{interface}' in implements, got {sw_component_type.implements}"
 
         # Verify attribute list
-        # Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering
+        # Note: The camelCase extraction fix now correctly extracts "consistencyNeeds"
+        # instead of truncating to "consistency"
         expected_attributes = [
-            "consistency", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"
+            "consistencyNeeds", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"
         ]
         assert len(sw_component_type.attributes) == len(expected_attributes), \
             f"Expected {len(expected_attributes)} attributes, got {len(sw_component_type.attributes)}"
@@ -191,7 +192,7 @@ class TestPdfIntegration:
 
         # Verify attribute types match expected values
         expected_types = {
-            "consistency": "ConsistencyNeeds",
+            "consistencyNeeds": "ConsistencyNeeds",
             "port": "PortPrototype",
             "portGroup": "PortGroup",
             "swcMapping": "SwComponentMapping",
@@ -310,6 +311,90 @@ class TestPdfIntegration:
         print("    All expected subclasses present: YES")
         print("    No unexpected subclasses: YES")
         print(f"  Sample subclasses: {sorted(arelement.subclasses)[:10]}...")
+
+    def test_parse_real_autosar_pdf_and_verify_referrable_attributes(
+        self, generic_structure_referrable: AutosarClass
+    ) -> None:
+        """Test parsing real AUTOSAR PDF and verify Referrable class attributes.
+
+        SWIT_00011: Test Parsing Referrable Class and Verifying Attributes
+
+        Requirements:
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+            SWR_MODEL_00001: AUTOSAR Class Representation
+
+        This test verifies that the Referrable class from the GenericStructureTemplate PDF
+        has the correct attributes, specifically testing the camelCase attribute name
+        extraction fix for "shortNameFragment".
+
+        The Referrable class should have 2 attributes:
+        1. shortName (Identifier, 1, attr)
+        2. shortNameFragment (ShortNameFragment, *, aggr)
+
+        Args:
+            generic_structure_referrable: Cached Referrable class from GenericStructureTemplate PDF.
+        """
+        from autosar_pdf2txt.models import AttributeKind
+
+        # ========== Verify Referrable class from GenericStructureTemplate PDF ==========
+        referrable = generic_structure_referrable
+
+        # Verify class name
+        assert referrable.name == "Referrable", \
+            f"Expected class name 'Referrable', got '{referrable.name}'"
+
+        # Verify the class is abstract
+        assert referrable.is_abstract is True, "Referrable class should be abstract"
+
+        # Verify the base classes
+        assert len(referrable.bases) == 1, "Referrable should have 1 base class"
+        assert "ARObject" in referrable.bases, "Referrable should inherit from ARObject"
+
+        # Verify attribute count (should be 2 after the fix)
+        assert len(referrable.attributes) == 2, \
+            f"Expected 2 attributes, got {len(referrable.attributes)}: {list(referrable.attributes.keys())}"
+
+        # Verify first attribute: shortName
+        short_name_attr = referrable.attributes.get("shortName")
+        assert short_name_attr is not None, "shortName attribute should exist"
+        assert short_name_attr.name == "shortName", \
+            f"Expected attribute name 'shortName', got '{short_name_attr.name}'"
+        assert short_name_attr.type == "Identifier", \
+            f"Expected type 'Identifier', got '{short_name_attr.type}'"
+        assert short_name_attr.multiplicity == "1", \
+            f"Expected multiplicity '1', got '{short_name_attr.multiplicity}'"
+        assert short_name_attr.kind == AttributeKind.ATTR, \
+            f"Expected kind 'ATTR', got '{short_name_attr.kind.value}'"
+
+        # Verify second attribute: shortNameFragment (this is the key test for the fix)
+        short_name_fragment_attr = referrable.attributes.get("shortNameFragment")
+        assert short_name_fragment_attr is not None, \
+            "shortNameFragment attribute should exist (camelCase extraction fix)"
+        assert short_name_fragment_attr.name == "shortNameFragment", \
+            f"Expected attribute name 'shortNameFragment', got '{short_name_fragment_attr.name}'"
+        assert short_name_fragment_attr.type == "ShortNameFragment", \
+            f"Expected type 'ShortNameFragment', got '{short_name_fragment_attr.type}'"
+        assert short_name_fragment_attr.multiplicity == "*", \
+            f"Expected multiplicity '*', got '{short_name_fragment_attr.multiplicity}'"
+        assert short_name_fragment_attr.kind == AttributeKind.AGGR, \
+            f"Expected kind 'AGGR', got '{short_name_fragment_attr.kind.value}'"
+
+        # Verify attribute notes exist
+        assert short_name_attr.note, "shortName attribute should have a note"
+        assert short_name_fragment_attr.note, "shortNameFragment attribute should have a note"
+
+        # Print Referrable class information for verification
+        print("\n=== Referrable class verified ===")
+        print(f"  Name: {referrable.name}")
+        print(f"  Package: {referrable.package}")
+        print(f"  Abstract: {referrable.is_abstract}")
+        print(f"  Bases: {', '.join(referrable.bases)}")
+        print(f"  Attributes ({len(referrable.attributes)}):")
+        for attr_name, attr in referrable.attributes.items():
+            print(f"    - {attr_name}: {attr.type} (mult: {attr.multiplicity}, kind: {attr.kind.value})")
 
     def test_parse_timing_extensions_pdf_and_verify_class_list(
         self, timing_extensions_pdf: AutosarDoc

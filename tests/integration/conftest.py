@@ -142,6 +142,51 @@ def generic_structure_arelement(generic_structure_template_pdf: AutosarDoc) -> A
 
 
 @pytest.fixture(scope="session")
+def generic_structure_referrable(generic_structure_template_pdf: AutosarDoc) -> AutosarClass:
+    """Cache the Referrable class from GenericStructureTemplate PDF.
+
+    This fixture pre-fetches and caches the Referrable class,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        generic_structure_template_pdf: Parsed GenericStructureTemplate PDF data.
+
+    Returns:
+        The Referrable AutosarClass.
+
+    Raises:
+        ValueError: If Referrable class is not found.
+    """
+    # Find M2 package (root metamodel package)
+    m2 = generic_structure_template_pdf.get_package("M2")
+    if not m2:
+        raise ValueError("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> GenericStructure -> GeneralTemplateClasses -> Identifiable
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        raise ValueError("AUTOSARTemplates package not found")
+
+    generic_structure = autosar_templates.get_subpackage("GenericStructure")
+    if not generic_structure:
+        raise ValueError("GenericStructure package not found")
+
+    general_template_classes = generic_structure.get_subpackage("GeneralTemplateClasses")
+    if not general_template_classes:
+        raise ValueError("GeneralTemplateClasses package not found")
+
+    identifiable = general_template_classes.get_subpackage("Identifiable")
+    if not identifiable:
+        raise ValueError("Identifiable package not found")
+
+    referrable = identifiable.get_class("Referrable")
+    if not referrable:
+        raise ValueError("Referrable class not found")
+
+    return referrable
+
+
+@pytest.fixture(scope="session")
 def timing_extensions_pdf(parser: PdfParser) -> AutosarDoc:
     """Parse and cache the TimingExtensions PDF.
 

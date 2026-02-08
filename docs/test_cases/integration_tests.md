@@ -55,9 +55,9 @@ All existing integration test cases in this document are currently at maturity l
 4. Verify the package name is "M2::AUTOSARTemplates::SWComponentTemplate::Components"
 5. Verify the note is "Base class for AUTOSAR software components."
 6. Verify the base list contains: "ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable"
-7. Verify the attribute list contains: "consistency", "port", "portGroup", "swcMapping", "swComponent", "unitGroup" (Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering)
+7. Verify the attribute list contains: "consistencyNeeds", "port", "portGroup", "swcMapping", "swComponent", "unitGroup" (Note: CamelCase extraction fix now correctly extracts "consistencyNeeds" instead of truncating to "consistency")
 8. Verify the attribute "swcMapping" has kind "ref" and is_ref is true
-9. Verify attribute types match expected values: consistency: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup
+9. Verify attribute types match expected values: consistencyNeeds: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup
 10. Verify attributes have notes (multi-line attribute note support is verified in SWIT_00006)
 
 **Part 3: Verify ARElement class and its subclasses from GenericStructureTemplate PDF**
@@ -87,9 +87,9 @@ All existing integration test cases in this document are currently at maturity l
 - Package: "M2::AUTOSARTemplates::SWComponentTemplate::Components"
 - Note: "Base class for AUTOSAR software components."
 - Bases: ["ARElement", "ARObject", "AtpBlueprint", "AtpBlueprintable", "AtpClassifier", "AtpType", "CollectableElement", "Identifiable", "MultilanguageReferrable", "PackageableElement", "Referrable"]
-- Attributes: ["consistency", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"]
+- Attributes: ["consistencyNeeds", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"]
 - swcMapping.kind == "ref" and swcMapping.is_ref == True
-- Attribute types: {consistency: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup}
+- Attribute types: {consistencyNeeds: ConsistencyNeeds, port: PortPrototype, portGroup: PortGroup, swcMapping: SwComponentMapping, swComponent: SwComponent, unitGroup: UnitGroup}
 - All attributes have notes (single-line for SwComponentType)
 
 **Part 3: ARElement class and subclasses**
@@ -512,3 +512,65 @@ This test is critical for detecting a multi-page parsing bug where the base clas
   - Line 2: "quest2Support"
 - The parser correctly concatenates these to form "request2Support"
 - Test screenshot reference: examples/pdf/Screenshot 2026-02-08 at 12.15.48.png
+
+---
+
+#### SWIT_00011
+**Title**: Test Referrable Class CamelCase Attribute Name Extraction
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies the Referrable class from AUTOSAR_FO_TPS_GenericStructureTemplate.pdf has correct attributes, specifically testing the camelCase attribute name extraction fix for "shortNameFragment".
+
+**Precondition**: File examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_FO_TPS_GenericStructureTemplate.pdf using the PdfParser
+2. Navigate to M2::AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::Identifiable package
+3. Retrieve Referrable class
+4. Verify class name is "Referrable"
+5. Verify class is abstract
+6. Verify base classes include "ARObject"
+7. Verify total attribute count is 2
+8. Verify first attribute "shortName" exists with:
+   - Type: "Identifier"
+   - Multiplicity: "1"
+   - Kind: "attr"
+9. Verify second attribute "shortNameFragment" exists with:
+   - Type: "ShortNameFragment"
+   - Multiplicity: "*"
+   - Kind: "aggr"
+10. Verify both attributes have notes
+
+**Expected Result**:
+
+**Referrable from GenericStructureTemplate PDF**
+- Name: "Referrable"
+- Package: "M2::AUTOSARTemplates::GenericStructure::GeneralTemplateClasses::Identifiable"
+- Abstract: True
+- Base classes: ["ARObject"]
+- Total attributes: 2
+- Attributes:
+  - shortName (Identifier, 1, attr)
+  - shortNameFragment (ShortNameFragment, *, aggr)
+- CamelCase attribute extraction: VERIFIED
+  - "shortNameFragment" correctly extracted from "shortName ShortNameFragment * aggr"
+  - First attribute "shortName" preserved (not overwritten)
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00012, SWR_MODEL_00001
+
+**Test Implementation**:
+- Test method: `test_parse_real_autosar_pdf_and_verify_referrable_attributes`
+- Test file: `tests/integration/test_pdf_integration.py`
+- Fixture: `generic_structure_referrable` (session-scoped)
+
+**Notes**:
+- This test validates the fix for camelCase attribute name extraction (SWUT_PARSER_00102)
+- The PDF has the attribute "shortNameFragment" where the PDF text extraction splits the camelCase name:
+  - Expected attribute name: "shortNameFragment"
+  - Extracted as: "shortName ShortNameFragment * aggr"
+- Before the fix: Only 1 attribute "shortName" (type: "ShortNameFragment") was captured
+- After the fix: Both "shortName" and "shortNameFragment" are correctly extracted
+- The fix detects when the second word starts with the capitalized version of the first word
+  and combines them to form the camelCase attribute name
+

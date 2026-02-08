@@ -583,6 +583,44 @@ class AutosarClassParser(AbstractTypeParser):
             third_word = words[2] if len(words) > 2 else ""
             fourth_word = words[3] if len(words) > 3 else ""
 
+            # Check for camelCase attribute name continuation (SWR_PARSER_00012)
+            # E.g., "shortName ShortNameFragment * aggr" should be parsed as:
+            # - attr_name: "shortNameFragment" (not "shortName")
+            # - attr_type: "ShortNameFragment"
+            # This happens when PDF text extraction splits camelCase attribute names
+            # Key heuristic: The second word should start with the capitalized first word
+            # AND the suffix (after removing prefix) should be a short fragment word
+            prefix = attr_name[0].upper() + attr_name[1:] if attr_name else ""
+            is_camelcase_continuation = False
+            if (
+                len(words) >= 4 and
+                third_word in (self.MULTIPLICITIES | self.ATTR_KINDS_ALL) and
+                attr_name and attr_type and
+                attr_name[-1].islower() and  # First word ends with lowercase
+                attr_type[0].isupper() and  # Second word starts with uppercase
+                attr_type.startswith(prefix)  # Second word starts with capitalized first word
+            ):
+                # Check if the suffix is a short continuation word (not a complete type)
+                suffix = attr_type[len(prefix):] if len(attr_type) > len(prefix) else ""
+                # Only treat as continuation if the suffix is a short fragment word
+                # Heuristic: suffix should be very short (<= 8 chars) and not a common type suffix
+                # Common type suffixes that indicate a complete type (not a continuation):
+                # - "Dependency", "Mapping", "Reference", "Prototype", "Definition", "Comment", etc.
+                type_suffixes = {"Dependency", "Mapping", "Reference", "Prototype", "Definition", "Instance", "Element", "Container", "Collection", "Exception", "Handler", "Manager", "Factory", "Builder", "Comment", "Data", "Value", "Type", "Kind", "Name", "Text", "Info", "Status", "State", "Mode", "Flag", "Count", "Index", "Length", "Size"}
+                is_camelcase_continuation = (
+                    len(suffix) <= 8 and  # Very short suffix (likely a fragment), changed from < to <= to handle "Fragment" (8 chars)
+                    suffix not in type_suffixes and  # Not a common type suffix
+                    suffix[0].isupper() if suffix else False  # Starts with uppercase (camelCase continuation)
+                )
+
+            if is_camelcase_continuation:
+                # Combine to form camelCase attribute name
+                # Remove prefix from second word: "ShortNameFragment" -> "Fragment"
+                suffix = attr_type[len(prefix):] if len(attr_type) > len(prefix) else ""
+                attr_name = attr_name + suffix  # "shortName" + "Fragment" = "shortNameFragment"
+                # The type remains the same (e.g., "ShortNameFragment")
+                # No need to shift words as the type is correctly identified
+
             is_new_attribute = (
                 # Third word is multiplicity or kind
                 third_word in (self.MULTIPLICITIES | self.ATTR_KINDS_ALL) or

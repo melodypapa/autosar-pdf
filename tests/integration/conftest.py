@@ -380,3 +380,34 @@ def diagnostic_extract_template_pdf(parser: PdfParser) -> AutosarDoc:
     print(f"  Root classes: {len(doc.root_classes)}")
 
     return doc
+
+
+@pytest.fixture(scope="session")
+def diagnostic_extract_j1939_cluster(diagnostic_extract_template_pdf: AutosarDoc) -> Optional[AutosarClass]:
+    """Cache the J1939Cluster class from DiagnosticExtractTemplate PDF.
+
+    This fixture pre-fetches and caches the J1939Cluster class which contains
+    the hyphenated attribute name continuation pattern (re- + quest2Support = request2Support).
+
+    Args:
+        diagnostic_extract_template_pdf: Parsed DiagnosticExtractTemplate PDF data.
+
+    Returns:
+        The J1939Cluster AutosarClass if found, None otherwise.
+
+    Note:
+        Returns None if the class cannot be found (e.g., PDF parsing issues or class not present).
+        Tests using this fixture should handle None gracefully using pytest.skip if needed.
+    """
+    # Find J1939Cluster class using the helper function
+    result = find_class_by_name(diagnostic_extract_template_pdf.packages, "J1939Cluster")
+
+    if result:
+        package, j1939_cluster = result
+        print("\n=== J1939Cluster found ===")
+        print(f"  Package: {package.name}")
+        print(f"  Attributes: {len(j1939_cluster.attributes)}")
+        return j1939_cluster
+
+    print("\n=== J1939Cluster not found ===")
+    return None

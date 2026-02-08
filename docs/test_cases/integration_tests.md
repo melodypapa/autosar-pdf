@@ -457,3 +457,58 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 - Test file: `tests/integration/test_pdf_integration.py`
 - Fixture: `bsw_module_description_pdf` (session-scoped)
 
+
+---
+
+#### SWIT_00010
+**Title**: Test J1939Cluster Hyphenated Attribute Name Continuation
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies the hyphenated attribute name continuation pattern (re- + quest2Support = request2Support) in the J1939Cluster class from AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf using the PdfParser
+2. Find the J1939Cluster class in the extracted packages
+3. Verify the class name is "J1939Cluster"
+4. Verify the package name is "M2::AUTOSARTemplates::SystemTemplate::Fibex::Fibex4Can::CanTopology"
+5. Verify the attribute "request2Support" exists (NOT "re-")
+6. Verify the incorrect attribute name "re-" does NOT exist
+7. Verify the request2Support attribute type is "Boolean"
+8. Verify the request2Support attribute multiplicity is "0..1"
+9. Verify the request2Support attribute kind is "attr"
+10. Verify the request2Support note mentions "Request2" or "RQST2"
+11. Verify other expected attributes exist: "networkId", "usesAddress"
+
+**Expected Result**:
+
+**J1939Cluster from DiagnosticExtractTemplate PDF**
+- Name: "J1939Cluster"
+- Package: "M2::AUTOSARTemplates::SystemTemplate::Fibex::Fibex4Can::CanTopology"
+- Hyphenated attribute continuation: VERIFIED
+  - Attribute "request2Support" correctly extracted (NOT "re-")
+  - Hyphenated word break (re- + quest2Support) handled correctly
+- Attributes: ["networkId", "request2Support", "usesAddress"]
+- Total attributes: 3
+- request2Support details:
+  - Type: "Boolean"
+  - Multiplicity: "0..1"
+  - Kind: "attr"
+  - Note: Contains "Request2" or "RQST2"
+
+**Requirements Coverage**: SWR_PARSER_00010, SWR_PARSER_00012
+
+**Test Implementation**:
+- Test method: `test_j1939_cluster_hyphenated_attribute_name_continuation_swit_00010`
+- Test file: `tests/integration/test_pdf_integration.py`
+- Fixture: `diagnostic_extract_j1939_cluster` (session-scoped)
+
+**Notes**:
+- This test validates the fix for hyphenated attribute name continuation
+- The PDF has the attribute name split across two lines with a hyphen:
+  - Line 1: "re- Boolean 0..1 attr Enables support for the Request2 PGN (RQST2)."
+  - Line 2: "quest2Support"
+- The parser correctly concatenates these to form "request2Support"
+- Test screenshot reference: examples/pdf/Screenshot 2026-02-08 at 12.15.48.png

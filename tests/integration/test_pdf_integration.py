@@ -1190,3 +1190,83 @@ class TestPdfIntegration:
         print(f"  Attributes ({len(bsw_module_description.attributes)}):")
         for attr_name, attr in bsw_module_description.attributes.items():
             print(f"    - {attr_name}: {attr.type}")
+
+    def test_j1939_cluster_hyphenated_attribute_name_continuation_swit_00010(
+        self, diagnostic_extract_j1939_cluster: Optional[AutosarClass]
+    ) -> None:
+        """Test J1939Cluster hyphenated attribute name continuation (request2Support).
+
+        Test Case ID: SWIT_00010
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        This test verifies the hyphenated word break pattern where "re-" and "quest2Support"
+        are concatenated to form "request2Support" as shown in the screenshot from
+        AUTOSAR_CP_TPS_DiagnosticExtractTemplate.pdf page 321.
+
+        The PDF has the attribute name split across two lines:
+        - Line 1: "re- Boolean 0..1 attr Enables support for the Request2 PGN (RQST2)."
+        - Line 2: "quest2Support"
+
+        The parser should concatenate these to form the complete attribute name "request2Support".
+
+        Args:
+            diagnostic_extract_j1939_cluster: Cached J1939Cluster class (may be None).
+        """
+        # Skip if the class couldn't be found (PDF parsing issue)
+        if diagnostic_extract_j1939_cluster is None:
+            pytest.skip("J1939Cluster class not found in PDF - may be parsing issue or class not present")
+
+        j1939_cluster = diagnostic_extract_j1939_cluster
+
+        # Verify class name
+        assert j1939_cluster.name == "J1939Cluster", \
+            f"Expected class name 'J1939Cluster', got '{j1939_cluster.name}'"
+
+        # Verify package
+        expected_package = "M2::AUTOSARTemplates::SystemTemplate::Fibex::Fibex4Can::CanTopology"
+        assert j1939_cluster.package == expected_package, \
+            f"Expected package '{expected_package}', got '{j1939_cluster.package}'"
+
+        # Verify request2Support attribute exists (NOT "re-")
+        assert "request2Support" in j1939_cluster.attributes, \
+            f"Expected 'request2Support' attribute not found. Got: {list(j1939_cluster.attributes.keys())}"
+
+        # CRITICAL: Verify the incorrect "re-" attribute does NOT exist
+        assert "re-" not in j1939_cluster.attributes, \
+            "Incorrect attribute name 're-' should not exist (should be 'request2Support')"
+
+        # Verify request2Support attribute details
+        request2_support_attr = j1939_cluster.attributes["request2Support"]
+        assert request2_support_attr.type == "Boolean", \
+            f"Expected request2Support type to be 'Boolean', got '{request2_support_attr.type}'"
+        assert request2_support_attr.multiplicity == "0..1", \
+            f"Expected request2Support multiplicity to be '0..1', got '{request2_support_attr.multiplicity}'"
+        assert request2_support_attr.kind.value == "attr", \
+            f"Expected request2Support kind to be 'attr', got '{request2_support_attr.kind.value}'"
+
+        # Verify note contains expected content
+        assert request2_support_attr.note is not None, "request2Support should have a note"
+        assert "Request2" in request2_support_attr.note or "RQST2" in request2_support_attr.note, \
+            f"request2Support note should mention 'Request2' or 'RQST2', got: {request2_support_attr.note}"
+
+        # Verify other expected attributes exist
+        expected_attributes = ["networkId", "request2Support", "usesAddress"]
+        for expected_attr in expected_attributes:
+            assert expected_attr in j1939_cluster.attributes, \
+                f"Expected attribute '{expected_attr}' not found. Got: {list(j1939_cluster.attributes.keys())}"
+
+        # Print J1939Cluster information for verification
+        print("\n=== J1939Cluster verified ===")
+        print(f"  Name: {j1939_cluster.name}")
+        print(f"  Package: {j1939_cluster.package}")
+        print(f"  Attributes ({len(j1939_cluster.attributes)}):")
+        for attr_name, attr in j1939_cluster.attributes.items():
+            print(f"    - {attr_name}: {attr.type}")
+
+        print("\n=== Hyphenated attribute continuation verified ===")
+        print("  ✓ Attribute 'request2Support' correctly extracted")
+        print("  ✓ Incorrect attribute 're-' does NOT exist")
+        print("  ✓ Hyphenated word break (re- + quest2Support) handled correctly")

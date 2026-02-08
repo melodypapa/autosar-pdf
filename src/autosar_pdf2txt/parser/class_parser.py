@@ -263,7 +263,7 @@ class AutosarClassParser(AbstractTypeParser):
                 self._finalize_pending_attribute(current_model)
                 return i, True
 
-            # Handle single-word camelCase continuation of attribute name
+            # Handle single-word continuation of attribute name (camelCase or hyphenated)
             # This must come BEFORE the attribute section check because single words don't have spaces
             # Only applies when we're in attribute section and have a pending attribute with a complete note
             if (self._in_attribute_section and line and " " not in line and
@@ -271,21 +271,30 @@ class AutosarClassParser(AbstractTypeParser):
                     self._pending_attr_type is not None and
                     self._pending_attr_note):  # We have a note, so attribute parsing is complete
                 words = line.split()
-                if (len(words) == 1 and words[0] and words[0][0].isupper() and
-                        any(c.islower() for c in words[0]) and
-                        words[0].isalpha()):  # CamelCase, not all-caps, and only letters (no punctuation)
-                    # Only trigger if the pending attribute name ends with lowercase
-                    # This ensures we're concatenating a split camelCase word, not appending random text
-                    if self._pending_attr_name and self._pending_attr_name[-1].islower():
-                        # Critical: Only apply if the note is SHORT
-                        # If we have a long note already, we're likely in the description/tags phase
-                        # and this word is probably a tag/keyword, not a continuation of the attribute name
-                        note_len = len(self._pending_attr_note) if self._pending_attr_note else 0
-                        if note_len < 50:  # Note is short, suggesting we're still parsing name/type
-                            # This is a camelCase continuation - append to attribute name
-                            self._pending_attr_name = self._pending_attr_name + words[0]
-                            i += 1
-                            continue
+                if len(words) == 1 and words[0]:
+                    # Check for hyphenated word break (e.g., "re-" + "quest2Support")
+                    # This takes precedence because hyphen is a clear indicator of word break
+                    if self._pending_attr_name and self._pending_attr_name.endswith("-"):
+                        # Remove the hyphen and concatenate (e.g., "re-" + "quest2Support" = "request2Support")
+                        self._pending_attr_name = self._pending_attr_name[:-1] + words[0]
+                        i += 1
+                        continue
+                    # Check for camelCase continuation
+                    elif (words[0][0].isupper() and
+                            any(c.islower() for c in words[0]) and
+                            words[0].isalpha()):  # CamelCase, not all-caps, and only letters (no punctuation)
+                        # Only trigger if the pending attribute name ends with lowercase
+                        # This ensures we're concatenating a split camelCase word, not appending random text
+                        if self._pending_attr_name and self._pending_attr_name[-1].islower():
+                            # Critical: Only apply if the note is SHORT
+                            # If we have a long note already, we're likely in the description/tags phase
+                            # and this word is probably a tag/keyword, not a continuation of the attribute name
+                            note_len = len(self._pending_attr_note) if self._pending_attr_note else 0
+                            if note_len < 50:  # Note is short, suggesting we're still parsing name/type
+                                # This is a camelCase continuation - append to attribute name
+                                self._pending_attr_name = self._pending_attr_name + words[0]
+                                i += 1
+                                continue
 
             # Process attribute section
             if self._in_attribute_section and line and " " in line:

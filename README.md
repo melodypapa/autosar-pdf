@@ -9,6 +9,8 @@ A Python package to extract AUTOSAR model hierarchies from PDF specification doc
 - **Hierarchical Parsing**: Parse complex hierarchical class structures with inheritance relationships
 - **Source Location Tracking**: Track PDF file and page number for each type definition and base class reference
 - **Markdown Output**: Generate well-formatted markdown output with proper indentation
+- **JSON Output**: Generate structured JSON output with complete type information
+- **Type Mapping**: Generate type-to-package mapping in JSON or Markdown table format
 - **Class Details**: Support for abstract classes, attributes, ATP markers, and source information
 - **Class Hierarchy**: Generate separate class inheritance hierarchy files showing root classes and their subclasses
 - **Individual Class Files**: Create separate markdown files for each class with detailed information
@@ -78,6 +80,12 @@ autosar-extract examples/pdf/ -o output.md --log-file extraction.log
 
 # Combine log file with verbose mode for detailed logging
 autosar-extract examples/pdf/ -o output.md --log-file extraction.log -v
+
+# Generate type-to-package mapping in JSON format
+autosar-extract examples/pdf/ -o mapping.json --generate-mapping
+
+# Generate type-to-package mapping in Markdown table format
+autosar-extract examples/pdf/ -o mapping.md --generate-mapping
 ```
 
 #### CLI Options
@@ -86,8 +94,11 @@ autosar-extract examples/pdf/ -o output.md --log-file extraction.log -v
 - `-o OUTPUT, --output OUTPUT`: Output file path (default: stdout)
 - `--include-class-details`: Create separate markdown files for each class (requires `-o`)
 - `--include-class-hierarchy`: Generate class inheritance hierarchy in a separate file (requires `-o`)
+- `--generate-mapping`: Generate type-to-package mapping instead of full package hierarchy (requires `-o`)
 - `--log-file LOG_FILE`: Write log messages to a file with timestamps (default: console only)
 - `-v, --verbose`: Enable verbose output mode for detailed debug information
+
+**Note**: The `--generate-mapping` flag conflicts with `--include-class-details` and `--include-class-hierarchy`. These options cannot be used together.
 
 ### Python API
 
@@ -291,6 +302,77 @@ Class hierarchy written to: autosar_complete-hierarchy.md
 Writing class files to: autosar_complete/classes/
 ```
 
+### Example: Generate Type-to-Package Mapping
+
+Generate a simple mapping of all types to their package paths:
+
+```bash
+# Generate JSON mapping
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
+  -o mapping.json --generate-mapping
+
+# Generate Markdown table mapping
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
+  -o mapping.md --generate-mapping
+```
+
+**JSON Output Format** (`mapping.json`):
+```json
+{
+  "types": [
+    {
+      "name": "SwComponentPrototype",
+      "type": "Class",
+      "package_path": "M2::AUTOSAR::Components"
+    },
+    {
+      "name": "Category",
+      "type": "Enumeration",
+      "package_path": "M2::AUTOSAR::DataTypes"
+    },
+    {
+      "name": "LimitValue",
+      "type": "Primitive",
+      "package_path": "M2::AUTOSAR::DataTypes"
+    }
+  ]
+}
+```
+
+**Markdown Output Format** (`mapping.md`):
+```markdown
+# Type to Package Mapping
+
+| Name | Type | Package Path |
+|------|------|--------------|
+| SwComponentPrototype | Class | M2::AUTOSAR::Components |
+| RequiredSwComponentPrototype | Class | M2::AUTOSAR::Components |
+| Category | Enumeration | M2::AUTOSAR::DataTypes |
+| LimitValue | Primitive | M2::AUTOSAR::DataTypes |
+```
+
+**Python API for Mapping Generation**:
+
+```python
+from autosar_pdf2txt import PdfParser
+from autosar_pdf2txt.writer import MappingWriter
+
+# Parse PDFs
+parser = PdfParser()
+doc = parser.parse_pdfs(["examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf"])
+
+# Generate mapping
+writer = MappingWriter()
+
+# JSON format
+json_mapping = writer.write_mapping(doc.packages, format="json")
+print(json_mapping)
+
+# Markdown format
+md_mapping = writer.write_mapping(doc.packages, format="markdown")
+print(md_mapping)
+```
+
 ## Output Format
 
 ### Package Hierarchy Output
@@ -477,6 +559,7 @@ Contributions are welcome! Please ensure:
 - **Test Coverage**: Maintained 97%+ test coverage with 524 total tests (510 unit + 14 integration)
 - **Python 3.12 Support**: Added Python 3.12 to supported versions
 - **Development Status**: Updated from "Beta" to "4 - Production" status
+- **Type-to-Package Mapping**: Added mapping generation feature with `--generate-mapping` CLI flag (from PR #167)
 
 ### Version 0.19.0
 - Added page number tracking in two-phase parsing (SWR_PARSER_00030) for accurate source location

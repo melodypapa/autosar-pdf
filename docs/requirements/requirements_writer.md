@@ -404,3 +404,73 @@ The following requirements define JSON output format for AUTOSAR class extractio
 - .json extension → JSON format
 - .md extension → Markdown format
 - No extension or unknown → Markdown (default)
+
+---
+
+### Mapping Writer Requirements
+
+The following requirements define the mapping writer functionality for generating type-to-package mappings in JSON and Markdown formats.
+
+**Requirements**: SWR_WRITER_00024 - SWR_WRITER_00026
+
+**Key Areas**:
+- Mapping Writer Initialization
+- JSON Mapping Output Format
+- Markdown Mapping Table Output
+
+---
+
+### SWR_WRITER_00024
+**Title**: Mapping Writer Initialization
+
+**Maturity**: accept
+
+**Description**: The system shall provide a mapping writer class (MappingWriter) for writing AUTOSAR type-to-package mappings in both JSON and Markdown formats. The MappingWriter class shall:
+- Require no parameters for initialization
+- Support both JSON and Markdown output formats
+- Traverse package hierarchies to collect all types (classes, enumerations, primitives)
+
+---
+
+### SWR_WRITER_00025
+**Title**: JSON Mapping Output Format
+
+**Maturity**: accept
+
+**Description**: The mapping writer shall generate JSON output with a single flat list of all types. The JSON structure shall be:
+```json
+{
+  "types": [
+    {"name": "ClassName", "type": "Class", "package_path": "M2::AUTOSAR::DataTypes"},
+    {"name": "EnumName", "type": "Enumeration", "package_path": "M2::AUTOSAR::DataTypes"},
+    {"name": "PrimitiveName", "type": "Primitive", "package_path": "M2::AUTOSAR::DataTypes"}
+  ]
+}
+```
+Each type entry shall contain:
+- name: The type name string
+- type: One of "Class", "Enumeration", or "Primitive"
+- package_path: Full package path with :: separator
+
+---
+
+### SWR_WRITER_00026
+**Title**: Markdown Mapping Table Output
+
+**Maturity**: accept
+
+**Description**: The mapping writer shall generate Markdown output in table format. The output shall contain:
+- A "# Type to Package Mapping" heading
+- A table with columns: Name | Type | Package Path
+- One row per type with the type name, type category, and full package path
+
+**Example Output**:
+```markdown
+# Type to Package Mapping
+
+| Name | Type | Package Path |
+|------|------|--------------|
+| RunnableEntity | Class | M2::AUTOSAR::BswModuleDescriptions |
+| TriggerEnum | Enumeration | M2::AUTOSAR::DataTypes |
+| LimitValue | Primitive | M2::AUTOSAR::DataTypes |
+```

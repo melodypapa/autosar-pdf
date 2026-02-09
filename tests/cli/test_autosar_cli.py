@@ -591,3 +591,155 @@ class TestAutosarCli:
             assert call_args is not None
             format_string = call_args[0][0] if call_args[0] else call_args[1].get('fmt')
             assert "%(asctime)s" in format_string or "%(msecs)" in format_string
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--generate-mapping", "-o", "mapping.json"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_generate_mapping_json(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00037: Test CLI mapping generation with JSON output.
+
+        Requirements:
+            SWR_CLI_00015: CLI Mapping Generation Flag
+        """
+        def path_side_effect(path_str):
+            instance = MagicMock()
+            if path_str == "test.pdf":
+                instance.exists.return_value = True
+                instance.is_file.return_value = True
+                type(instance).suffix = PropertyMock(return_value=".pdf")
+                instance.absolute.return_value = MagicMock()
+            elif path_str == "mapping.json":
+                instance.exists.return_value = True
+                instance.is_file.return_value = True
+                type(instance).suffix = PropertyMock(return_value=".json")
+                instance.parent.mkdir.return_value = None
+                instance.write_text.return_value = None
+            return instance
+
+        mock_path.side_effect = path_side_effect
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MappingWriter") as mock_writer:
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
+            mock_writer.return_value.write_mapping.return_value = '{"types": []}'
+
+            result = main()
+
+            assert result == 0
+            mock_writer.return_value.write_mapping.assert_called_once_with([mock_pkg], format="json")
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--generate-mapping", "-o", "mapping.md"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_generate_mapping_markdown(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00038: Test CLI mapping generation with Markdown output.
+
+        Requirements:
+            SWR_CLI_00015: CLI Mapping Generation Flag
+        """
+        def path_side_effect(path_str):
+            instance = MagicMock()
+            if path_str == "test.pdf":
+                instance.exists.return_value = True
+                instance.is_file.return_value = True
+                type(instance).suffix = PropertyMock(return_value=".pdf")
+                instance.absolute.return_value = MagicMock()
+            elif path_str == "mapping.md":
+                instance.exists.return_value = True
+                instance.is_file.return_value = True
+                type(instance).suffix = PropertyMock(return_value=".md")
+                instance.parent.mkdir.return_value = None
+                instance.write_text.return_value = None
+            return instance
+
+        mock_path.side_effect = path_side_effect
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.MappingWriter") as mock_writer:
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
+            mock_writer.return_value.write_mapping.return_value = "# Type to Package Mapping\n\n"
+
+            result = main()
+
+            assert result == 0
+            mock_writer.return_value.write_mapping.assert_called_once_with([mock_pkg], format="markdown")
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--generate-mapping", "--include-class-details", "-o", "mapping.json"])
+    def test_generate_mapping_conflict_with_class_details(self) -> None:
+        """SWUT_CLI_00039: Test CLI mapping flag conflict with --include-class-details.
+
+        Requirements:
+            SWR_CLI_00016: CLI Mapping Flag Conflict Detection
+        """
+        import pytest
+        with patch("autosar_pdf2txt.cli.autosar_cli.argparse.ArgumentParser.error") as mock_error:
+            mock_error.side_effect = SystemExit(2)
+            with pytest.raises(SystemExit):
+                main()
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--generate-mapping", "--include-class-hierarchy", "-o", "mapping.json"])
+    def test_generate_mapping_conflict_with_class_hierarchy(self) -> None:
+        """SWUT_CLI_00040: Test CLI mapping flag conflict with --include-class-hierarchy.
+
+        Requirements:
+            SWR_CLI_00016: CLI Mapping Flag Conflict Detection
+        """
+        import pytest
+        with patch("autosar_pdf2txt.cli.autosar_cli.argparse.ArgumentParser.error") as mock_error:
+            mock_error.side_effect = SystemExit(2)
+            with pytest.raises(SystemExit):
+                main()
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--generate-mapping", "--include-class-details", "--include-class-hierarchy", "-o", "mapping.json"])
+    def test_generate_mapping_conflict_with_both_flags(self) -> None:
+        """SWUT_CLI_00041: Test CLI mapping flag conflict with both flags.
+
+        Requirements:
+            SWR_CLI_00016: CLI Mapping Flag Conflict Detection
+        """
+        import pytest
+        with patch("autosar_pdf2txt.cli.autosar_cli.argparse.ArgumentParser.error") as mock_error:
+            mock_error.side_effect = SystemExit(2)
+            with pytest.raises(SystemExit):
+                main()
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--generate-mapping"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_generate_mapping_requires_output(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00042: Test CLI mapping requires output file.
+
+        Requirements:
+            SWR_CLI_00015: CLI Mapping Generation Flag
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+        mock_path.return_value = mock_path_instance
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser:
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
+
+            result = main()
+
+            assert result == 1
+            mock_logging.error.assert_called()
+            error_msg = mock_logging.error.call_args[0][0]
+            assert "--generate-mapping requires -o/--output" in error_msg

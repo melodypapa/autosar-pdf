@@ -5566,3 +5566,249 @@ All existing test cases in this document are currently at maturity level **accep
 **Requirements Coverage**: SWR_PARSER_00004, SWR_WRITER_00006
 
 ---
+
+#### SWUT_WRITER_00058
+**Title**: Test Mapping Writer Initialization
+
+**Maturity**: draft
+
+**Description**: Verify that MappingWriter can be initialized without parameters.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Create a MappingWriter instance without parameters
+
+**Expected Result**: Writer instance is created successfully
+
+**Requirements Coverage**: SWR_WRITER_00024
+
+---
+
+#### SWUT_WRITER_00059
+**Title**: Test Write Mapping JSON Format
+
+**Maturity**: draft
+
+**Description**: Verify that MappingWriter generates correct JSON format with all types in a single flat list.
+
+**Precondition**: A MappingWriter instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarClass with name="TestClass", package="M2::TestPackage", is_abstract=False
+3. Create an AutosarEnumeration with name="TestEnum", package="M2::TestPackage"
+4. Create an AutosarPrimitive with name="TestPrimitive", package="M2::TestPackage"
+5. Add all types to package
+6. Call write_mapping() with format="json"
+7. Parse output as JSON
+8. Verify output contains "types" key with array
+9. Verify array has 3 entries
+10. Verify each entry has "name", "type", and "package_path" keys
+
+**Expected Result**:
+- JSON contains single "types" array
+- All types (class, enumeration, primitive) are in the same array
+- Each type entry has name, type (Class/Enumeration/Primitive), and package_path
+
+**Requirements Coverage**: SWR_WRITER_00025
+
+---
+
+#### SWUT_WRITER_00060
+**Title**: Test Write Mapping Markdown Table Format
+
+**Maturity**: draft
+
+**Description**: Verify that MappingWriter generates correct Markdown table format.
+
+**Precondition**: A MappingWriter instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="TestPackage"
+2. Create an AutosarClass with name="TestClass", package="M2::TestPackage"
+3. Create an AutosarEnumeration with name="TestEnum", package="M2::TestPackage"
+4. Create an AutosarPrimitive with name="TestPrimitive", package="M2::TestPackage"
+5. Add all types to package
+6. Call write_mapping() with format="markdown"
+7. Verify output contains "# Type to Package Mapping" header
+8. Verify output contains table header "| Name | Type | Package Path |"
+9. Verify output contains table separator "|------|------|"
+10. Verify output contains rows for all three types
+
+**Expected Result**:
+- Markdown contains proper table header with columns: Name, Type, Package Path
+- Table has separator row after header
+- Each type appears as a row with correct values
+
+**Requirements Coverage**: SWR_WRITER_00026
+
+---
+
+#### SWUT_WRITER_00061
+**Title**: Test Collect Mapping with Nested Packages
+
+**Maturity**: draft
+
+**Description**: Verify that MappingWriter correctly traverses nested packages and collects all types with full package paths.
+
+**Precondition**: A MappingWriter instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="ParentPackage"
+2. Create a subpackage with name="ChildPackage"
+3. Create an AutosarClass with name="ParentClass", package="M2::ParentPackage"
+4. Create an AutosarClass with name="ChildClass", package="M2::ParentPackage::ChildPackage"
+5. Add ParentClass to ParentPackage
+6. Add ChildClass to ChildPackage
+7. Add ChildPackage to ParentPackage
+8. Call write_mapping() with format="json"
+9. Parse output as JSON
+10. Verify both classes are in types array
+11. Verify ParentClass has package_path "M2::ParentPackage"
+12. Verify ChildClass has package_path "M2::ParentPackage::ChildPackage"
+
+**Expected Result**:
+- Both classes are collected from nested packages
+- Package paths include full hierarchy with :: separator
+
+**Requirements Coverage**: SWR_WRITER_00025
+
+---
+
+#### SWUT_WRITER_00062
+**Title**: Test Write Mapping with Empty Packages
+
+**Maturity**: draft
+
+**Description**: Verify that MappingWriter handles empty packages gracefully.
+
+**Precondition**: A MappingWriter instance exists
+
+**Test Steps**:
+1. Create an AutosarPackage with name="EmptyPackage"
+2. Call write_mapping() with format="json"
+3. Parse output as JSON
+4. Verify output contains "types" key with empty array
+5. Call write_mapping() with format="markdown"
+6. Verify output contains header but no data rows
+
+**Expected Result**:
+- JSON format returns empty types array
+- Markdown format returns header only
+
+**Requirements Coverage**: SWR_WRITER_00024
+
+---
+
+#### SWUT_CLI_00037
+**Title**: Test CLI Mapping Generation Flag with JSON Output
+
+**Maturity**: draft
+
+**Description**: Verify that the --generate-mapping flag generates JSON mapping output.
+
+**Precondition**: A valid PDF file exists
+
+**Test Steps**:
+1. Run autosar-extract with --generate-mapping -o mapping.json <input.pdf>
+2. Verify exit code is 0
+3. Verify mapping.json file is created
+4. Parse JSON and verify structure
+
+**Expected Result**:
+- Command succeeds with exit code 0
+- JSON file contains types array with name, type, and package_path fields
+
+**Requirements Coverage**: SWR_CLI_00015
+
+---
+
+#### SWUT_CLI_00038
+**Title**: Test CLI Mapping Generation Flag with Markdown Output
+
+**Maturity**: draft
+
+**Description**: Verify that the --generate-mapping flag generates Markdown table output.
+
+**Precondition**: A valid PDF file exists
+
+**Test Steps**:
+1. Run autosar-extract with --generate-mapping -o mapping.md <input.pdf>
+2. Verify exit code is 0
+3. Verify mapping.md file is created
+4. Verify content contains table format
+
+**Expected Result**:
+- Command succeeds with exit code 0
+- Markdown file contains table with Name, Type, Package Path columns
+
+**Requirements Coverage**: SWR_CLI_00015
+
+---
+
+#### SWUT_CLI_00039
+**Title**: Test CLI Mapping Flag Conflict with Class Details
+
+**Maturity**: draft
+
+**Description**: Verify that --generate-mapping conflicts with --include-class-details and reports error.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run autosar-extract with --generate-mapping --include-class-details -o mapping.json <input.pdf>
+2. Verify exit code is 1 (error)
+3. Verify error message mentions conflict
+
+**Expected Result**:
+- Command fails with exit code 1
+- Error message indicates that --generate-mapping conflicts with --include-class-details
+
+**Requirements Coverage**: SWR_CLI_00016
+
+---
+
+#### SWUT_CLI_00040
+**Title**: Test CLI Mapping Flag Conflict with Class Hierarchy
+
+**Maturity**: draft
+
+**Description**: Verify that --generate-mapping conflicts with --include-class-hierarchy and reports error.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run autosar-extract with --generate-mapping --include-class-hierarchy -o mapping.json <input.pdf>
+2. Verify exit code is 1 (error)
+3. Verify error message mentions conflict
+
+**Expected Result**:
+- Command fails with exit code 1
+- Error message indicates that --generate-mapping conflicts with --include-class-hierarchy
+
+**Requirements Coverage**: SWR_CLI_00016
+
+---
+
+#### SWUT_CLI_00041
+**Title**: Test CLI Mapping Flag Conflict with Both Flags
+
+**Maturity**: draft
+
+**Description**: Verify that --generate-mapping conflicts with both --include-class-details and --include-class-hierarchy.
+
+**Precondition**: None
+
+**Test Steps**:
+1. Run autosar-extract with --generate-mapping --include-class-details --include-class-hierarchy -o mapping.json <input.pdf>
+2. Verify exit code is 1 (error)
+3. Verify error message mentions conflict
+
+**Expected Result**:
+- Command fails with exit code 1
+- Error message indicates conflict
+
+**Requirements Coverage**: SWR_CLI_00016
+
+---

@@ -4,10 +4,10 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from autosar_pdf2txt import PdfParser, MarkdownWriter
-from autosar_pdf2txt.writer import JsonWriter
+from autosar_pdf2txt.writer import JsonWriter, MappingWriter
 from autosar_pdf2txt.models import AutosarClass, AutosarEnumeration, AutosarPrimitive
 
 
@@ -43,6 +43,8 @@ def main() -> int:
         SWR_CLI_00011: CLI Class Files Flag
         SWR_CLI_00012: CLI Class Hierarchy Flag
         SWR_CLI_00014: CLI Logger File Specification
+        SWR_CLI_00015: CLI Mapping Generation Flag
+        SWR_CLI_00016: CLI Mapping Flag Conflict Detection
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -80,6 +82,11 @@ def main() -> int:
         help="Generate class inheritance hierarchy and write to a separate file (requires -o/--output)",
     )
     parser.add_argument(
+        "--generate-mapping",
+        action="store_true",
+        help="Generate type-to-package mapping (requires -o/--output)",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -92,6 +99,11 @@ def main() -> int:
     )
 
     args = parser.parse_args()
+
+    # SWR_CLI_00016: CLI Mapping Flag Conflict Detection
+    # Check for conflicts between --generate-mapping and other output flags
+    if args.generate_mapping and (args.include_class_details or args.include_class_hierarchy):
+        parser.error("--generate-mapping cannot be used with --include-class-details or --include-class-hierarchy")
 
     # Configure logging based on verbose flag
     # SWR_CLI_00005: CLI Verbose Mode
@@ -235,6 +247,26 @@ def main() -> int:
         else:
             logging.info("📝 Using Markdown output format")
             use_json = False
+
+        # SWR_CLI_00015: CLI Mapping Generation Flag
+        # Generate type-to-package mapping if requested
+        if args.generate_mapping:
+            if not args.output:
+                logging.error("--generate-mapping requires -o/--output to be specified")
+                return 1
+
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            mapping_format: Literal["json", "markdown"] = "json" if use_json else "markdown"
+            logging.info(f"📊 Generating type-to-package mapping in {mapping_format.upper()} format...")
+
+            mapping_writer = MappingWriter()
+            mapping = mapping_writer.write_mapping(doc.packages, format=mapping_format)
+            output_path.write_text(mapping, encoding="utf-8")
+            logging.info(f"✅ Mapping written to: {args.output}")
+
+            return 0
 
         # SWR_CLI_00012: CLI Class Hierarchy Flag
         # Generate class hierarchy if requested (only for markdown)

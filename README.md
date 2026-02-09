@@ -32,6 +32,8 @@ cd autosar-pdf
 pip install -e .
 ```
 
+**Version**: 1.0.0 (Production Release)
+
 ## Requirements
 
 - Python 3.7+
@@ -548,14 +550,16 @@ Contributions are welcome! Please ensure:
 
 ## Changelog
 
-### Version 0.20.0
-- Added type-to-package mapping feature with `--generate-mapping` CLI flag
-- Implemented MappingWriter class for generating type-to-package mappings in JSON and Markdown formats
-- JSON mapping format: Single flat list with all types (Class/Enumeration/Primitive) and package paths
-- Markdown mapping format: Table format with Name, Type, and Package Path columns
-- Added CLI conflict detection: `--generate-mapping` conflicts with `--include-class-details` and `--include-class-hierarchy`
-- Added Python API for programmatic mapping generation using MappingWriter
-- Added comprehensive test coverage for mapping functionality (SWUT_WRITER_00058-00062, SWUT_CLI_00037-00042)
+### Version 1.0.0
+- **Production Release**: Project has reached production stability with comprehensive test coverage
+- **CamelCase Attribute Extraction**: Fixed attribute parsing for camelCase names like `shortNameFragment` (SWR_PARSER_00012)
+- **Improved Attribute Name Parsing**: Resolved issues with Referrable class showing correct attributes (shortName and shortNameFragment)
+- **Modern Python Packaging**: Migrated from setup.py to pyproject.toml with PEP 621 compliance
+- **Enhanced Type Detection**: Added 34 common type suffixes to exclusion list for better camelCase detection
+- **Test Coverage**: Maintained 97%+ test coverage with 524 total tests (510 unit + 14 integration)
+- **Python 3.12 Support**: Added Python 3.12 to supported versions
+- **Development Status**: Updated from "Beta" to "4 - Production" status
+- **Type-to-Package Mapping**: Added mapping generation feature with `--generate-mapping` CLI flag (from PR #167)
 
 ### Version 0.19.0
 - Added page number tracking in two-phase parsing (SWR_PARSER_00030) for accurate source location

@@ -142,6 +142,51 @@ def generic_structure_arelement(generic_structure_template_pdf: AutosarDoc) -> A
 
 
 @pytest.fixture(scope="session")
+def generic_structure_referrable(generic_structure_template_pdf: AutosarDoc) -> AutosarClass:
+    """Cache the Referrable class from GenericStructureTemplate PDF.
+
+    This fixture pre-fetches and caches the Referrable class,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        generic_structure_template_pdf: Parsed GenericStructureTemplate PDF data.
+
+    Returns:
+        The Referrable AutosarClass.
+
+    Raises:
+        ValueError: If Referrable class is not found.
+    """
+    # Find M2 package (root metamodel package)
+    m2 = generic_structure_template_pdf.get_package("M2")
+    if not m2:
+        raise ValueError("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> GenericStructure -> GeneralTemplateClasses -> Identifiable
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        raise ValueError("AUTOSARTemplates package not found")
+
+    generic_structure = autosar_templates.get_subpackage("GenericStructure")
+    if not generic_structure:
+        raise ValueError("GenericStructure package not found")
+
+    general_template_classes = generic_structure.get_subpackage("GeneralTemplateClasses")
+    if not general_template_classes:
+        raise ValueError("GeneralTemplateClasses package not found")
+
+    identifiable = general_template_classes.get_subpackage("Identifiable")
+    if not identifiable:
+        raise ValueError("Identifiable package not found")
+
+    referrable = identifiable.get_class("Referrable")
+    if not referrable:
+        raise ValueError("Referrable class not found")
+
+    return referrable
+
+
+@pytest.fixture(scope="session")
 def timing_extensions_pdf(parser: PdfParser) -> AutosarDoc:
     """Parse and cache the TimingExtensions PDF.
 
@@ -380,3 +425,34 @@ def diagnostic_extract_template_pdf(parser: PdfParser) -> AutosarDoc:
     print(f"  Root classes: {len(doc.root_classes)}")
 
     return doc
+
+
+@pytest.fixture(scope="session")
+def diagnostic_extract_j1939_cluster(diagnostic_extract_template_pdf: AutosarDoc) -> Optional[AutosarClass]:
+    """Cache the J1939Cluster class from DiagnosticExtractTemplate PDF.
+
+    This fixture pre-fetches and caches the J1939Cluster class which contains
+    the hyphenated attribute name continuation pattern (re- + quest2Support = request2Support).
+
+    Args:
+        diagnostic_extract_template_pdf: Parsed DiagnosticExtractTemplate PDF data.
+
+    Returns:
+        The J1939Cluster AutosarClass if found, None otherwise.
+
+    Note:
+        Returns None if the class cannot be found (e.g., PDF parsing issues or class not present).
+        Tests using this fixture should handle None gracefully using pytest.skip if needed.
+    """
+    # Find J1939Cluster class using the helper function
+    result = find_class_by_name(diagnostic_extract_template_pdf.packages, "J1939Cluster")
+
+    if result:
+        package, j1939_cluster = result
+        print("\n=== J1939Cluster found ===")
+        print(f"  Package: {package.name}")
+        print(f"  Attributes: {len(j1939_cluster.attributes)}")
+        return j1939_cluster
+
+    print("\n=== J1939Cluster not found ===")
+    return None

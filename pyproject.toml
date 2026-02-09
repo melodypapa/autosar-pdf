@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta:__legacy__"
+
+[project]
+name = "autosar-pdf2txt"
+version = "1.0.0"
+description = "A Python package to extract AUTOSAR model from PDF files to markdown"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "Melodypapa", email = "melodypapa@outlook.com"}
+]
+keywords = ["autosar", "pdf", "parser", "markdown", "extraction"]
+classifiers = [
+    "Development Status :: 4 - Production",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Software Development :: Documentation",
+]
+
+dependencies = [
+    "pdfplumber>=0.10.0",
+    "PyYAML>=5.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/melodypapa/autosar-pdf"
+Repository = "https://github.com/melodypapa/autosar-pdf.git"
+Issues = "https://github.com/melodypapa/autosar-pdf/issues"
+
+[project.scripts]
+autosar-extract = "autosar_pdf2txt.cli.autosar_cli:main"
+autosar-extract-table = "autosar_pdf2txt.cli.extract_tables_cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}

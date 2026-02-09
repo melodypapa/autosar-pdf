@@ -1355,6 +1355,112 @@ class TestPdfParser:
         # Verify that only 1 attribute exists
         assert len(class_defs[0].attributes) == 1
 
+    def test_attribute_name_multiline_hyphenated_continuation(self) -> None:
+        """Test that attribute names split across lines with hyphens are correctly concatenated.
+
+        SWUT_PARSER_00101: Test Hyphenated Attribute Name Continuation
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        This test verifies that when an attribute name is split across lines with a hyphen
+        at the end of the first part (e.g., "re-" on one line and "quest2Support" on the next),
+        the parser correctly concatenates them into "request2Support".
+
+        This is important for PDFs where the text extraction splits hyphenated words at line
+        boundaries, which can happen with narrow column layouts in PDF tables.
+
+        Note: The second line must be a single word without spaces to trigger the continuation
+        logic. The hyphen at the end of the first part is the key indicator that this is a
+        split word that needs to be concatenated.
+        """
+        PdfParser()
+        text = """
+        Class J1939Cluster
+        Package M2::AUTOSARTemplates::SystemTemplate::Fibex::Fibex4Can::CanTopology
+        Attribute Type Mult. Kind Note
+        networkId PositiveInteger 0..1 attr This represents the network ID
+        re- Boolean 0..1 attr Enables support for the Request2 PGN (RQST2).
+        quest2Support
+        usesAddress Boolean 0..1 attr Defines whether nodes use initial address
+        """
+        class_defs = _parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "J1939Cluster"
+
+        # Verify that "re-" and "quest2Support" are concatenated into "request2Support"
+        assert "request2Support" in class_defs[0].attributes
+        assert class_defs[0].attributes["request2Support"].type == "Boolean"
+        assert class_defs[0].attributes["request2Support"].multiplicity == "0..1"
+        assert class_defs[0].attributes["request2Support"].kind == AttributeKind.ATTR
+        assert "Enables support for the Request2 PGN" in class_defs[0].attributes["request2Support"].note
+
+        # Verify that the other attributes are also parsed correctly
+        assert "networkId" in class_defs[0].attributes
+        assert "usesAddress" in class_defs[0].attributes
+
+        # Verify that only 3 attributes exist
+        assert len(class_defs[0].attributes) == 3
+
+    def test_attribute_name_camelcase_extraction(self) -> None:
+        """Test that camelCase attribute names are correctly extracted from single line.
+
+        SWUT_PARSER_00102: Test CamelCase Attribute Name Extraction
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        This test verifies that when an attribute name is a camelCase word that gets
+        split during PDF text extraction (e.g., "shortName ShortNameFragment * aggr"),
+        the parser correctly extracts "shortNameFragment" as the attribute name and
+        "ShortNameFragment" as the type.
+
+        This scenario occurs in AUTOSAR PDFs where the attribute name and type have
+        the same stem (e.g., "shortNameFragment" attribute with type "ShortNameFragment"),
+        and the PDF text extraction splits the camelCase name incorrectly.
+
+        Example from Referrable class:
+        - shortName Identifier 1 attr (first attribute)
+        - shortName ShortNameFragment * aggr (second attribute - should be "shortNameFragment")
+        """
+        from autosar_pdf2txt.models import AttributeKind
+
+        PdfParser()
+        text = """
+        Class Referrable
+        Package M2::AUTOSARTemplates::GenericStructure::GeneralTemplateClasses
+        Note Instances of this class can be referred to by their identifier
+        Attribute Type Mult. Kind Note
+        shortName Identifier 1 attr This specifies an identifying short name
+        shortName ShortNameFragment * aggr This specifies how shortName is composed
+        """
+        class_defs = _parse_class_text(text)
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "Referrable"
+
+        # Verify first attribute (shortName)
+        attr1 = class_defs[0].attributes.get("shortName")
+        assert attr1 is not None, "shortName attribute should exist"
+        assert attr1.name == "shortName"
+        assert attr1.type == "Identifier"
+        assert attr1.multiplicity == "1"
+        assert attr1.kind == AttributeKind.ATTR
+
+        # Verify second attribute (shortNameFragment) - this is the key test
+        # The parser should correctly extract "shortNameFragment" as the attribute name
+        # from "shortName ShortNameFragment * aggr"
+        attr2 = class_defs[0].attributes.get("shortNameFragment")
+        assert attr2 is not None, "shortNameFragment attribute should exist"
+        assert attr2.name == "shortNameFragment"
+        assert attr2.type == "ShortNameFragment"
+        assert attr2.multiplicity == "*"
+        assert attr2.kind == AttributeKind.AGGR
+
+        # Verify that only 2 attributes exist
+        assert len(class_defs[0].attributes) == 2
+
     def test_extract_primitive_class_definition(self) -> None:
         """Test that the parser correctly recognizes class definitions with 'Primitive' prefix.
 

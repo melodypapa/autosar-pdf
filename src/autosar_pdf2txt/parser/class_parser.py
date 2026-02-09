@@ -263,7 +263,7 @@ class AutosarClassParser(AbstractTypeParser):
                 self._finalize_pending_attribute(current_model)
                 return i, True
 
-            # Handle single-word camelCase continuation of attribute name
+            # Handle single-word continuation of attribute name (camelCase or hyphenated)
             # This must come BEFORE the attribute section check because single words don't have spaces
             # Only applies when we're in attribute section and have a pending attribute with a complete note
             if (self._in_attribute_section and line and " " not in line and
@@ -271,21 +271,30 @@ class AutosarClassParser(AbstractTypeParser):
                     self._pending_attr_type is not None and
                     self._pending_attr_note):  # We have a note, so attribute parsing is complete
                 words = line.split()
-                if (len(words) == 1 and words[0] and words[0][0].isupper() and
-                        any(c.islower() for c in words[0]) and
-                        words[0].isalpha()):  # CamelCase, not all-caps, and only letters (no punctuation)
-                    # Only trigger if the pending attribute name ends with lowercase
-                    # This ensures we're concatenating a split camelCase word, not appending random text
-                    if self._pending_attr_name and self._pending_attr_name[-1].islower():
-                        # Critical: Only apply if the note is SHORT
-                        # If we have a long note already, we're likely in the description/tags phase
-                        # and this word is probably a tag/keyword, not a continuation of the attribute name
-                        note_len = len(self._pending_attr_note) if self._pending_attr_note else 0
-                        if note_len < 50:  # Note is short, suggesting we're still parsing name/type
-                            # This is a camelCase continuation - append to attribute name
-                            self._pending_attr_name = self._pending_attr_name + words[0]
-                            i += 1
-                            continue
+                if len(words) == 1 and words[0]:
+                    # Check for hyphenated word break (e.g., "re-" + "quest2Support")
+                    # This takes precedence because hyphen is a clear indicator of word break
+                    if self._pending_attr_name and self._pending_attr_name.endswith("-"):
+                        # Remove the hyphen and concatenate (e.g., "re-" + "quest2Support" = "request2Support")
+                        self._pending_attr_name = self._pending_attr_name[:-1] + words[0]
+                        i += 1
+                        continue
+                    # Check for camelCase continuation
+                    elif (words[0][0].isupper() and
+                            any(c.islower() for c in words[0]) and
+                            words[0].isalpha()):  # CamelCase, not all-caps, and only letters (no punctuation)
+                        # Only trigger if the pending attribute name ends with lowercase
+                        # This ensures we're concatenating a split camelCase word, not appending random text
+                        if self._pending_attr_name and self._pending_attr_name[-1].islower():
+                            # Critical: Only apply if the note is SHORT
+                            # If we have a long note already, we're likely in the description/tags phase
+                            # and this word is probably a tag/keyword, not a continuation of the attribute name
+                            note_len = len(self._pending_attr_note) if self._pending_attr_note else 0
+                            if note_len < 50:  # Note is short, suggesting we're still parsing name/type
+                                # This is a camelCase continuation - append to attribute name
+                                self._pending_attr_name = self._pending_attr_name + words[0]
+                                i += 1
+                                continue
 
             # Process attribute section
             if self._in_attribute_section and line and " " in line:
@@ -573,6 +582,44 @@ class AutosarClassParser(AbstractTypeParser):
             # - Third word as multiplicity (0..1, *, 0..*) or kind (attr, aggr, ref)
             third_word = words[2] if len(words) > 2 else ""
             fourth_word = words[3] if len(words) > 3 else ""
+
+            # Check for camelCase attribute name continuation (SWR_PARSER_00012)
+            # E.g., "shortName ShortNameFragment * aggr" should be parsed as:
+            # - attr_name: "shortNameFragment" (not "shortName")
+            # - attr_type: "ShortNameFragment"
+            # This happens when PDF text extraction splits camelCase attribute names
+            # Key heuristic: The second word should start with the capitalized first word
+            # AND the suffix (after removing prefix) should be a short fragment word
+            prefix = attr_name[0].upper() + attr_name[1:] if attr_name else ""
+            is_camelcase_continuation = False
+            if (
+                len(words) >= 4 and
+                third_word in (self.MULTIPLICITIES | self.ATTR_KINDS_ALL) and
+                attr_name and attr_type and
+                attr_name[-1].islower() and  # First word ends with lowercase
+                attr_type[0].isupper() and  # Second word starts with uppercase
+                attr_type.startswith(prefix)  # Second word starts with capitalized first word
+            ):
+                # Check if the suffix is a short continuation word (not a complete type)
+                suffix = attr_type[len(prefix):] if len(attr_type) > len(prefix) else ""
+                # Only treat as continuation if the suffix is a short fragment word
+                # Heuristic: suffix should be very short (<= 8 chars) and not a common type suffix
+                # Common type suffixes that indicate a complete type (not a continuation):
+                # - "Dependency", "Mapping", "Reference", "Prototype", "Definition", "Comment", etc.
+                type_suffixes = {"Dependency", "Mapping", "Reference", "Prototype", "Definition", "Instance", "Element", "Container", "Collection", "Exception", "Handler", "Manager", "Factory", "Builder", "Comment", "Data", "Value", "Type", "Kind", "Name", "Text", "Info", "Status", "State", "Mode", "Flag", "Count", "Index", "Length", "Size"}
+                is_camelcase_continuation = (
+                    len(suffix) <= 8 and  # Very short suffix (likely a fragment), changed from < to <= to handle "Fragment" (8 chars)
+                    suffix not in type_suffixes and  # Not a common type suffix
+                    suffix[0].isupper() if suffix else False  # Starts with uppercase (camelCase continuation)
+                )
+
+            if is_camelcase_continuation:
+                # Combine to form camelCase attribute name
+                # Remove prefix from second word: "ShortNameFragment" -> "Fragment"
+                suffix = attr_type[len(prefix):] if len(attr_type) > len(prefix) else ""
+                attr_name = attr_name + suffix  # "shortName" + "Fragment" = "shortNameFragment"
+                # The type remains the same (e.g., "ShortNameFragment")
+                # No need to shift words as the type is correctly identified
 
             is_new_attribute = (
                 # Third word is multiplicity or kind

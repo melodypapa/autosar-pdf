@@ -5506,6 +5506,36 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00101
+**Title**: Test Hyphenated Attribute Name Continuation
+
+**Maturity**: accept
+
+**Description**: Verify that attribute names split across lines with hyphens are correctly concatenated.
+
+**Precondition**: An AutosarClassParser instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="TestClass" and package="M2::Test"
+2. Simulate parsing an attribute table where the first line contains:
+   - Attribute name: "re-"
+   - Type: "Boolean"
+   - Multiplicity: "0..1"
+   - Kind: "attr"
+   - Note: "Enables support for the Request2 PGN (RQST2)."
+3. Simulate encountering a continuation line with just: "quest2Support"
+4. Verify the parser concatenates to form the complete attribute name: "request2Support"
+5. Verify the attribute is added to the class with correct name, type, multiplicity, kind, and note
+
+**Expected Result**:
+- The attribute name "request2Support" is correctly extracted
+- The attribute has type="Boolean", multiplicity="0..1", kind="attr"
+- The attribute note contains the full description
+
+**Requirements Coverage**: SWR_PARSER_00012
+
+---
+
 #### SWUT_WRITER_00057
 **Title**: Test Writing Class With AtpPrototype ATP Type
 

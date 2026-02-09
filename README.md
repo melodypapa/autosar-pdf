@@ -105,7 +105,7 @@ autosar-extract examples/pdf/ -o mapping.md --generate-mapping
 You can also use the package programmatically in your Python code:
 
 ```python
-from autosar_pdf2txt import PdfParser, MarkdownWriter
+from autosar_pdf2txt import PdfParser, MarkdownWriter, MappingWriter
 
 # Parse single PDF file
 parser = PdfParser()
@@ -138,6 +138,11 @@ root_classes = [cls for cls in all_classes if not cls.bases]
 # Write class hierarchy
 hierarchy = writer.write_class_hierarchy(root_classes, all_classes)
 print(hierarchy)
+
+# Generate type-to-package mapping
+mapping_writer = MappingWriter()
+json_mapping = mapping_writer.write_mapping(all_packages, format="json")
+md_mapping = mapping_writer.write_mapping(all_packages, format="markdown")
 ```
 
 ## Data Models
@@ -354,8 +359,7 @@ autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
 **Python API for Mapping Generation**:
 
 ```python
-from autosar_pdf2txt import PdfParser
-from autosar_pdf2txt.writer import MappingWriter
+from autosar_pdf2txt import PdfParser, MappingWriter
 
 # Parse PDFs
 parser = PdfParser()
@@ -371,6 +375,12 @@ print(json_mapping)
 # Markdown format
 md_mapping = writer.write_mapping(doc.packages, format="markdown")
 print(md_mapping)
+```
+
+**Alternative import** (if you prefer importing from the writer submodule):
+```python
+from autosar_pdf2txt import PdfParser
+from autosar_pdf2txt.writer import MappingWriter
 ```
 
 ## Output Format

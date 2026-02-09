@@ -19,7 +19,7 @@ from autosar_pdf2txt.models import (
     AutosarPrimitive,
 )
 from autosar_pdf2txt.parser import PdfParser
-from autosar_pdf2txt.writer import MarkdownWriter
+from autosar_pdf2txt.writer import MarkdownWriter, MappingWriter
 
 __all__ = [
     "AttributeKind",
@@ -32,5 +32,6 @@ __all__ = [
     "AutosarPrimitive",
     "PdfParser",
     "MarkdownWriter",
+    "MappingWriter",
     "__version__",
 ]

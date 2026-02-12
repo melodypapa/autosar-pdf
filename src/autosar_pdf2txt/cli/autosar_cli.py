@@ -296,8 +296,8 @@ def main() -> int:
             if use_json:
                 # JSON output
                 json_writer = JsonWriter()
-                json_writer.write_packages_to_files(doc.packages, base_dir=output_path.parent)
-                logging.info(f"✍️  JSON output written to: {output_path.parent}")
+                json_writer.write_packages_to_files(doc.packages, output_path=output_path)
+                logging.info(f"✍️  JSON output written to: {output_path}")
             else:
                 # Markdown output
                 markdown_writer = MarkdownWriter()

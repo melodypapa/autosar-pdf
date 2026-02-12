@@ -50,15 +50,18 @@ class JsonWriter:
         - Maintains nested directory structure for subpackages
 
         The root directory for the file structure is the same as the output JSON file location.
-        If output_path is provided, the directory containing that file is used as the root.
-        If base_dir is provided, it is used directly as the root directory.
+        If output_path is provided, the directory containing that file is used as the root,
+        and the filename is used for the index file.
+        If base_dir is provided, it is used directly as the root directory and the index
+        file is named "index.json".
 
         Args:
             packages: List of top-level AutosarPackage objects.
             output_path: Path to the output JSON file. The root directory will be
-                the directory containing this file. Cannot be used with base_dir.
+                the directory containing this file. The filename will be used for
+                the index file instead of "index.json". Cannot be used with base_dir.
             base_dir: Base directory path where the package structure will be created.
-                Cannot be used with output_path.
+                The index file will be named "index.json". Cannot be used with output_path.
 
         Raises:
             OSError: If directory creation or file writing fails.
@@ -83,12 +86,14 @@ class JsonWriter:
         if base_dir is not None and not base_dir:
             raise ValueError("base_dir cannot be empty")
 
-        # Determine base path from output_path or base_dir
+        # Determine base path and index filename from output_path or base_dir
         if output_path is not None:
             output_file = Path(output_path)
             base_path = output_file.parent
+            index_filename = output_file.name
         else:
             base_path = Path(base_dir)  # type: ignore
+            index_filename = "index.json"
 
         # Create packages directory
         packages_dir = base_path / "packages"
@@ -98,10 +103,10 @@ class JsonWriter:
         for pkg in packages:
             self._write_package_to_files(pkg, packages_dir)
 
-        # Write index.json
-        self._write_index(packages, base_path)
+        # Write index file with user-specified name or default
+        self._write_index(packages, base_path, index_filename)
 
-    def _write_index(self, packages: List[AutosarPackage], base_path: Path) -> None:
+    def _write_index(self, packages: List[AutosarPackage], base_path: Path, index_filename: str = "index.json") -> None:
         """Write the root index.json file.
 
         Requirements:
@@ -109,7 +114,8 @@ class JsonWriter:
 
         Args:
             packages: List of top-level AutosarPackage objects.
-            base_path: Base directory where index.json will be written.
+            base_path: Base directory where the index file will be written.
+            index_filename: Name of the index file (default: "index.json").
         """
         # Collect metadata
         total_classes = 0
@@ -166,8 +172,8 @@ class JsonWriter:
             "packages": package_refs,
         }
 
-        # Write index.json
-        index_file = base_path / "index.json"
+        # Write index file with specified filename
+        index_file = base_path / index_filename
         with open(index_file, "w", encoding="utf-8") as f:
             json.dump(index, f, indent=2, ensure_ascii=False)
 

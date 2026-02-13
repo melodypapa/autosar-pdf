@@ -663,3 +663,158 @@ class AbstractTypeParser(ABC):
             - is_complete: True if parsing is complete, False if more lines needed
         """
         pass
+
+    @staticmethod
+    def _load_patches(config_path: str) -> Dict[str, Dict]:
+        """Load patch configuration from YAML file.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type patches)
+
+        Args:
+            config_path: Path to the YAML configuration file.
+
+        Returns:
+            Dictionary containing patches organized by type category.
+            Structure: {type_category: {item_name: {field: {field_type: {wrong_value: correct_value}}}}}
+        """
+        import yaml
+        try:
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+                return config.get('patches', {})
+        except FileNotFoundError:
+            return {}
+        except Exception:
+            return {}
+
+    @staticmethod
+    def apply_class_patches(
+        class_obj: AutosarClass,
+        patches: Dict[str, Dict],
+    ) -> None:
+        """Apply class attribute type patches to a parsed AutosarClass.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type patches)
+
+        Args:
+            class_obj: The AutosarClass object to patch.
+            patches: The patches dictionary from YAML configuration.
+        """
+        class_patches = patches.get('classes', {})
+        class_name = class_obj.name
+
+        if class_name not in class_patches:
+            return
+
+        attribute_patches = class_patches[class_name]
+
+        for attr_name, attr_name_patches in attribute_patches.items():
+            if attr_name not in class_obj.attributes:
+                continue
+
+            attr = class_obj.attributes[attr_name]
+
+            # Check for attribute_type patches
+            if 'attribute_type' in attr_name_patches:
+                type_patches = attr_name_patches['attribute_type']
+                if attr.type in type_patches:
+                    # Create new attribute with corrected type
+                    from autosar_pdf2txt.models import AutosarAttribute
+                    class_obj.attributes[attr_name] = AutosarAttribute(
+                        name=attr.name,
+                        type=type_patches[attr.type],
+                        multiplicity=attr.multiplicity,
+                        kind=attr.kind,
+                        is_ref=attr.is_ref,
+                        note=attr.note,
+                    )
+
+            # Future: Add support for other fields like attribute_name, attribute_multiplicity, etc.
+
+    @staticmethod
+    def apply_enumeration_patches(
+        enum_obj: AutosarEnumeration,
+        patches: Dict[str, Dict],
+    ) -> None:
+        """Apply enumeration literal name patches to a parsed AutosarEnumeration.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type patches)
+
+        Args:
+            enum_obj: The AutosarEnumeration object to patch.
+            patches: The patches dictionary from YAML configuration.
+        """
+        enum_patches = patches.get('enumerations', {})
+        enum_name = enum_obj.name
+
+        if enum_name not in enum_patches:
+            return
+
+        literal_patches = enum_patches[enum_name]
+        
+        # Create a new tuple with patched literal names
+        patched_literals = []
+        for literal in enum_obj.enumeration_literals:
+            if literal.name in literal_patches and 'literal_name' in literal_patches[literal.name]:
+                correct_name = literal_patches[literal.name]['literal_name']
+                # Create a new literal with the corrected name
+                from autosar_pdf2txt.models import AutosarEnumLiteral
+                patched_literal = AutosarEnumLiteral(
+                    name=correct_name,
+                    description=literal.description,
+                    index=literal.index,
+                )
+                patched_literals.append(patched_literal)
+            else:
+                patched_literals.append(literal)
+        
+        # Update the enumeration with the patched literals
+        object.__setattr__(enum_obj, 'enumeration_literals', tuple(patched_literals))
+
+    @staticmethod
+    def apply_primitive_patches(
+        primitive_obj: AutosarPrimitive,
+        patches: Dict[str, Dict],
+    ) -> None:
+        """Apply primitive attribute type patches to a parsed AutosarPrimitive.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type patches)
+
+        Args:
+            primitive_obj: The AutosarPrimitive object to patch.
+            patches: The patches dictionary from YAML configuration.
+        """
+        primitive_patches = patches.get('primitives', {})
+        primitive_name = primitive_obj.name
+
+        if primitive_name not in primitive_patches:
+            return
+
+        attribute_patches = primitive_patches[primitive_name]
+
+        for attr_name, attr_name_patches in attribute_patches.items():
+            if attr_name not in primitive_obj.attributes:
+                continue
+
+            attr = primitive_obj.attributes[attr_name]
+
+            # Check for attribute_type patches
+            if 'attribute_type' in attr_name_patches:
+                type_patches = attr_name_patches['attribute_type']
+                if attr.type in type_patches:
+                    # Create new attribute with corrected type
+                    from autosar_pdf2txt.models import AutosarAttribute
+                    primitive_obj.attributes[attr_name] = AutosarAttribute(
+                        name=attr.name,
+                        type=type_patches[attr.type],
+                        multiplicity=attr.multiplicity,
+                        kind=attr.kind,
+                        is_ref=attr.is_ref,
+                        note=attr.note,
+                    )
+
+            # Future: Add support for other fields like attribute_name, attribute_multiplicity, etc.

@@ -15,7 +15,10 @@ Requirements:
 
 import re
 from pathlib import Path
-from typing import Dict, List, Match, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Match, Optional, Tuple
+
+if TYPE_CHECKING:
+    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
 
 import yaml
 
@@ -39,9 +42,10 @@ class AutosarEnumerationParser(AbstractTypeParser):
     Requirements:
         SWR_PARSER_00025: AutosarEnumeration Specialized Parser
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
+        SWR_PARSER_00031: XSD-based validation of parsed types
     """
 
-    def __init__(self) -> None:
+    def __init__(self, xsd_validator: Optional["XsdValidator"] = None) -> None:
         """Initialize the AutosarEnumeration parser.
 
         Loads YAML configuration for enumeration literal parsing patterns.
@@ -49,6 +53,10 @@ class AutosarEnumerationParser(AbstractTypeParser):
         Requirements:
             SWR_PARSER_00025: AutosarEnumeration Specialized Parser
             SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
+            SWR_PARSER_00031: XSD-based validation of parsed types
+
+        Args:
+            xsd_validator: Optional XSD validator for consistency with other parsers.
         """
         super().__init__()
         # Parsing state
@@ -292,39 +300,22 @@ class AutosarEnumerationParser(AbstractTypeParser):
         Patches are applied as a post-processing step for edge cases that
         the improved multi-line logic couldn't handle.
 
+        Uses the new patches structure from base_parser.py which has explicit
+        field keys like literal_name.
+
         Args:
             current_model: The current AutosarEnumeration being parsed.
 
         Requirements:
             SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type patches)
         """
-        if not self._patches:
-            return
-
-        # Check if this enumeration has patches configured
-        enum_name = current_model.name
-        if enum_name not in self._patches:
-            return
-
-        # Get patches for this enumeration
-        enum_patches = self._patches[enum_name]
-
-        # Apply patches to pending literals
-        for literal in self._pending_literals:
-            if literal.name in enum_patches:
-                patch_value = enum_patches[literal.name]
-                
-                # Check if patch_value is a dict (index-based patches) or string (apply to all)
-                if isinstance(patch_value, dict):
-                    # Index-based patches: {correct_name: target_index}
-                    for correct_name, target_index in patch_value.items():
-                        if literal.index == target_index:
-                            # Apply patch only for this specific index
-                            literal.name = correct_name
-                            break
-                else:
-                    # String patch: apply to all occurrences
-                    literal.name = patch_value
+        # Load patches from the new structure
+        config_path = Path(__file__).parent.parent / "config" / "parser_config.yaml"
+        patches = self._load_patches(str(config_path))
+        
+        # Apply patches using the base parser method
+        self.apply_enumeration_patches(current_model, patches)
 
     def _process_enumeration_literal_line(self, line: str, current_model: AutosarEnumeration) -> bool:
         """Process a line in the enumeration literal section.

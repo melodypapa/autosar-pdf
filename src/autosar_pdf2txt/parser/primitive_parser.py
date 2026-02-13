@@ -10,7 +10,11 @@ Requirements:
     SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
 """
 
-from typing import Any, Dict, List, Match, Optional, Tuple
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Match, Optional, Tuple
+
+if TYPE_CHECKING:
+    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
 
 from autosar_pdf2txt.models import (
     AttributeKind,
@@ -32,13 +36,18 @@ class AutosarPrimitiveParser(AbstractTypeParser):
     Requirements:
         SWR_PARSER_00026: AutosarPrimitive Specialized Parser
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
+        SWR_PARSER_00031: XSD-based validation of parsed types
     """
 
-    def __init__(self) -> None:
+    def __init__(self, xsd_validator: Optional["XsdValidator"] = None) -> None:
         """Initialize the AutosarPrimitive parser.
 
         Requirements:
             SWR_PARSER_00026: AutosarPrimitive Specialized Parser
+            SWR_PARSER_00031: XSD-based validation of parsed types
+
+        Args:
+            xsd_validator: Optional XSD validator for consistency with other parsers.
         """
         super().__init__()
         # Parsing state
@@ -211,6 +220,12 @@ class AutosarPrimitiveParser(AbstractTypeParser):
 
         # End of lines - finalize and return
         self._finalize_pending_attribute(current_model)
+        
+        # Apply attribute type patches from YAML configuration
+        config_path = Path(__file__).parent.parent / "config" / "parser_config.yaml"
+        patches = self._load_patches(str(config_path))
+        self.apply_primitive_patches(current_model, patches)
+        
         return i, True
 
     def _process_attribute_line(

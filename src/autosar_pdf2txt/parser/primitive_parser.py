@@ -11,10 +11,7 @@ Requirements:
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Match, Optional, Tuple
-
-if TYPE_CHECKING:
-    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
+from typing import Any, Dict, List, Match, Optional, Tuple
 
 from autosar_pdf2txt.models import (
     AttributeKind,
@@ -36,18 +33,13 @@ class AutosarPrimitiveParser(AbstractTypeParser):
     Requirements:
         SWR_PARSER_00026: AutosarPrimitive Specialized Parser
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
-        SWR_PARSER_00031: XSD-based validation of parsed types
-    """
+        """
 
-    def __init__(self, xsd_validator: Optional["XsdValidator"] = None) -> None:
+    def __init__(self) -> None:
         """Initialize the AutosarPrimitive parser.
 
         Requirements:
             SWR_PARSER_00026: AutosarPrimitive Specialized Parser
-            SWR_PARSER_00031: XSD-based validation of parsed types
-
-        Args:
-            xsd_validator: Optional XSD validator for consistency with other parsers.
         """
         super().__init__()
         # Parsing state

@@ -14,10 +14,7 @@ Requirements:
 """
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Match, Optional, Tuple
-
-if TYPE_CHECKING:
-    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
+from typing import Any, Dict, List, Match, Optional, Tuple
 
 from autosar_pdf2txt.models import (
     AttributeKind,
@@ -43,25 +40,21 @@ class AutosarClassParser(AbstractTypeParser):
     Requirements:
         SWR_PARSER_00024: AutosarClass Specialized Parser
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
-        SWR_PARSER_00031: XSD-based validation of parsed types
+        SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type fragments)
     """
 
     def __init__(
         self,
         config_path: str = "src/autosar_pdf2txt/config/parser_config.yaml",
-        xsd_validator: Optional["XsdValidator"] = None,
     ) -> None:
         """Initialize the AutosarClass parser.
 
         Requirements:
             SWR_PARSER_00024: AutosarClass Specialized Parser
             SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type fragments)
-            SWR_PARSER_00031: XSD-based validation of parsed types
 
         Args:
             config_path: Path to the YAML configuration file.
-            xsd_validator: Optional XSD validator for real-time validation
-                and auto-correction of parsed classes.
         """
         super().__init__()
         # Parsing state
@@ -83,9 +76,6 @@ class AutosarClassParser(AbstractTypeParser):
         
         # Store config path for patch loading
         self._config_path: str = config_path
-
-        # Store XSD validator for real-time validation
-        self._xsd_validator = xsd_validator
 
         # Load type prefix configuration for multi-line fragment merging
         self._type_prefixes: Dict[str, List[str]] = self._load_type_prefix_config(config_path)
@@ -211,16 +201,6 @@ class AutosarClassParser(AbstractTypeParser):
             atp_type=atp_type,
             sources=[source] if source else [],
         )
-
-        # Validate and correct against XSD if validator is available
-        if self._xsd_validator:
-            corrections = self._xsd_validator.validate_and_correct_class(cls)
-            if corrections:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.debug(f"XSD corrections for {class_name}: {len(corrections)}")
-                for correction in corrections:
-                    logger.debug(f"  - {correction}")
 
         return cls
 

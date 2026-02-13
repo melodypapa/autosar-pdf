@@ -15,10 +15,7 @@ Requirements:
 
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Match, Optional, Tuple
-
-if TYPE_CHECKING:
-    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
+from typing import Dict, List, Match, Optional, Tuple
 
 import yaml
 
@@ -45,7 +42,7 @@ class AutosarEnumerationParser(AbstractTypeParser):
         SWR_PARSER_00031: XSD-based validation of parsed types
     """
 
-    def __init__(self, xsd_validator: Optional["XsdValidator"] = None) -> None:
+    def __init__(self) -> None:
         """Initialize the AutosarEnumeration parser.
 
         Loads YAML configuration for enumeration literal parsing patterns.
@@ -53,10 +50,6 @@ class AutosarEnumerationParser(AbstractTypeParser):
         Requirements:
             SWR_PARSER_00025: AutosarEnumeration Specialized Parser
             SWR_PARSER_00101: YAML Configuration for Enumeration Literal Word Mapping
-            SWR_PARSER_00031: XSD-based validation of parsed types
-
-        Args:
-            xsd_validator: Optional XSD validator for consistency with other parsers.
         """
         super().__init__()
         # Parsing state

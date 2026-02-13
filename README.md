@@ -91,6 +91,7 @@ autosar-extract examples/pdf/ -o data/mapping.md --generate-mapping
 
 - `pdf_files`: Path(s) to PDF file(s) or director(y/ies) containing PDFs to parse
 - `-o OUTPUT, --output OUTPUT`: Output file path (default: stdout)
+- `--format {markdown,json}`: Output format (default: inferred from file extension, or markdown)
 - `--include-class-details`: Create separate markdown files for each class (requires `-o`)
 - `--include-class-hierarchy`: Generate class inheritance hierarchy in a separate file (requires `-o`)
 - `--generate-mapping`: Generate type-to-package mapping instead of full package hierarchy (requires `-o`)
@@ -288,11 +289,7 @@ autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf \
 Generate all outputs in a single run:
 
 ```bash
-autosar-extract examples/pdf/ \
-  -o autosar_complete.md \
-  --include-class-hierarchy \
-  --include-class-details \
-  -v
+autosar-extract examples/pdf/ -o autosar_complete.json --include-class-hierarchy --include-class-details
 ```
 
 Output:
@@ -305,7 +302,11 @@ Writing to: autosar_complete.md
 Class hierarchy written to: autosar_complete-hierarchy.md
 Writing class files to: autosar_complete/classes/
 ```
+```
 
+**Common auto-corrections** include:
+- Attribute name case corrections (e.g., `Shortname` → `shortName`)
+- Type name corrections (e.g., `SwComponent` → `SwComponentType`)
 ### Example: Generate Type-to-Package Mapping
 
 Generate a simple mapping of all types to their package paths:

@@ -574,3 +574,64 @@ This test is critical for detecting a multi-page parsing bug where the base clas
 - The fix detects when the second word starts with the capitalized version of the first word
   and combines them to form the camelCase attribute name
 
+
+---
+
+#### SWIT_00012
+**Title**: Test BswModuleDescription Class CamelCase Attribute Name and Type Split Across Lines
+
+**Maturity**: accept
+
+**Description**: Integration test that verifies the BswModuleDescription class from AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf correctly handles camelCase attribute names and types that are split across PDF lines. This test validates the look-ahead fragment detection and merging fix for attributes like "bswModuleDocumentation" where the PDF text extraction splits both the name and type across lines.
+
+**Precondition**: File examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf exists
+
+**Test Steps**:
+1. Parse the PDF file examples/pdf/AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf using the PdfParser
+2. Navigate to M2::AUTOSARTemplates::BswModuleTemplate::BswOverview package
+3. Retrieve BswModuleDescription class
+4. Verify class name is "BswModuleDescription"
+5. Verify the class is NOT abstract
+6. Verify the attribute "bswModuleDocumentation" exists with:
+   - Type: "SwComponentDocumentation"
+   - Multiplicity: "0..1"
+   - Kind: "aggr"
+7. Verify the attribute note contains "documentation" (case-insensitive)
+8. Verify NO attribute named "bswModule" exists (this would indicate incorrect parsing)
+9. Verify NO attribute named "SwComponent" exists (this would indicate incorrect type parsing)
+
+**Expected Result**:
+
+**BswModuleDescription from BSWModuleDescriptionTemplate PDF**
+- Name: "BswModuleDescription"
+- Package: "M2::AUTOSARTemplates::BswModuleTemplate::BswOverview"
+- Abstract: False
+- Attributes includes "bswModuleDocumentation" (SwComponentDocumentation, 0..1, aggr)
+- NO attribute "bswModule" (fragment would indicate incomplete parsing)
+- NO attribute "SwComponent" (incomplete type would indicate incorrect parsing)
+- Attribute note contains "documentation"
+
+**CamelCase fragment merging: VERIFIED**
+- PDF text extraction splits the attribute across lines:
+  - Line 37: "bswModule SwComponent 0..1 aggr This adds documentation..."
+  - Line 38: "Documentation Documentation"
+- Before the fix: Created attribute "bswModule" with type "SwComponent" (both incomplete)
+- After the fix: Creates attribute "bswModuleDocumentation" with type "SwComponentDocumentation"
+- The fix detects when BOTH name and type are short fragments and looks ahead to the next line
+- When the next line contains continuation words, it merges them with both fragments
+
+**Requirements Coverage**: SWR_PARSER_00003, SWR_PARSER_00004, SWR_PARSER_00010, SWR_PARSER_00012, SWR_MODEL_00001
+
+**Test Implementation**:
+- Test method: `test_parse_bsw_module_description_pdf_and_verify_camelcase_fragment_attributes`
+- Test file: `tests/integration/test_pdf_integration.py`
+- Fixture: `bsw_module_description_pdf` (session-scoped)
+
+**Notes**:
+- This test validates the fix for camelCase attribute name and type split across lines (SWUT_PARSER_00102)
+- The fix handles the specific case where PDF text extraction splits compound camelCase words at line boundaries
+- Key scenarios tested:
+  1. Both attribute name and type are fragments (short, incomplete)
+  2. Continuation line contains two words (one for name, one for type)
+  3. Orphaned look-ahead fragments are properly finalized when no continuation exists
+  4. Previous pending attributes are finalized before returning look-ahead markers

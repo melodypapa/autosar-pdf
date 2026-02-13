@@ -55,6 +55,8 @@ class AutosarClassParser(AbstractTypeParser):
         self._pending_attr_multiplicity: Optional[str] = None
         self._pending_attr_kind: Optional[AttributeKind] = None
         self._pending_attr_note: Optional[str] = None
+        self._pending_lookahead_frag_name: Optional[str] = None
+        self._pending_lookahead_frag_type: Optional[str] = None
         # Class list state (Base, Subclasses, Aggregated by)
         self._pending_class_lists: Dict[str, Tuple[Optional[List[str]], Optional[str], bool]] = {
             "base_classes": (None, None, True),
@@ -78,6 +80,8 @@ class AutosarClassParser(AbstractTypeParser):
         self._pending_attr_multiplicity = None
         self._pending_attr_kind = None
         self._pending_attr_note = None
+        self._pending_lookahead_frag_name = None
+        self._pending_lookahead_frag_type = None
         self._pending_class_lists = {
             "base_classes": (None, None, True),
             "aggregated_by": (None, None, True),
@@ -263,6 +267,77 @@ class AutosarClassParser(AbstractTypeParser):
                 self._finalize_pending_attribute(current_model)
                 return i, True
 
+            # Handle camelCase look-ahead fragment merging (SWR_PARSER_00012)
+            # If we have look-ahead fragments from previous line, and current line contains words,
+            # check if it should be merged with the look-ahead fragments
+            if (self._pending_lookahead_frag_name or self._pending_lookahead_frag_type) and line:
+                words = line.split()
+                if words:
+                    # Handle two-word look-ahead (e.g., "Documentation Documentation")
+                    # Check first TWO words specifically, regardless of total word count
+                    # This handles cases where continuation words are followed by metadata like "Stereotypes:"
+                    # But ONLY trigger if the first TWO words are THE SAME (e.g., "Documentation Documentation")
+                    # This pattern indicates a continuation word that's repeated, which is a strong signal
+                    # that both should be merged with the look-ahead fragments
+                    if (len(words) >= 2 and self._pending_lookahead_frag_name and self._pending_lookahead_frag_type and
+                        words[0] == words[1] and  # First two words are THE SAME
+                        words[0][0].isupper() and words[0].isalpha()):
+                        word1, word2 = words[0], words[1]
+                        # Merge with look-ahead name fragment
+                        # Type assertion: _pending_attr_name is not None because _pending_lookahead_frag_name is set
+                        assert self._pending_attr_name is not None
+                        self._pending_attr_name = self._pending_attr_name + word1
+                        self._pending_lookahead_frag_name = None
+                        # Check if second word should merge with look-ahead type fragment
+                        if word2[0].isupper() and word2.isalpha():
+                            # Merge with look-ahead type fragment
+                            # Type assertion: _pending_attr_type is not None because _pending_lookahead_frag_type is set
+                            assert self._pending_attr_type is not None
+                            self._pending_attr_type = self._pending_attr_type + word2
+                            self._pending_lookahead_frag_type = None
+                        i += 1
+                        continue
+                    # Handle single-word look-ahead (e.g., "Documentation")
+                    elif len(words) == 1 and words[0]:
+                        word = words[0]
+                        # Check if this word should merge with look-ahead name fragment
+                        if self._pending_lookahead_frag_name and word[0].isupper() and word.isalpha():
+                            # Merge with look-ahead name fragment
+                            # Type assertion: _pending_attr_name is not None because _pending_lookahead_frag_name is set
+                            assert self._pending_attr_name is not None
+                            self._pending_attr_name = self._pending_attr_name + word
+                            self._pending_lookahead_frag_name = None
+                            i += 1
+                            continue
+                        # Check if this word should merge with look-ahead type fragment
+                        elif self._pending_lookahead_frag_type and word[0].isupper() and word.isalpha():
+                            # Merge with look-ahead type fragment
+                            # Type assertion: _pending_attr_type is not None because _pending_lookahead_frag_type is set
+                            assert self._pending_attr_type is not None
+                            self._pending_attr_type = self._pending_attr_type + word
+                            self._pending_lookahead_frag_type = None
+                            i += 1
+                            continue
+
+            # If we have orphaned look-ahead fragments but current line is not a continuation,
+            # finalize the pending attribute and clear fragments (SWR_PARSER_00012)
+            # This handles cases where look-ahead was triggered but no continuation word appeared
+            if (self._pending_lookahead_frag_name or self._pending_lookahead_frag_type) and line:
+                words = line.split()
+                # Check if this line looks like a continuation word
+                is_continuation = (
+                    (len(words) == 1 and words[0] and words[0][0].isupper() and words[0].isalpha()) or
+                    (len(words) == 2 and self._pending_lookahead_frag_name and self._pending_lookahead_frag_type and
+                     words[0][0].isupper() and words[0].isalpha() and
+                     words[1][0].isupper() and words[1].isalpha())
+                )
+                if not is_continuation:
+                    # Not a continuation word - finalize pending attribute and clear fragments
+                    self._finalize_pending_attribute(current_model)
+                    # Clear look-ahead fragments
+                    self._pending_lookahead_frag_name = None
+                    self._pending_lookahead_frag_type = None
+
             # Handle single-word continuation of attribute name (camelCase or hyphenated)
             # This must come BEFORE the attribute section check because single words don't have spaces
             # Only applies when we're in attribute section and have a pending attribute with a complete note
@@ -308,11 +383,26 @@ class AutosarClassParser(AbstractTypeParser):
                 )
                 if attr_result["section_ended"]:
                     self._in_attribute_section = False
-                self._pending_attr_name = attr_result["pending_attr_name"]
-                self._pending_attr_type = attr_result["pending_attr_type"]
-                self._pending_attr_multiplicity = attr_result["pending_attr_multiplicity"]
-                self._pending_attr_kind = attr_result["pending_attr_kind"]
-                self._pending_attr_note = attr_result["pending_attr_note"]
+
+                # Check for camelCase fragment look-ahead marker (SWR_PARSER_00012)
+                # If attr_result returned early without finalizing, it means we detected
+                # potential camelCase fragments that need look-ahead to the next line
+                if "pending_lookahead_frag_name" in attr_result and "pending_lookahead_frag_type" in attr_result:
+                    # Store the look-ahead marker for processing in next iteration
+                    # The actual merging will happen when we process the next line
+                    self._pending_lookahead_frag_name = attr_result["pending_lookahead_frag_name"]
+                    self._pending_lookahead_frag_type = attr_result["pending_lookahead_frag_type"]
+                    self._pending_attr_name = attr_result["pending_attr_name"]
+                    self._pending_attr_type = attr_result["pending_attr_type"]
+                    self._pending_attr_multiplicity = attr_result["pending_attr_multiplicity"]
+                    self._pending_attr_kind = attr_result["pending_attr_kind"]
+                    self._pending_attr_note = attr_result["pending_attr_note"]
+                else:
+                    self._pending_attr_name = attr_result["pending_attr_name"]
+                    self._pending_attr_type = attr_result["pending_attr_type"]
+                    self._pending_attr_multiplicity = attr_result["pending_attr_multiplicity"]
+                    self._pending_attr_kind = attr_result["pending_attr_kind"]
+                    self._pending_attr_note = attr_result["pending_attr_note"]
                 i += 1
                 continue
 
@@ -578,6 +668,52 @@ class AutosarClassParser(AbstractTypeParser):
             attr_type = attr_match.group(2)
             words = line.split()
 
+            # Check for camelCase fragment look-ahead (SWR_PARSER_00012)
+            # If BOTH name and type look like incomplete camelCase fragments on first line,
+            # look ahead to next line to see if it contains continuation words
+            # Example: "bswModule SwComponent 0..1 aggr" followed by "Documentation Documentation"
+            # should merge to: name="bswModuleDocumentation", type="SwComponentDocumentation"
+            #
+            # Key heuristic: BOTH name and type must be short (both are fragments)
+            # - Name ends with lowercase (incomplete camelCase)
+            # - Type starts with uppercase but is relatively short (< 15 chars, suggesting a fragment)
+            # - Type is NOT a known complete type (doesn't end with common type suffixes)
+            third_word = words[2] if len(words) > 2 else ""
+            # Common type endings that indicate a complete type (not a fragment)
+            type_endings = {"Dependency", "Mapping", "Reference", "Prototype", "Definition", "Instance", "Element", "Container", "Collection", "Exception", "Handler", "Manager", "Factory", "Builder", "Comment", "Data", "Value", "Type", "Kind", "Name", "Text", "Info", "Status", "State", "Mode", "Flag", "Count", "Index", "Length", "Size", "Entry", "Group", "Set", "List", "Dict", "Queue", "Stack", "Tree", "Node", "Edge", "Graph", "Table", "View", "Model", "Item", "Object", "Class", "Struct", "Union", "Interface", "Package", "Module", "Service", "Client", "Server", "Port", "Connection", "Channel", "Stream", "Reader", "Writer", "Parser", "Formatter", "Encoder", "Decoder", "Converter", "Validator", "Checker", "Tester", "Runner", "Worker", "Driver", "Controller", "Manager", "Director", "Builder", "Factory", "Provider", "Consumer", "Producer", "Sender", "Receiver", "Listener", "Observer", "Visitor", "Iterator", "Generator", "Accessor", "Mutator", "Operation", "Function", "Method", "Procedure", "Process", "Thread", "Task", "Job", "Work", "Action", "Command", "Event", "Message", "Request", "Response", "Error", "Exception", "Warning", "Info", "Debug", "Trace", "Log"}
+            type_ends_with_complete_ending = any(attr_type.endswith(ending) for ending in type_endings)
+            needs_lookahead = (
+                len(words) >= 4 and  # Has enough words for basic attribute structure
+                third_word in (self.MULTIPLICITIES | self.ATTR_KINDS_ALL) and  # Has valid multiplicity/kind
+                attr_name and attr_type and  # Both name and type present
+                attr_name[-1].islower() and  # Name ends with lowercase (incomplete camelCase)
+                attr_type[0].isupper() and  # Type starts with uppercase (potential camelCase start)
+                len(attr_type) < 15 and  # Type is relatively short (suggesting a fragment, not a complete type)
+                not type_ends_with_complete_ending  # Type doesn't end with common type suffixes
+            )
+            if needs_lookahead:
+                # Look ahead to next line in continue_parsing context
+                # Mark this as needing look-ahead processing
+                # IMPORTANT: Finalize any previous pending attribute first (SWR_PARSER_00012)
+                # This ensures we don't lose attributes like "bswModule BswModuleDependency"
+                # when the next line "bswDocumentation SwComponent" triggers look-ahead
+                self._add_attribute_if_valid(
+                    current_model.attributes,
+                    pending_attr_name, pending_attr_type,
+                    pending_attr_multiplicity, pending_attr_kind, pending_attr_note
+                )
+                result["pending_lookahead_frag_name"] = attr_name
+                result["pending_lookahead_frag_type"] = attr_type
+                result["pending_attr_name"] = attr_name
+                result["pending_attr_type"] = attr_type
+                result["pending_attr_multiplicity"] = third_word if third_word in self.MULTIPLICITIES else words[3] if len(words) > 3 else ""
+                result["pending_attr_kind"] = self._parse_attribute_kind(words[3]) if len(words) > 3 and words[3] in (self.ATTR_KINDS_ATTR | self.ATTR_KINDS_AGGR | self.ATTR_KINDS_REF) else None
+                # Extract note text from remaining words
+                note_start = 4 if len(words) > 4 else 3
+                result["pending_attr_note"] = " ".join(words[note_start:]) if len(words) > note_start else ""
+                # Return without finalizing - let continue_parsing handle the continuation
+                return result
+
             # A real attribute line should have:
             # - Third word as multiplicity (0..1, *, 0..*) or kind (attr, aggr, ref)
             third_word = words[2] if len(words) > 2 else ""
@@ -679,6 +815,9 @@ class AutosarClassParser(AbstractTypeParser):
         self._pending_attr_multiplicity = None
         self._pending_attr_kind = None
         self._pending_attr_note = None
+        # Reset look-ahead fragments
+        self._pending_lookahead_frag_name = None
+        self._pending_lookahead_frag_type = None
 
     def _extract_tags(self, note: str) -> Dict[str, str]:
         """Extract all metadata tags from note.

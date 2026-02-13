@@ -456,3 +456,44 @@ def diagnostic_extract_j1939_cluster(diagnostic_extract_template_pdf: AutosarDoc
 
     print("\n=== J1939Cluster not found ===")
     return None
+
+
+@pytest.fixture(scope="session")
+def bsw_module_description_bsw_module_description(bsw_module_description_pdf: AutosarDoc) -> AutosarClass:
+    """Cache the BswModuleDescription class from BSWModuleDescriptionTemplate PDF.
+
+    This fixture pre-fetches and caches the BswModuleDescription class,
+    avoiding repeated package navigation in tests.
+
+    Args:
+        bsw_module_description_pdf: Parsed BSWModuleDescriptionTemplate PDF data.
+
+    Returns:
+        The BswModuleDescription AutosarClass.
+
+    Raises:
+        ValueError: If BswModuleDescription class is not found.
+    """
+    # Find M2 package (root metamodel package)
+    m2 = bsw_module_description_pdf.get_package("M2")
+    if not m2:
+        raise ValueError("M2 package not found")
+
+    # Navigate to AUTOSARTemplates -> BswModuleTemplate -> BswOverview
+    autosar_templates = m2.get_subpackage("AUTOSARTemplates")
+    if not autosar_templates:
+        raise ValueError("AUTOSARTemplates package not found")
+
+    bsw_module_template = autosar_templates.get_subpackage("BswModuleTemplate")
+    if not bsw_module_template:
+        raise ValueError("BswModuleTemplate package not found")
+
+    bsw_overview = bsw_module_template.get_subpackage("BswOverview")
+    if not bsw_overview:
+        raise ValueError("BswOverview package not found")
+
+    bsw_module_description = bsw_overview.get_class("BswModuleDescription")
+    if not bsw_module_description:
+        raise ValueError("BswModuleDescription class not found")
+
+    return bsw_module_description

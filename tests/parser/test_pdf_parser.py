@@ -1461,6 +1461,58 @@ class TestPdfParser:
         # Verify that only 2 attributes exist
         assert len(class_defs[0].attributes) == 2
 
+    def test_attribute_name_and_type_camelcase_split_across_lines(self) -> None:
+        """Test that camelCase attribute names and types split across lines are correctly reconstructed.
+
+        SWUT_PARSER_00102: Test CamelCase Attribute Name and Type Split Across Lines
+
+        Requirements:
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+
+        This test verifies that when BOTH an attribute name and type are split across
+        PDF lines (e.g., "bswModule SwComponent 0..1 aggr" followed by
+        "Documentation Documentation"), the parser correctly reconstructs:
+        - Attribute name: "bswModuleDocumentation" (not "bswModule")
+        - Attribute type: "SwComponentDocumentation" (not "SwComponent")
+
+        This is the actual bug seen in AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf
+        page 26, where PDF text extraction splits compound camelCase words at line
+        boundaries.
+
+        The key challenge is detecting incomplete camelCase fragments on the FIRST line
+        (not just continuation lines), requiring look-ahead to the next line.
+        """
+        from autosar_pdf2txt.models import AttributeKind
+
+        PdfParser()
+        text = """
+        Class BswModuleDescription
+        Package M2::AUTOSARTemplates::BswModuleTemplate::BswOverview
+        Attribute Type Mult. Kind Note
+        bswModule SwComponent 0..1 aggr This adds documentation to the BSW module.
+        Documentation Documentation
+        """
+        class_defs = _parse_class_text(text)
+
+        assert len(class_defs) == 1
+        assert class_defs[0].name == "BswModuleDescription"
+
+        # Verify the attribute is correctly parsed with merged name and type
+        attr = class_defs[0].attributes.get("bswModuleDocumentation")
+        assert attr is not None, "bswModuleDocumentation attribute should exist"
+        assert attr.name == "bswModuleDocumentation", \
+            f"Expected name 'bswModuleDocumentation', got '{attr.name}'"
+        assert attr.type == "SwComponentDocumentation", \
+            f"Expected type 'SwComponentDocumentation', got '{attr.type}'"
+        assert attr.multiplicity == "0..1"
+        assert attr.kind == AttributeKind.AGGR
+        assert "documentation" in attr.note.lower()
+
+        # Verify that only 1 attribute exists (no incorrect "bswModule" attribute)
+        assert len(class_defs[0].attributes) == 1, \
+            f"Expected 1 attribute, got {len(class_defs[0].attributes)}: {list(class_defs[0].attributes.keys())}"
+
     def test_extract_primitive_class_definition(self) -> None:
         """Test that the parser correctly recognizes class definitions with 'Primitive' prefix.
 

@@ -5536,6 +5536,41 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_PARSER_00102
+**Title**: Test CamelCase Attribute Name and Type Split Across Lines
+
+**Maturity**: draft
+
+**Description**: Verify that camelCase attribute names and types broken across PDF line boundaries are correctly reconstructed. This handles cases where PDF text extraction splits compound words (e.g., "bswModuleDocumentation" → "bswModule" + "Documentation", "SwComponentDocumentation" → "SwComponent" + "Documentation").
+
+**Precondition**: An AutosarClassParser instance exists
+
+**Test Steps**:
+1. Create an AutosarClass with name="TestClass" and package="M2::Test"
+2. Simulate parsing an attribute table where the first line contains:
+   - Attribute name: "bswModule" (incomplete fragment, ends with lowercase)
+   - Type: "SwComponent" (incomplete fragment, starts with uppercase)
+   - Multiplicity: "0..1"
+   - Kind: "aggr"
+   - Note: ""
+3. Simulate encountering a continuation line with: "Documentation Documentation" where:
+   - First "Documentation" should be appended to attribute name
+   - Second "Documentation" should be appended to type
+4. Verify parser correctly merges both fragments:
+   - Attribute name becomes: "bswModuleDocumentation"
+   - Type becomes: "SwComponentDocumentation"
+5. Verify attribute is added to class with correct name, type, multiplicity, kind, and note
+
+**Expected Result**:
+- The attribute name "bswModuleDocumentation" is correctly extracted (not "bswModule")
+- The type "SwComponentDocumentation" is correctly extracted (not "SwComponent")
+- The attribute has multiplicity="0..1", kind="aggr"
+- The attribute note contains the full description from subsequent lines
+
+**Requirements Coverage**: SWR_PARSER_00012
+
+---
+
 #### SWUT_WRITER_00057
 **Title**: Test Writing Class With AtpPrototype ATP Type
 

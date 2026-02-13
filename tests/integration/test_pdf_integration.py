@@ -171,10 +171,10 @@ class TestPdfIntegration:
                 f"Expected '{interface}' in implements, got {sw_component_type.implements}"
 
         # Verify attribute list
-        # Note: The camelCase extraction fix now correctly extracts "consistencyNeeds"
-        # instead of truncating to "consistency"
+        # Note: The camelCase extraction fix now correctly extracts full attribute names
+        # including "swComponentDocumentation" (not just "swComponent")
         expected_attributes = [
-            "consistencyNeeds", "port", "portGroup", "swcMapping", "swComponent", "unitGroup"
+            "consistencyNeeds", "port", "portGroup", "swcMapping", "swComponentDocumentation", "unitGroup"
         ]
         assert len(sw_component_type.attributes) == len(expected_attributes), \
             f"Expected {len(expected_attributes)} attributes, got {len(sw_component_type.attributes)}"
@@ -191,12 +191,13 @@ class TestPdfIntegration:
             f"Expected swcMapping is_ref to be True, got {swc_mapping.is_ref}"
 
         # Verify attribute types match expected values
+        # swComponentDocumentation is now correctly extracted with full type
         expected_types = {
             "consistencyNeeds": "ConsistencyNeeds",
             "port": "PortPrototype",
             "portGroup": "PortGroup",
             "swcMapping": "SwComponentMapping",
-            "swComponent": "SwComponent",
+            "swComponentDocumentation": "SwComponentDocumentation",
             "unitGroup": "UnitGroup"
         }
         for attr_name, expected_type in expected_types.items():
@@ -1237,9 +1238,10 @@ class TestPdfIntegration:
             assert interface in bsw_module_description.implements, \
                 f"Expected '{interface}' in implements, got {bsw_module_description.implements}"
 
-        # Verify attributes (Note: Multi-line attributes have truncated names due to SWR_PARSER_00012 filtering)
+        # Verify attributes (SWR_PARSER_00012 camelCase fragment merging is now implemented)
+        # The bswModuleDocumentation attribute is now correctly extracted with its full name
         expected_attributes = [
-            "bswModule", "expectedEntry", "implemented", "internalBehavior", "moduleId",
+            "bswModule", "bswModuleDocumentation", "expectedEntry", "implemented", "internalBehavior", "moduleId",
             "providedClient", "providedData", "providedMode", "releasedTrigger",
             "requiredClient", "requiredData", "requiredMode", "requiredTrigger"
         ]
@@ -1249,9 +1251,10 @@ class TestPdfIntegration:
             assert expected_attr in bsw_module_description.attributes, \
                 f"Expected attribute '{expected_attr}' not found in attributes: {list(bsw_module_description.attributes.keys())}"
 
-        # Verify attribute types (using truncated attribute names due to SWR_PARSER_00012)
+        # Verify attribute types (bswModuleDocumentation is now correctly extracted with full type)
         expected_types = {
-            "bswModule": "SwComponent",
+            "bswModule": "BswModuleDependency",  # This is the dependency attribute, not the documentation attribute
+            "bswModuleDocumentation": "SwComponentDocumentation",  # Correctly merged from camelCase fragments
             "expectedEntry": "BswModuleEntry",
             "implemented": "BswModuleEntry",
             "providedClient": "BswModuleClientServer",
@@ -1355,3 +1358,104 @@ class TestPdfIntegration:
         print("  ✓ Attribute 'request2Support' correctly extracted")
         print("  ✓ Incorrect attribute 're-' does NOT exist")
         print("  ✓ Hyphenated word break (re- + quest2Support) handled correctly")
+
+    def test_parse_bsw_module_description_pdf_and_verify_camelcase_fragment_attributes(
+        self, bsw_module_description_bsw_module_description: AutosarClass
+    ) -> None:
+        """Test BswModuleDescription Class CamelCase Attribute Name and Type Split Across Lines.
+
+        Test Case ID: SWIT_00012
+
+        Requirements:
+            SWR_PARSER_00001: PDF Parser Initialization
+            SWR_PARSER_00003: PDF File Parsing
+            SWR_PARSER_00004: Class Definition Pattern Recognition
+            SWR_PARSER_00005: Class Definition Data Model
+            SWR_PARSER_00006: Package Hierarchy Building
+            SWR_PARSER_00010: Attribute Extraction from PDF
+            SWR_PARSER_00012: Multi-Line Attribute Handling
+            SWR_MODEL_00001: AUTOSAR Class Representation
+
+        This test verifies that the BswModuleDescription class from the
+        AUTOSAR_CP_TPS_BSWModuleDescriptionTemplate.pdf correctly handles camelCase
+        attribute names and types that are split across PDF lines. Specifically,
+        it tests the bswModuleDocumentation attribute where PDF text extraction
+        splits both the name ("bswModule" + "Documentation") and type
+        ("SwComponent" + "Documentation") across lines.
+
+        Args:
+            bsw_module_description_bsw_module_description: Cached BswModuleDescription class.
+
+        This test validates the fix for camelCase attribute name and type
+        fragment detection and merging (SWUT_PARSER_00102).
+        """
+        # Verify the class name
+        assert bsw_module_description_bsw_module_description.name == "BswModuleDescription", \
+            f"Expected class name 'BswModuleDescription', got '{bsw_module_description_bsw_module_description.name}'"
+
+        # Verify the class is NOT abstract
+        assert not bsw_module_description_bsw_module_description.is_abstract, \
+            "Expected BswModuleDescription to be non-abstract"
+
+        # Verify the attribute "bswModuleDocumentation" exists
+        assert "bswModuleDocumentation" in bsw_module_description_bsw_module_description.attributes, \
+            "Expected 'bswModuleDocumentation' attribute not found. This indicates the camelCase fragment merging failed."
+
+        # Verify the attribute type is correct
+        bsw_module_doc_attr = bsw_module_description_bsw_module_description.attributes["bswModuleDocumentation"]
+        assert bsw_module_doc_attr.type == "SwComponentDocumentation", \
+            f"Expected type 'SwComponentDocumentation', got '{bsw_module_doc_attr.type}'"
+
+        # Verify the attribute multiplicity and kind
+        assert bsw_module_doc_attr.multiplicity == "0..1", \
+            f"Expected multiplicity '0..1', got '{bsw_module_doc_attr.multiplicity}'"
+        assert bsw_module_doc_attr.kind.value == "aggr", \
+            f"Expected kind 'aggr', got '{bsw_module_doc_attr.kind.value}'"
+
+        # Verify the attribute note contains "documentation"
+        assert bsw_module_doc_attr.note is not None, "bswModuleDocumentation should have a note"
+        assert "documentation" in bsw_module_doc_attr.note.lower(), \
+            f"Expected note to contain 'documentation', got: {bsw_module_doc_attr.note.lower()}"
+
+        # CRITICAL: Verify that bswModule attribute exists with correct type (BswModuleDependency)
+        # This is a DIFFERENT attribute from bswModuleDocumentation - it's for dependency tracking
+        assert "bswModule" in bsw_module_description_bsw_module_description.attributes, \
+            "Expected 'bswModule' attribute not found. This attribute should exist with type 'BswModuleDependency'."
+        bsw_module_attr = bsw_module_description_bsw_module_description.attributes["bswModule"]
+        assert bsw_module_attr.type == "BswModuleDependency", \
+            f"Expected type 'BswModuleDependency' for bswModule attribute, got '{bsw_module_attr.type}'"
+
+        # CRITICAL: Verify NO attribute with type "SwComponent" exists (incomplete type parsing)
+        for attr_name, attr in bsw_module_description_bsw_module_description.attributes.items():
+            if attr.type == "SwComponent":
+                raise AssertionError(
+                    f"Incorrect attribute '{attr_name}' with type 'SwComponent' should NOT exist. "
+                    f"This indicates the type fragment was not merged correctly. "
+                    f"Expected type 'SwComponentDocumentation'."
+                )
+
+        # Print verification information
+        print("\n=== BswModuleDescription verified ===")
+        print(f"  Name: {bsw_module_description_bsw_module_description.name}")
+        print(f"  Package: {bsw_module_description_bsw_module_description.package}")
+        print(f"  Abstract: {bsw_module_description_bsw_module_description.is_abstract}")
+        print(f"  Total attributes: {len(bsw_module_description_bsw_module_description.attributes)}")
+
+        print("\n=== bswModuleDocumentation attribute verified ===")
+        print("  Name: bswModuleDocumentation")
+        print(f"  Type: {bsw_module_doc_attr.type}")
+        print(f"  Multiplicity: {bsw_module_doc_attr.multiplicity}")
+        print(f"  Kind: {bsw_module_doc_attr.kind.value}")
+        print(f"  Note preview: {bsw_module_doc_attr.note[:80] if len(bsw_module_doc_attr.note) > 80 else bsw_module_doc_attr.note}...")
+
+        print("\n=== CamelCase fragment merging verified ===")
+        print("  ✓ Attribute 'bswModuleDocumentation' correctly extracted")
+        print("  ✓ Type 'SwComponentDocumentation' correctly extracted")
+        print("  ✓ NO incorrect fragment attribute 'bswModule'")
+        print("  ✓ NO incorrect type 'SwComponent'")
+        print("  ✓ Name and type fragments correctly merged from continuation line")
+
+        print("\n=== This validates SWUT_PARSER_00102 fix ===")
+        print("  PDF lines: 'bswModule SwComponent 0..1 aggr ...' + 'Documentation Documentation'")
+        print("  Expected result: name='bswModuleDocumentation', type='SwComponentDocumentation'")
+        print("  Fix status: VERIFIED")

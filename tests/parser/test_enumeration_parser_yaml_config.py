@@ -192,22 +192,29 @@ class TestEnumerationParserYamlConfig:
 
         # Create a test enumeration with a literal
         enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
-        parser._pending_literals = [
-            AutosarEnumLiteral(name="WrongName", description="Test description", value=None)
-        ]
 
-        # Set up a patch for this enumeration
-        parser._patches = {
-            "TestEnum": {
-                "WrongName": "CorrectName"
+        # Create a mock literal with dataclass replace
+        original_literal = AutosarEnumLiteral(name="WrongName", description="Test description", value=None)
+
+        # Manually set the literals (simulating what would happen during parsing)
+        # Using object.__setattr__ to bypass frozen dataclass
+        object.__setattr__(enum, 'enumeration_literals', (original_literal,))
+
+        # Apply patches using the base parser method directly
+        # (since _apply_patches loads from YAML, we test the underlying method)
+        test_patches = {
+            "enumerations": {
+                "TestEnum": {
+                    "WrongName": {
+                        "literal_name": "CorrectName"
+                    }
+                }
             }
         }
+        parser.apply_enumeration_patches(enum, test_patches)
 
-        # Apply patches
-        parser._apply_patches(enum)
-
-        # Verify patch was applied
-        assert parser._pending_literals[0].name == "CorrectName", \
+        # Verify patch was applied to the enumeration's literals
+        assert enum.enumeration_literals[0].name == "CorrectName", \
             "Patch should have been applied to change WrongName to CorrectName"
 
     def test_apply_patches_no_match(self) -> None:
@@ -220,22 +227,25 @@ class TestEnumerationParserYamlConfig:
 
         # Create a test enumeration with a literal
         enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
-        parser._pending_literals = [
-            AutosarEnumLiteral(name="CorrectName", description="Test description", value=None)
-        ]
+        original_literal = AutosarEnumLiteral(name="CorrectName", description="Test description", value=None)
+        object.__setattr__(enum, 'enumeration_literals', (original_literal,))
 
         # Set up a patch for a different enumeration
-        parser._patches = {
-            "OtherEnum": {
-                "WrongName": "CorrectName"
+        test_patches = {
+            "enumerations": {
+                "OtherEnum": {
+                    "WrongName": {
+                        "literal_name": "CorrectName"
+                    }
+                }
             }
         }
 
         # Apply patches (should do nothing)
-        parser._apply_patches(enum)
+        parser.apply_enumeration_patches(enum, test_patches)
 
         # Verify no changes were made
-        assert parser._pending_literals[0].name == "CorrectName", \
+        assert enum.enumeration_literals[0].name == "CorrectName", \
             "Literal name should remain unchanged when no patches match"
 
     def test_apply_patches_empty(self) -> None:
@@ -249,16 +259,15 @@ class TestEnumerationParserYamlConfig:
         # Create a test enumeration with a literal
         enum = AutosarEnumeration(name="TestEnum", package="M2::Test")
         original_name = "SomeLiteral"
-        parser._pending_literals = [
-            AutosarEnumLiteral(name=original_name, description="Test description", value=None)
-        ]
+        original_literal = AutosarEnumLiteral(name=original_name, description="Test description", value=None)
+        object.__setattr__(enum, 'enumeration_literals', (original_literal,))
 
         # Ensure patches are empty
-        parser._patches = {}
+        test_patches = {"enumerations": {}}
 
         # Apply patches (should do nothing)
-        parser._apply_patches(enum)
+        parser.apply_enumeration_patches(enum, test_patches)
 
         # Verify no changes were made
-        assert parser._pending_literals[0].name == original_name, \
+        assert enum.enumeration_literals[0].name == original_name, \
             "Literal name should remain unchanged with empty patches"

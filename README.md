@@ -82,10 +82,9 @@ autosar-extract examples/pdf/ -o output.md --log-file extraction.log
 autosar-extract examples/pdf/ -o output.md --log-file extraction.log -v
 
 # Generate type-to-package mapping in JSON format
-autosar-extract examples/pdf/ -o mapping.json --generate-mapping
 
 # Generate type-to-package mapping in Markdown table format
-autosar-extract examples/pdf/ -o mapping.md --generate-mapping
+autosar-extract examples/pdf/ -o data/mapping.md --generate-mapping
 ```
 
 #### CLI Options

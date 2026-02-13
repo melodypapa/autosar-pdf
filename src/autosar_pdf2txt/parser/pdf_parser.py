@@ -23,7 +23,10 @@ import logging
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
+
+if TYPE_CHECKING:
+    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
 
 from autosar_pdf2txt.models import (
     AutosarClass,
@@ -47,10 +50,11 @@ class PdfParser:
 
     Requirements:
         SWR_PARSER_00001: PDF Parser Initialization
+        SWR_PARSER_00031: XSD-based validation of parsed types
 
     The parser extracts class definitions from PDF files and builds
     AutosarPackage and AutosarClass objects using specialized parsers
-    for each AUTOSAR type.
+    for each AUTOSAR type. Optionally validates against XSD schema.
 
     Usage:
         >>> parser = PdfParser()
@@ -58,22 +62,30 @@ class PdfParser:
         >>> print(len(packages))
     """
 
-    def __init__(self) -> None:
+    def __init__(self, xsd_validator: Optional["XsdValidator"] = None) -> None:
         """Initialize the PDF parser.
+
+        Args:
+            xsd_validator: Optional XSD validator for real-time validation
+                and auto-correction of parsed classes.
 
         Requirements:
             SWR_PARSER_00001: PDF Parser Initialization
             SWR_PARSER_00007: PDF Backend Support - pdfplumber
+            SWR_PARSER_00031: XSD-based validation of parsed types
 
         Raises:
             ImportError: If pdfplumber is not installed.
         """
         self._validate_backend()
 
-        # Instantiate specialized parsers
-        self._class_parser = AutosarClassParser()
-        self._enum_parser = AutosarEnumerationParser()
-        self._primitive_parser = AutosarPrimitiveParser()
+        # Store XSD validator
+        self._xsd_validator = xsd_validator
+
+        # Instantiate specialized parsers with XSD validator
+        self._class_parser = AutosarClassParser(xsd_validator=xsd_validator)
+        self._enum_parser = AutosarEnumerationParser(xsd_validator=xsd_validator)
+        self._primitive_parser = AutosarPrimitiveParser(xsd_validator=xsd_validator)
 
     def _validate_backend(self) -> None:
         """Validate that pdfplumber backend is available.

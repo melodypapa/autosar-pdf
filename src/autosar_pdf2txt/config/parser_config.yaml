@@ -80,10 +80,271 @@ enumeration_literals:
         mostSignificantByteFirst: 0
         mostSignificantByteLast: 1
 
-# Future sections for other parsers can be added here
+# Attribute type prefix configuration for multi-line fragment merging
+# Defines type prefixes that are incomplete and need continuation words from the next line
 #
-# class_parser:
-#   # Class-specific configuration
+# Requirements:
+#     SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type fragments)
+#
+# When parsing attribute tables, if a type word appears in the Type column (x≈147.7)
+# on the next line, and it matches a continuation word for the current type prefix,
+# the parser will merge them to form the complete type.
+attribute_type_prefixes:
+  # Format: { "prefix": [continuation_words] }
+  # When "prefix" is found as a type, check next line for continuation words
+  
+  # SwComponent + Prototype = SwComponentPrototype
+  # SwComponent + Type = SwComponentType
+  # SwComponent + Documentation = SwComponentDocumentation
+  SwComponent:
+    - "Prototype"
+    - "Type"
+    - "Documentation"
+  
+  # ParameterData + Prototype = ParameterDataPrototype
+  ParameterData:
+    - "Prototype"
+  
+  # SwcService + Type = SwcServiceType
+  SwcService:
+    - "Type"
+  
+  # AbstractImplementation + DataType = AbstractImplementationDataType
+  AbstractImplementation:
+    - "DataType"
+  
+  # Additional common patterns
+  BswModule:
+    - "Description"
+    - "Entity"
+    - "Dependency"
+  
+  Component:
+    - "Type"
+    - "Documentation"
+
+# Manual patches for parsing errors that don't merge correctly
+# This section is extensible for classes, enumerations, and primitives
+#
+# Requirements:
+#     SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type patches)
+patches:
+  # Class patches - fix attribute types, names, etc.
+  classes:
+    # Format: { "ClassName": { "attribute_name": { "attribute_type": { "wrong_type": "correct_type" } } } }
+    "CompositionSwComponentType":
+      component:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+      software:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "SwComponentType":
+      swComponent:
+        attribute_type:
+          "SwComponent": "SwComponentDocumentation"
+    
+    "CpSoftwareCluster":
+      swComponent:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+    
+    "SwComponentPrototypeAssignment":
+      swComponent:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+    
+    "SwcToEcuMapping":
+      component:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+    
+    "ComponentClustering":
+      clustered:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+    
+    "ExecutionTimeConstraint":
+      component:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+    
+    "RootSwCompositionPrototype":
+      software:
+        attribute_type:
+          "RootSwComposition": "RootSwCompositionPrototype"
+    
+    "SwcInternalBehavior":
+      service:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "SwcServiceDependencyInSystemInstanceRef":
+      targetSwc:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "DiagnosticServiceSwMapping":
+      mappedSwc:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "DiagnosticFimFunctionMapping":
+      mappedSwc:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "DiagnosticEventPortMapping":
+      swcService:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "DiagnosticOperationCyclePortMapping":
+      swcService:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "DiagnosticEnableConditionPortMapping":
+      swcService:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "DiagnosticStorageConditionPortMapping":
+      swcService:
+        attribute_type:
+          "SwcService": "SwcService"
+    
+    "ECUMapping":
+      commController:
+        attribute_type:
+          "Communication": "CommunicationConnector"
+    
+    "EcuInstance":
+      commController:
+        attribute_type:
+          "Communication": "CommunicationConnector"
+      connector:
+        attribute_type:
+          "Communication": "CommunicationConnector"
+    
+    "CommConnectorPort":
+      communication:
+        attribute_type:
+          "Communication": "CommunicationConnector"
+    
+    "ExecutionOrderConstraint":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "ComponentInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "PortInCompositionTypeInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "InstanceEventInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "InnerDataPrototypeGroupInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "InnerRunnableEntityGroupInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "RunnableEntityInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "VariableDataPrototypeInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "InnerPortGroupInCompositionInstanceRef":
+      base:
+        attribute_type:
+          "CompositionSw": "CompositionSwComponentType"
+    
+    "ComponentInSystemInstanceRef":
+      target:
+        attribute_type:
+          "SwComponent": "SwComponentPrototype"
+    
+    "ParameterInAtomicSWCTypeInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    "VariableInAtomicSWCTypeInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    "VariableInAtomicSwcInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    "RModeInAtomicSwcInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    "TriggerInAtomicSwcInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    "OperationInAtomicSwcInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    "ModeGroupInAtomicSwcInstanceRef":
+      base:
+        attribute_type:
+          "AtomicSwComponent": "AtomicSwComponentType"
+    
+    # Future extensibility - can add other fields like:
+    # "SomeClass":
+    #   someAttribute:
+    #     attribute_name: "wrong_name"
+    #     attribute_multiplicity: "*"
+    #     attribute_kind: "attribute"
+  
+  # Enumeration patches - fix literal names, values, etc.
+  enumerations:
+    # Format: { "EnumerationName": { "literal_name": { "literal_name": "correct_name" } } }
+    "DiagnosticEventCombinationReportingBehaviorEnum":
+      reportingInChronlogicalOrder:
+        literal_name: "reportingInChronlogicalOrderOldestFirst"
+    
+    "ByteOrderEnum":
+      mostSignificantByte:
+        literal_name: "mostSignificantByteFirst"
+    
+    # Future extensibility - can add other fields like:
+    # "SomeEnum":
+    #   someLiteral:
+    #     literal_value: 0
+  
+  # Primitive patches - fix attribute types, etc.
+  primitives: {}
+
+# Future sections for other parsers can be added here
 #
 # primitive_parser:
 #   # Primitive-specific configuration

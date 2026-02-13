@@ -14,7 +14,10 @@ Requirements:
 """
 
 import re
-from typing import Any, Dict, List, Match, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Match, Optional, Tuple
+
+if TYPE_CHECKING:
+    from autosar_pdf2txt.validator.xsd_validator import XsdValidator
 
 from autosar_pdf2txt.models import (
     AttributeKind,
@@ -35,17 +38,30 @@ class AutosarClassParser(AbstractTypeParser):
     - Aggregated by parsing
     - Note parsing
     - State management across multiple pages
+    - Real-time XSD validation and auto-correction (if validator provided)
 
     Requirements:
         SWR_PARSER_00024: AutosarClass Specialized Parser
         SWR_PARSER_00028: Direct Model Creation by Specialized Parsers
+        SWR_PARSER_00031: XSD-based validation of parsed types
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        config_path: str = "src/autosar_pdf2txt/config/parser_config.yaml",
+        xsd_validator: Optional["XsdValidator"] = None,
+    ) -> None:
         """Initialize the AutosarClass parser.
 
         Requirements:
             SWR_PARSER_00024: AutosarClass Specialized Parser
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type fragments)
+            SWR_PARSER_00031: XSD-based validation of parsed types
+
+        Args:
+            config_path: Path to the YAML configuration file.
+            xsd_validator: Optional XSD validator for real-time validation
+                and auto-correction of parsed classes.
         """
         super().__init__()
         # Parsing state
@@ -64,6 +80,15 @@ class AutosarClassParser(AbstractTypeParser):
             "subclasses": (None, None, True),
         }
         self._in_class_list_section: Optional[str] = None
+        
+        # Store config path for patch loading
+        self._config_path: str = config_path
+
+        # Store XSD validator for real-time validation
+        self._xsd_validator = xsd_validator
+
+        # Load type prefix configuration for multi-line fragment merging
+        self._type_prefixes: Dict[str, List[str]] = self._load_type_prefix_config(config_path)
 
     def _reset_state(self) -> None:
         """Reset parser state for a new class definition.
@@ -88,6 +113,33 @@ class AutosarClassParser(AbstractTypeParser):
             "subclasses": (None, None, True),
         }
         self._in_class_list_section = None
+
+    def _load_type_prefix_config(self, config_path: str) -> Dict[str, List[str]]:
+        """Load type prefix configuration from YAML file.
+
+        This method loads the attribute type prefix configuration that defines
+        which type fragments should be merged with continuation words from the next line.
+
+        Requirements:
+            SWR_PARSER_00012: Multi-Line Attribute Handling (extended for type fragments)
+
+        Args:
+            config_path: Path to the YAML configuration file.
+
+        Returns:
+            Dictionary mapping type prefixes to their continuation words.
+        """
+        import yaml
+        try:
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+                return config.get('attribute_type_prefixes', {})
+        except FileNotFoundError:
+            # If config file not found, return empty dict (no fragment merging)
+            return {}
+        except Exception:
+            # If config file is invalid, return empty dict (no fragment merging)
+            return {}
 
     def parse_definition(
         self,
@@ -152,13 +204,25 @@ class AutosarClassParser(AbstractTypeParser):
         )
 
         # Create AutosarClass directly (no intermediate ClassDefinition)
-        return AutosarClass(
+        cls = AutosarClass(
             name=class_name,
             package=package_path,
             is_abstract=is_abstract,
             atp_type=atp_type,
             sources=[source] if source else [],
         )
+
+        # Validate and correct against XSD if validator is available
+        if self._xsd_validator:
+            corrections = self._xsd_validator.validate_and_correct_class(cls)
+            if corrections:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"XSD corrections for {class_name}: {len(corrections)}")
+                for correction in corrections:
+                    logger.debug(f"  - {correction}")
+
+        return cls
 
     def continue_parsing(
         self,
@@ -338,6 +402,31 @@ class AutosarClassParser(AbstractTypeParser):
                     self._pending_lookahead_frag_name = None
                     self._pending_lookahead_frag_type = None
 
+            # Handle multi-line type continuation detection (SWR_PARSER_00012 extension)
+            # If we have a pending attribute with a type that might be a fragment,
+            # check the next line for continuation words in the Type column
+            if (self._in_attribute_section and line and
+                    self._pending_attr_type is not None and
+                    self._pending_attr_name is not None and
+                    self._pending_attr_multiplicity is not None):
+                words = line.split()
+                # Check if this line looks like a new attribute (has attribute name at start)
+                # or if it's a continuation of the previous attribute's type
+                if len(words) >= 1:
+                    first_word = words[0]
+                    # Check if the first word could be a type continuation
+                    # (starts with uppercase, is alphabetical, and is a known continuation)
+                    if (first_word[0].isupper() and first_word.isalpha() and
+                            self._pending_attr_type in self._type_prefixes):
+                        continuation_words = self._type_prefixes[self._pending_attr_type]
+                        if first_word in continuation_words:
+                            # This is a type continuation - merge it
+                            self._pending_attr_type = self._pending_attr_type + first_word
+                            # Skip processing this line as a new attribute
+                            # The line is just the continuation word, possibly with metadata
+                            i += 1
+                            continue
+
             # Handle single-word continuation of attribute name (camelCase or hyphenated)
             # This must come BEFORE the attribute section check because single words don't have spaces
             # Only applies when we're in attribute section and have a pending attribute with a complete note
@@ -411,6 +500,10 @@ class AutosarClassParser(AbstractTypeParser):
         # End of lines - finalize and return
         self._finalize_pending_class_lists(current_model)
         self._finalize_pending_attribute(current_model)
+        
+        # Apply attribute type patches from YAML configuration
+        patches = self._load_patches(self._config_path)
+        self.apply_class_patches(current_model, patches)
         
         # Only mark as complete if we're not in the attribute section
         # If we're in the attribute section, we might have more attributes on the next page
@@ -704,6 +797,32 @@ class AutosarClassParser(AbstractTypeParser):
                 )
                 result["pending_lookahead_frag_name"] = attr_name
                 result["pending_lookahead_frag_type"] = attr_type
+                result["pending_attr_name"] = attr_name
+                result["pending_attr_type"] = attr_type
+                result["pending_attr_multiplicity"] = third_word if third_word in self.MULTIPLICITIES else words[3] if len(words) > 3 else ""
+                result["pending_attr_kind"] = self._parse_attribute_kind(words[3]) if len(words) > 3 and words[3] in (self.ATTR_KINDS_ATTR | self.ATTR_KINDS_AGGR | self.ATTR_KINDS_REF) else None
+                # Extract note text from remaining words
+                note_start = 4 if len(words) > 4 else 3
+                result["pending_attr_note"] = " ".join(words[note_start:]) if len(words) > note_start else ""
+                # Return without finalizing - let continue_parsing handle the continuation
+                return result
+
+            # Check for type fragment that needs continuation from next line (SWR_PARSER_00012 extension)
+            # If the type is a known prefix but incomplete (e.g., "SwComponent", "ParameterData"),
+            # mark it for look-ahead to check the next line for continuation words
+            if (
+                attr_type in self._type_prefixes and  # Type is a known prefix
+                third_word in (self.MULTIPLICITIES | self.ATTR_KINDS_ALL) and  # Has valid multiplicity/kind
+                not type_ends_with_complete_ending  # Type doesn't end with common suffixes
+            ):
+                # This type is incomplete and needs continuation
+                # Finalize any previous pending attribute first
+                self._add_attribute_if_valid(
+                    current_model.attributes,
+                    pending_attr_name, pending_attr_type,
+                    pending_attr_multiplicity, pending_attr_kind, pending_attr_note
+                )
+                # Mark type fragment for look-ahead (name is complete, type is incomplete)
                 result["pending_attr_name"] = attr_name
                 result["pending_attr_type"] = attr_type
                 result["pending_attr_multiplicity"] = third_word if third_word in self.MULTIPLICITIES else words[3] if len(words) > 3 else ""

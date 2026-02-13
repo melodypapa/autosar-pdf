@@ -97,11 +97,6 @@ def main() -> int:
         type=str,
         help="Write log messages to the specified file (in addition to stderr)",
     )
-    parser.add_argument(
-        "--xsd-file",
-        type=str,
-        help="Path to AUTOSAR XSD file for real-time validation and auto-correction of parsed types",
-    )
 
     args = parser.parse_args()
 
@@ -201,33 +196,10 @@ def main() -> int:
         logging.error("No PDF files to process")
         return 1
 
-    # SWR_PARSER_00031: XSD-based validation of parsed types
-    # Preload XSD if specified for real-time validation and auto-correction
-    xsd_validator = None
-    if args.xsd_file:
-        try:
-            from autosar_pdf2txt.validator import XsdParser, XsdValidator
-
-            logging.info(f"📋 Preloading XSD: {args.xsd_file}")
-            xsd_parser = XsdParser()
-            xsd_classes = xsd_parser.parse_xsd(args.xsd_file)
-            xsd_validator = XsdValidator(xsd_classes)
-            logging.info(f"✅ XSD loaded: {len(xsd_classes)} class definitions")
-        except FileNotFoundError as e:
-            logging.error(f"XSD file not found: {e}")
-            return 1
-        except ValueError as e:
-            logging.error(f"Failed to parse XSD file: {e}")
-            return 1
-        except Exception as e:
-            logging.error(f"Unexpected error loading XSD: {e}")
-            return 1
-
     try:
         # Parse all PDFs using parse_pdfs() to ensure parent/child relationships
         # are resolved after all models are loaded (not per-PDF)
-        # Pass XSD validator for real-time validation if available
-        pdf_parser = PdfParser(xsd_validator=xsd_validator)
+        pdf_parser = PdfParser()
 
         # SWR_CLI_00007: CLI Progress Feedback
         logging.info(f"🔄 Parsing {len(pdf_paths)} PDF file(s)...")

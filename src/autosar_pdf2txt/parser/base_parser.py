@@ -766,6 +766,8 @@ class AbstractTypeParser(ABC):
                     name=correct_name,
                     description=literal.description,
                     index=literal.index,
+                    tags=literal.tags,
+                    value=literal.value,
                 )
                 patched_literals.append(patched_literal)
             else:

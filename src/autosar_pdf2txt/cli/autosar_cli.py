@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from autosar_pdf2txt import PdfParser
-from autosar_pdf2txt.writer import MappingWriter
+from autosar_pdf2txt.writer import MappingWriter, MarkdownWriter
 from autosar_pdf2txt.models import AutosarClass, AutosarEnumeration, AutosarPrimitive
 
 

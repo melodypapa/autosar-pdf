@@ -4,34 +4,10 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Literal, Optional
 
-from autosar_pdf2txt import PdfParser, MarkdownWriter
-from autosar_pdf2txt.writer import JsonWriter, MappingWriter
+from autosar_pdf2txt import PdfParser
+from autosar_pdf2txt.writer import MappingWriter, MarkdownWriter
 from autosar_pdf2txt.models import AutosarClass, AutosarEnumeration, AutosarPrimitive
-
-
-def infer_format_from_path(output_path: Optional[str]) -> Optional[str]:
-    """Infer output format from file extension.
-
-    Requirements:
-        SWR_WRITER_00023: JSON Format Inference from Extension
-
-    Args:
-        output_path: Output file path.
-
-    Returns:
-        'json', 'markdown', or None if cannot infer.
-    """
-    if not output_path:
-        return None
-
-    path = Path(output_path)
-    if path.suffix.lower() == ".json":
-        return "json"
-    elif path.suffix.lower() == ".md":
-        return "markdown"
-    return None
 
 
 def main() -> int:
@@ -39,12 +15,13 @@ def main() -> int:
 
     Requirements:
         SWR_CLI_00001: CLI Entry Point
-        SWR_CLI_00010: CLI Class File Output
-        SWR_CLI_00011: CLI Class Files Flag
-        SWR_CLI_00012: CLI Class Hierarchy Flag
         SWR_CLI_00014: CLI Logger File Specification
-        SWR_CLI_00015: CLI Mapping Generation Flag
-        SWR_CLI_00016: CLI Mapping Flag Conflict Detection
+        SWR_CLI_00015: --mapping FILE argument
+        SWR_CLI_00016: --hierarchy FILE argument
+        SWR_CLI_00017: --class-details DIR argument
+        SWR_CLI_00018: At least one output flag required
+        SWR_CLI_00019: Format auto-detection from file extension
+        SWR_CLI_00020: Output flags can be combined
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -58,33 +35,22 @@ def main() -> int:
         nargs="+",
         help="Path(s) to PDF file(s) or director(y/ies) containing PDFs to parse",
     )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        help="Output file path (default: stdout)",
+    # Output arguments (at least one required)
+    output_group = parser.add_argument_group("output arguments")
+    output_group.add_argument(
+        "--mapping",
+        metavar="FILE",
+        help="Generate type-to-package mapping to FILE",
     )
-    parser.add_argument(
-        "--format",
-        type=str,
-        choices=["markdown", "json"],
-        default=None,
-        help="Output format (default: inferred from file extension, or markdown)",
+    output_group.add_argument(
+        "--hierarchy",
+        metavar="FILE",
+        help="Generate class inheritance hierarchy to FILE",
     )
-    parser.add_argument(
-        "--include-class-details",
-        action="store_true",
-        help="Create separate markdown files for each class (requires -o/--output)",
-    )
-    parser.add_argument(
-        "--include-class-hierarchy",
-        action="store_true",
-        help="Generate class inheritance hierarchy and write to a separate file (requires -o/--output)",
-    )
-    parser.add_argument(
-        "--generate-mapping",
-        action="store_true",
-        help="Generate type-to-package mapping (requires -o/--output)",
+    output_group.add_argument(
+        "--class-details",
+        metavar="DIR",
+        help="Generate individual class files to DIR/",
     )
     parser.add_argument(
         "-v",
@@ -100,10 +66,10 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # SWR_CLI_00016: CLI Mapping Flag Conflict Detection
-    # Check for conflicts between --generate-mapping and other output flags
-    if args.generate_mapping and (args.include_class_details or args.include_class_hierarchy):
-        parser.error("--generate-mapping cannot be used with --include-class-details or --include-class-hierarchy")
+    # SWR_CLI_00018: At least one output flag required
+    # Validate at least one output flag is specified
+    if not any([args.mapping, args.hierarchy, args.class_details]):
+        parser.error("At least one output flag must be specified: --mapping, --hierarchy, --class-details")
 
     # Configure logging based on verbose flag
     # SWR_CLI_00005: CLI Verbose Mode
@@ -232,106 +198,67 @@ def main() -> int:
             for pkg in doc.packages:
                 logging.debug(f"  - {pkg.name}")
 
-        # Determine output format
-        # SWR_WRITER_00022: JSON CLI Format Argument
-        # SWR_WRITER_00023: JSON Format Inference from Extension
-        output_format = args.format
-        if output_format is None:
-            inferred_format = infer_format_from_path(args.output)
-            output_format = inferred_format if inferred_format else "markdown"
+        # Generate outputs based on specified flags
+        # SWR_CLI_00015: --mapping FILE argument
+        # SWR_CLI_00016: --hierarchy FILE argument
+        # SWR_CLI_00017: --class-details DIR argument
+        # SWR_CLI_00019: Format auto-detection from file extension
+        # SWR_CLI_00020: Output flags can be combined
+        outputs = []
 
-        # Select writer based on format
-        if output_format == "json":
-            logging.info("📝 Using JSON output format")
-            use_json = True
-        else:
-            logging.info("📝 Using Markdown output format")
-            use_json = False
-
-        # SWR_CLI_00015: CLI Mapping Generation Flag
-        # Generate type-to-package mapping if requested
-        if args.generate_mapping:
-            if not args.output:
-                logging.error("--generate-mapping requires -o/--output to be specified")
-                return 1
-
-            output_path = Path(args.output)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-
-            mapping_format: Literal["json", "markdown"] = "json" if use_json else "markdown"
-            logging.info(f"📊 Generating type-to-package mapping in {mapping_format.upper()} format...")
+        if args.mapping:
+            from autosar_pdf2txt.utils import detect_format
 
             mapping_writer = MappingWriter()
-            mapping = mapping_writer.write_mapping(doc.packages, format=mapping_format)
-            output_path.write_text(mapping, encoding="utf-8")
-            logging.info(f"✅ Mapping written to: {args.output}")
+            format_str = detect_format(args.mapping)
+            logging.info(f"📊 Generating type-to-package mapping in {format_str.upper()} format...")
 
-            return 0
+            mapping = mapping_writer.write_mapping(doc.packages, format=format_str)  # type: ignore[arg-type]
 
-        # SWR_CLI_00012: CLI Class Hierarchy Flag
-        # Generate class hierarchy if requested (only for markdown)
-        class_hierarchy = None
-        if not use_json and args.include_class_hierarchy:
-            logging.info("📊 Generating class hierarchy...")
+            # Ensure parent directory exists
+            Path(args.mapping).parent.mkdir(parents=True, exist_ok=True)
+
+            with open(args.mapping, "w", encoding="utf-8") as f:
+                f.write(mapping)
+            outputs.append(args.mapping)
+
+        if args.hierarchy:
+            from autosar_pdf2txt.utils import detect_format
+
+            hierarchy_format = detect_format(args.hierarchy)
+            logging.info(f"🏛️  Generating class inheritance hierarchy in {hierarchy_format.upper()} format...")
+
+            # Collect all classes for building hierarchy
             markdown_writer = MarkdownWriter()
-            # Collect all classes from packages for building hierarchy
             all_classes = []
             for pkg in doc.packages:
                 classes_from_pkg = markdown_writer._collect_classes_from_package(pkg)
                 all_classes.extend(classes_from_pkg)
 
-            logging.info(f"📊 Collected {len(all_classes)} classes from {len(doc.packages)} packages")
-            logging.debug(f"📊 Root classes for hierarchy: {len(doc.root_classes)}")
+            # Generate hierarchy content
+            hierarchy_content = markdown_writer.write_class_hierarchy(doc.root_classes, all_classes)
 
-            class_hierarchy = markdown_writer.write_class_hierarchy(doc.root_classes, all_classes)
-            if class_hierarchy:
-                logging.info(f"✅ Generated class hierarchy for {len(doc.root_classes)} root classes")
+            # Ensure parent directory exists
+            Path(args.hierarchy).parent.mkdir(parents=True, exist_ok=True)
 
-        # SWR_CLI_00004: CLI Output File Option
-        if args.output:
-            output_path = Path(args.output)
-            # Create parent directory if it doesn't exist
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(args.hierarchy, "w", encoding="utf-8") as f:
+                f.write(hierarchy_content)
+            outputs.append(args.hierarchy)
 
-            if use_json:
-                # JSON output
-                json_writer = JsonWriter()
-                json_writer.write_packages_to_files(doc.packages, output_path=output_path)
-                logging.info(f"✍️  JSON output written to: {output_path}")
-            else:
-                # Markdown output
-                markdown_writer = MarkdownWriter()
-                markdown = markdown_writer.write_packages(doc.packages)
-                output_path.write_text(markdown, encoding="utf-8")
-                logging.info(f"✍️  Output written to: {args.output}")
+        if args.class_details:
+            logging.info("📝 Generating individual class files...")
 
-                # SWR_CLI_00012: CLI Class Hierarchy Flag
-                # Write class hierarchy to separate file if flag is enabled
-                if class_hierarchy:
-                    # Generate hierarchy file name: <package_name>_hierarchy
-                    # Replace hyphens with underscores in the package name
-                    hierarchy_path = output_path.with_stem(f"{output_path.stem.replace('-', '_')}_hierarchy")
-                    hierarchy_path.write_text(class_hierarchy, encoding="utf-8")
-                    logging.info(f"📊 Class hierarchy written to: {hierarchy_path}")
+            # Ensure directory exists
+            Path(args.class_details).mkdir(parents=True, exist_ok=True)
 
-                # SWR_CLI_00010: CLI Class File Output
-                # SWR_CLI_00011: CLI Class Files Flag
-                # Write each class to separate files if flag is enabled
-                if args.include_class_details:
-                    markdown_writer.write_packages_to_files(doc.packages, output_path=output_path)
-                    logging.info(f"📁 Class files written to directory: {output_path.parent}")
-        else:
-            # No output file specified, write to stdout (markdown only)
-            if use_json:
-                logging.error("JSON format requires -o/--output to be specified")
-                return 1
-            else:
-                markdown_writer = MarkdownWriter()
-                markdown = markdown_writer.write_packages(doc.packages)
-                print(markdown, end="")
+            # Generate individual class files
+            markdown_writer = MarkdownWriter()
+            markdown_writer.write_packages_to_files(doc.packages, output_path=Path(args.class_details))
+            outputs.append(args.class_details)
 
-        # SWR_CLI_00009: CLI Error Handling
-        logging.info("✅ All PDF files processed successfully!")
+        # Log success
+        if outputs:
+            logging.info(f"✅ Generated {len(outputs)} output(s): {', '.join(outputs)}")
 
         return 0
 

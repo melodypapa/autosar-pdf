@@ -27,8 +27,10 @@ mypy src/autosar_pdf2txt/                   # Type checking
 python scripts/run_tests.py --unit && ruff check src/ tests/ && mypy src/autosar_pdf2txt/
 
 # Parse PDFs
-autosar-extract examples/pdf/input.pdf -o output.md
-autosar-extract examples/pdf/ -o output.md --include-class-details --include-class-hierarchy
+autosar-extract examples/pdf/ --mapping mapping.md
+autosar-extract examples/pdf/ --hierarchy hierarchy.md
+autosar-extract examples/pdf/ --class-details classes/
+autosar-extract examples/pdf/ --mapping mapping.md --hierarchy hierarchy.md --class-details classes/
 ```
 
 ## Test PDFs

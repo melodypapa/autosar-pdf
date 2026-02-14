@@ -225,7 +225,6 @@ def main() -> int:
 
         if args.hierarchy:
             from autosar_pdf2txt.utils import detect_format
-            from autosar_pdf2txt.writer import MappingWriter
 
             hierarchy_format = detect_format(args.hierarchy)
             logging.info(f"🏛️  Generating class inheritance hierarchy in {hierarchy_format.upper()} format...")

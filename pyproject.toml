@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta:__legacy__"
 
 [project]
 name = "autosar-pdf2txt"
-version = "1.0.0"
+version = "2.0.0"
 description = "A Python package to extract AUTOSAR model from PDF files to markdown"
 readme = "README.md"
 requires-python = ">=3.7"

@@ -4,7 +4,6 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Literal, Optional
 
 from autosar_pdf2txt import PdfParser
 from autosar_pdf2txt.writer import MappingWriter, MarkdownWriter
@@ -211,10 +210,10 @@ def main() -> int:
             from autosar_pdf2txt.utils import detect_format
 
             mapping_writer = MappingWriter()
-            format = detect_format(args.mapping)
-            logging.info(f"📊 Generating type-to-package mapping in {format.upper()} format...")
+            format_str = detect_format(args.mapping)
+            logging.info(f"📊 Generating type-to-package mapping in {format_str.upper()} format...")
 
-            mapping = mapping_writer.write_mapping(doc.packages, format=format)
+            mapping = mapping_writer.write_mapping(doc.packages, format=format_str)  # type: ignore[arg-type]
 
             # Ensure parent directory exists
             Path(args.mapping).parent.mkdir(parents=True, exist_ok=True)
@@ -253,13 +252,8 @@ def main() -> int:
             Path(args.class_details).mkdir(parents=True, exist_ok=True)
 
             # Generate individual class files
-            for pkg in doc.packages:
-                for typ in pkg.types:
-                    if isinstance(typ, AutosarClass):
-                        class_filename = f"{pkg.name}_{typ.name}.md"
-                        class_path = Path(args.class_details) / class_filename
-                        with open(class_path, "w", encoding="utf-8") as f:
-                            f.write(MarkdownWriter().write_class(typ))
+            markdown_writer = MarkdownWriter()
+            markdown_writer.write_packages_to_files(doc.packages, output_path=Path(args.class_details))
             outputs.append(args.class_details)
 
         # Log success

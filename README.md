@@ -32,7 +32,7 @@ cd autosar-pdf
 pip install -e .
 ```
 
-**Version**: 1.0.0 (Production Release)
+**Version**: 2.0.0 (Production Release)
 
 ## Requirements
 
@@ -46,57 +46,92 @@ pip install -e .
 The `autosar-extract` command provides a simple interface for extracting AUTOSAR models from PDF files.
 
 ```bash
-# Extract from single PDF and print to stdout
-autosar-extract path/to/file.pdf
+# Generate type-to-package mapping
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf --mapping mapping.md
 
-# Extract from multiple PDFs
-autosar-extract path/to/file1.pdf path/to/file2.pdf path/to/file3.pdf
+# Generate class inheritance hierarchy
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf --hierarchy hierarchy.md
 
-# Extract from directory (processes all PDFs in directory)
-autosar-extract path/to/directory
+# Generate individual class files
+autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf --class-details classes/
 
-# Extract from multiple directories and files
-autosar-extract path/to/dir1 path/to/file.pdf path/to/dir2
+# Combine multiple outputs
+autosar-extract examples/pdf/ --mapping mapping.md --hierarchy hierarchy.md --class-details classes/
 
-# Extract and save to file
-autosar-extract path/to/file.pdf -o output.md
+# Generate mapping in JSON format (auto-detected from .json extension)
+autosar-extract examples/pdf/ --mapping mapping.json
 
-# Generate class inheritance hierarchy in separate file
-autosar-extract path/to/file.pdf -o output.md --include-class-hierarchy
-# Creates: output.md (package hierarchy) and output-hierarchy.md (class inheritance)
+# Process multiple PDFs
+autosar-extract path/to/file1.pdf path/to/file2.pdf path/to/file3.pdf --mapping mapping.md
 
-# Create individual markdown files for each class
-autosar-extract path/to/file.pdf -o output.md --include-class-details
-# Creates: output.md and output/classes/<ClassName>.md files
+# Process all PDFs in a directory
+autosar-extract path/to/directory --mapping mapping.md
 
 # Enable verbose mode for detailed debug information
-autosar-extract path/to/file.pdf -v
-
-# Combine all options
-autosar-extract examples/pdf/ -o data/autosar_models.md --include-class-hierarchy --include-class-details
+autosar-extract examples/pdf/ --mapping mapping.md -v
 
 # Write logs to a file with timestamps
-autosar-extract examples/pdf/ -o output.md --log-file extraction.log
+autosar-extract examples/pdf/ --mapping mapping.md --log-file extraction.log
 
-# Combine log file with verbose mode for detailed logging
-autosar-extract examples/pdf/ -o output.md --log-file extraction.log -v
-
-# Generate type-to-package mapping in JSON format
-
-# Generate type-to-package mapping in Markdown table format
-autosar-extract examples/pdf/ -o data/mapping.md --generate-mapping
+# Combine log file with verbose mode
+autosar-extract examples/pdf/ --mapping mapping.md --log-file extraction.log -v
 ```
 
 #### CLI Options
 
 - `pdf_files`: Path(s) to PDF file(s) or director(y/ies) containing PDFs to parse
-- `-o OUTPUT, --output OUTPUT`: Output file path (default: stdout)
-- `--format {markdown,json}`: Output format (default: inferred from file extension, or markdown)
-- `--include-class-details`: Create separate markdown files for each class (requires `-o`)
-- `--include-class-hierarchy`: Generate class inheritance hierarchy in a separate file (requires `-o`)
-- `--generate-mapping`: Generate type-to-package mapping instead of full package hierarchy (requires `-o`)
-- `--log-file LOG_FILE`: Write log messages to a file with timestamps (default: console only)
+- `--mapping FILE`: Generate type-to-package mapping to FILE
+- `--hierarchy FILE`: Generate class inheritance hierarchy to FILE
+- `--class-details DIR`: Generate individual class files to DIR/
+- `--format {markdown,json}`: Output format (default: inferred from file extension)
 - `-v, --verbose`: Enable verbose output mode for detailed debug information
+- `--log-file LOG_FILE`: Write log messages to a file with timestamps (default: console only)
+
+**Note:** At least one output flag (`--mapping`, `--hierarchy`, or `--class-details`) must be specified.
+
+### Migration from v1.x to v2.0
+
+Version 2.0.0 includes breaking changes to CLI arguments. Here's how to migrate:
+
+**Old: Generate mapping**
+```bash
+autosar-extract input.pdf -o output.md --generate-mapping
+```
+
+**New:**
+```bash
+autosar-extract input.pdf --mapping output.md
+```
+
+**Old: Generate hierarchy**
+```bash
+autosar-extract input.pdf -o output.md --include-class-hierarchy
+```
+
+**New:**
+```bash
+autosar-extract input.pdf --hierarchy output.md
+```
+
+**Old: Generate class details**
+```bash
+autosar-extract input.pdf -o output.md --include-class-details
+```
+
+**New:**
+```bash
+autosar-extract input.pdf --class-details output/
+```
+
+**Old: Combine mapping + hierarchy**
+```bash
+autosar-extract input.pdf -o output.md --generate-mapping --include-class-hierarchy
+```
+
+**New:**
+```bash
+autosar-extract input.pdf --mapping mapping.md --hierarchy hierarchy.md
+```
 
 **Note**: The `--generate-mapping` flag conflicts with `--include-class-details` and `--include-class-hierarchy`. These options cannot be used together.
 
@@ -559,6 +594,14 @@ Contributions are welcome! Please ensure:
 - **Documentation**: See `docs/` directory for detailed requirements and development guidelines
 
 ## Changelog
+
+### Version 2.0.0 (Breaking Change)
+- **CLI Redesign**: Redesigned CLI output arguments for better flexibility
+- **Removed**: `-o`, `--generate-mapping`, `--include-class-hierarchy`, `--include-class-details`
+- **Added**: `--mapping FILE`, `--hierarchy FILE`, `--class-details DIR`
+- **Feature**: Output flags can now be combined in any combination
+- **Feature**: Format auto-detected from file extension (.md, .json)
+- **Migration**: See "Migration from v1.x to v2.0" section in README
 
 ### Version 1.0.0
 - **Production Release**: Project has reached production stability with comprehensive test coverage

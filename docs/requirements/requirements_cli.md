@@ -257,24 +257,90 @@ autosar-extract input.pdf -o mapping.md --generate-mapping
 ### SWR_CLI_00016
 **Title**: CLI Mapping Flag Conflict Detection
 
-**Maturity**: accept
+**Maturity**: invalid
 
-**Description**: The `--generate-mapping` flag shall be mutually exclusive with the following flags:
-- `--include-class-details`
-- `--include-class-hierarchy`
+**Description**: This requirement is deprecated and replaced by SWR_CLI_00020. The new CLI design allows all output flags to be combined without conflicts.
 
-When `--generate-mapping` is used with any of these conflicting flags, the CLI shall:
-- Display a clear error message indicating the conflict
-- Exit with error code 1
-- Not perform any processing
+**DEPRECATED**: Replaced by SWR_CLI_00020
 
-**Error Message Format**:
-```
-error: --generate-mapping cannot be used with --include-class-details or --include-class-hierarchy
-```
+---
 
-**Rationale**:
-- `--generate-mapping` generates a simple type-to-package mapping
-- `--include-class-details` and `--include-class-hierarchy` are for detailed output
-- These options represent fundamentally different output modes and should not be combined
-- Early conflict detection prevents user confusion and ensures clear intent
+### SWR_CLI_00015 (NEW)
+**Title**: --mapping FILE argument
+
+**Maturity**: draft
+
+**Description**: The CLI shall provide a `--mapping FILE` argument to generate type-to-package mapping output to the specified file.
+
+**Requirements**:
+- SWR_CLI_00015: --mapping FILE argument
+- SWR_CLI_00019: Format auto-detection from file extension
+
+---
+
+### SWR_CLI_00016 (NEW)
+**Title**: --hierarchy FILE argument
+
+**Maturity**: draft
+
+**Description**: The CLI shall provide a `--hierarchy FILE` argument to generate class inheritance hierarchy output to the specified file.
+
+**Requirements**:
+- SWR_CLI_00016: --hierarchy FILE argument
+- SWR_CLI_00019: Format auto-detection from file extension
+
+---
+
+### SWR_CLI_00017 (NEW)
+**Title**: --class-details DIR argument
+
+**Maturity**: draft
+
+**Description**: The CLI shall provide a `--class-details DIR` argument to generate individual class files in the specified directory.
+
+**Requirements**:
+- SWR_CLI_00017: --class-details DIR argument
+
+---
+
+### SWR_CLI_00018 (NEW)
+**Title**: At least one output flag required
+
+**Maturity**: draft
+
+**Description**: The CLI shall require at least one output flag (--mapping, --hierarchy, or --class-details) to be specified. If none are provided, the CLI shall exit with an error message.
+
+**Requirements**:
+- SWR_CLI_00018: At least one output flag required
+
+---
+
+### SWR_CLI_00019 (NEW)
+**Title**: Format auto-detection from file extension
+
+**Maturity**: draft
+
+**Description**: The CLI shall auto-detect output format from file extension: .md/.markdown for markdown, .json for JSON. Default to markdown if extension not recognized.
+
+**Requirements**:
+- SWR_CLI_00019: Format auto-detection from file extension
+
+---
+
+### SWR_CLI_00020 (NEW)
+**Title**: Output flags can be combined
+
+**Maturity**: draft
+
+**Description**: The CLI shall allow --mapping, --hierarchy, and --class-details flags to be combined in any combination without conflicts.
+
+**Requirements**:
+- SWR_CLI_00020: Output flags can be combined
+
+---
+
+**DEPRECATED Requirements**:
+- **SWR_CLI_00008**: Replaced by SWR_CLI_00015, SWR_CLI_00016, SWR_CLI_00017
+- **SWR_CLI_00011**: Replaced by SWR_CLI_00017
+- **SWR_CLI_00012**: Replaced by SWR_CLI_00016
+- **SWR_CLI_00015** (old): Replaced by SWR_CLI_00015 (new)

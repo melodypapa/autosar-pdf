@@ -35,7 +35,7 @@ class TestAutosarCli:
         assert callable(main)
         assert main.__annotations__.get("return") is int
 
-    @patch("sys.argv", ["autosar-extract", "nonexistent.pdf"])
+    @patch("sys.argv", ["autosar-extract", "nonexistent.pdf", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_non_existent_path_error(self, mock_path: MagicMock) -> None:
         """SWUT_CLI_00002: Test CLI handles non-existent paths with error.
@@ -50,7 +50,7 @@ class TestAutosarCli:
             assert result == 1
             mock_logging.error.assert_called()
 
-    @patch("sys.argv", ["autosar-extract", "test.txt"])
+    @patch("sys.argv", ["autosar-extract", "test.txt", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_non_pdf_file_warning(self, mock_path: MagicMock) -> None:
         """SWUT_CLI_00003: Test CLI warns about non-PDF files.
@@ -80,7 +80,7 @@ class TestAutosarCli:
             assert result == 1
             mock_logging.warning.assert_called()
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "-v"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "-v", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_verbose_mode_flag(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -122,7 +122,7 @@ class TestAutosarCli:
             assert any(call[0][0].setLevel.call_args[0][0] == mock_logging.DEBUG
                       for call in root_logger.addHandler.call_args_list)
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_logging_configuration_info(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -176,7 +176,7 @@ class TestAutosarCli:
             assert any(call[0][0] == mock_logging.FileHandler.return_value
                       for call in root_logger.addHandler.call_args_list)
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_error_handling_with_exception(self, mock_path: MagicMock) -> None:
         """SWUT_CLI_00008: Test CLI handles exceptions gracefully.
@@ -207,7 +207,7 @@ class TestAutosarCli:
             # exception should not be called in non-verbose mode
             mock_logging.exception.assert_not_called()
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "-v"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "-v", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_verbose_mode_exception_traceback(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -257,7 +257,7 @@ class TestAutosarCli:
         # 4. Process all discovered PDF files
         assert True  # Placeholder for documented requirement
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     def test_success_exit_code(self, mock_path: MagicMock) -> None:
         """SWUT_CLI_00011: Test CLI returns success exit code.
@@ -290,7 +290,7 @@ class TestAutosarCli:
 
             assert result == 0
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_log_file_argument_creates_handler(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -329,7 +329,7 @@ class TestAutosarCli:
             # Verify FileHandler was added to root logger
             mock_logging.getLogger.return_value.addHandler.assert_called()
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "logs/test.log"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "logs/test.log", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_log_file_creates_parent_directories(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -367,7 +367,7 @@ class TestAutosarCli:
             # Verify parent directory creation
             mock_path_instance.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log", "-v"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log", "-v", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_log_file_with_verbose_mode(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -406,7 +406,7 @@ class TestAutosarCli:
             root_logger = mock_logging.getLogger.return_value
             assert root_logger.addHandler.call_count >= 2  # Console handler + file handler
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "/invalid/path/test.log"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "/invalid/path/test.log", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_log_file_creation_error_continues_with_console_logging(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
@@ -444,7 +444,7 @@ class TestAutosarCli:
             error_msg = mock_logging.error.call_args[0][0]
             assert "Failed to create log file" in error_msg
 
-    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log"])
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
     @patch("autosar_pdf2txt.cli.autosar_cli.logging")
     def test_log_file_format_includes_timestamps(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:

@@ -95,7 +95,10 @@ Version 2.0.0 includes breaking changes to CLI arguments. Here's how to migrate:
 
 **Old: Generate mapping**
 ```bash
-autosar-extract input.pdf -o output.md --generate-mapping
+# The following flags are deprecated in v2.0.0:
+# -o, --generate-mapping, --include-class-hierarchy, --include-class-details
+# Use new CLI flags: --mapping, --hierarchy, --class-details
+# See examples above for current usage.
 ```
 
 **New:**
@@ -105,7 +108,10 @@ autosar-extract input.pdf --mapping output.md
 
 **Old: Generate hierarchy**
 ```bash
-autosar-extract input.pdf -o output.md --include-class-hierarchy
+# The following flags are deprecated in v2.0.0:
+# -o, --generate-mapping, --include-class-hierarchy, --include-class-details
+# Use new CLI flags: --mapping, --hierarchy, --class-details
+# See examples above for current usage.
 ```
 
 **New:**
@@ -115,25 +121,15 @@ autosar-extract input.pdf --hierarchy output.md
 
 **Old: Generate class details**
 ```bash
-autosar-extract input.pdf -o output.md --include-class-details
+# The following flags are deprecated in v2.0.0:
+# -o, --generate-mapping, --include-class-hierarchy, --include-class-details
+# Use new CLI flags: --mapping, --hierarchy, --class-details
+# See examples above for current usage.
 ```
+
+# See examples above for current usage.
 
 **New:**
-```bash
-autosar-extract input.pdf --class-details output/
-```
-
-**Old: Combine mapping + hierarchy**
-```bash
-autosar-extract input.pdf -o output.md --generate-mapping --include-class-hierarchy
-```
-
-**New:**
-```bash
-autosar-extract input.pdf --mapping mapping.md --hierarchy hierarchy.md
-```
-
-**Note**: The `--generate-mapping` flag conflicts with `--include-class-details` and `--include-class-hierarchy`. These options cannot be used together.
 
 ### Python API
 

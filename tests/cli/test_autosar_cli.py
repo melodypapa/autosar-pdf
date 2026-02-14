@@ -338,13 +338,35 @@ class TestAutosarCli:
         Requirements:
             SWR_CLI_00014: CLI Logger File Specification
         """
-        mock_path_instance = MagicMock()
-        mock_path_instance.exists.return_value = True
-        mock_path_instance.is_file.return_value = True
-        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
-        mock_path_instance.absolute.return_value = MagicMock()
-        mock_path_instance.parent.mkdir = MagicMock()
-        mock_path.return_value = mock_path_instance
+        # Mock for PDF file
+        pdf_path_instance = MagicMock()
+        pdf_path_instance.exists.return_value = True
+        pdf_path_instance.is_file.return_value = True
+        type(pdf_path_instance).suffix = PropertyMock(return_value=".pdf")
+        pdf_path_instance.absolute.return_value = MagicMock()
+
+        # Mock for log file path
+        log_path_instance = MagicMock()
+        log_path_instance.parent = MagicMock()
+        log_path_instance.parent.mkdir = MagicMock()
+
+        # Mock for output file path
+        output_path_instance = MagicMock()
+        output_path_instance.exists.return_value = True
+        output_path_instance.parent.mkdir.return_value = None
+        output_path_instance.write_text.return_value = None
+
+        # Return different mocks based on path
+        def path_side_effect(path_str):
+            if "test.pdf" in path_str:
+                return pdf_path_instance
+            elif "logs/test.log" in path_str:
+                return log_path_instance
+            elif "/tmp/output.md" in path_str or "output.md" in path_str:
+                return output_path_instance
+            return MagicMock()
+
+        mock_path.side_effect = path_side_effect
 
         # Mock FileHandler
         mock_file_handler = MagicMock()
@@ -365,7 +387,7 @@ class TestAutosarCli:
 
             assert result == 0
             # Verify parent directory creation
-            mock_path_instance.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+            log_path_instance.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
     @patch("sys.argv", ["autosar-extract", "test.pdf", "--log-file", "test.log", "-v", "--mapping", "/tmp/output.md"])
     @patch("autosar_pdf2txt.cli.autosar_cli.Path")
@@ -415,14 +437,34 @@ class TestAutosarCli:
         Requirements:
             SWR_CLI_00014: CLI Logger File Specification
         """
-        mock_path_instance = MagicMock()
-        mock_path_instance.exists.return_value = True
-        mock_path_instance.is_file.return_value = True
-        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
-        mock_path_instance.absolute.return_value = MagicMock()
-        # Simulate mkdir failure
-        mock_path_instance.parent.mkdir.side_effect = PermissionError("Permission denied")
-        mock_path.return_value = mock_path_instance
+        # Mock for PDF file
+        pdf_path_instance = MagicMock()
+        pdf_path_instance.exists.return_value = True
+        pdf_path_instance.is_file.return_value = True
+        type(pdf_path_instance).suffix = PropertyMock(return_value=".pdf")
+        pdf_path_instance.absolute.return_value = MagicMock()
+
+        # Mock for log file path (will fail mkdir)
+        log_path_instance = MagicMock()
+        log_path_instance.parent.mkdir.side_effect = PermissionError("Permission denied")
+
+        # Mock for output file path (will succeed)
+        output_path_instance = MagicMock()
+        output_path_instance.exists.return_value = True
+        output_path_instance.parent.mkdir.return_value = None
+        output_path_instance.write_text.return_value = None
+
+        # Return different mocks based on path
+        def path_side_effect(path_str):
+            if "test.pdf" in path_str:
+                return pdf_path_instance
+            elif "test.log" in path_str:
+                return log_path_instance
+            elif "/tmp/output.md" in path_str or "output.md" in path_str:
+                return output_path_instance
+            return MagicMock()
+
+        mock_path.side_effect = path_side_effect
 
         with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
              patch("autosar_pdf2txt.cli.autosar_cli.MarkdownWriter") as mock_writer, \

@@ -280,12 +280,14 @@ class AutosarEnumerationParser(AbstractTypeParser):
         Args:
             current_model: The current AutosarEnumeration being parsed.
         """
-        # Apply YAML patches before finalizing (if any)
-        self._apply_patches(current_model)
-
-        # Convert pending literals to immutable tuple
+        # Convert pending literals to immutable tuple first
         current_model.enumeration_literals = tuple(self._pending_literals)
         self._pending_literals = []
+
+        # Apply YAML patches after finalizing (if any)
+        # Patches must be applied after conversion to tuple so they affect
+        # the actual literals stored in the model
+        self._apply_patches(current_model)
 
     def _apply_patches(self, current_model: AutosarEnumeration) -> None:
         """Apply YAML patches to fix enumeration literal names.

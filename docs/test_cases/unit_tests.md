@@ -5829,21 +5829,133 @@ All existing test cases in this document are currently at maturity level **accep
 #### SWUT_CLI_00041
 **Title**: Test CLI Mapping Flag Conflict with Both Flags
 
-**Maturity**: draft
+**Maturity**: invalid
 
-**Description**: Verify that --generate-mapping conflicts with both --include-class-details and --include-class-hierarchy.
+**Description**: This test case is deprecated. The new CLI design allows all output flags to be combined without conflicts.
 
-**Precondition**: None
-
-**Test Steps**:
-1. Run autosar-extract with --generate-mapping --include-class-details --include-class-hierarchy -o mapping.json <input.pdf>
-2. Verify exit code is 1 (error)
-3. Verify error message mentions conflict
-
-**Expected Result**:
-- Command fails with exit code 1
-- Error message indicates conflict
-
-**Requirements Coverage**: SWR_CLI_00016
+**DEPRECATED**: Replaced by SWUT_CLI_00041 (new)
 
 ---
+
+#### SWUT_CLI_00037 (NEW)
+**Title**: --mapping flag generates mapping output
+
+**Maturity**: draft
+
+**Description**: When `--mapping FILE` is specified, the CLI SHALL generate type-to-package mapping to FILE.
+
+**Scenarios**:
+- Mapping only, markdown format
+- Mapping only, JSON format
+- Mapping + hierarchy (both files created)
+- Mapping + class details (both created)
+- Mapping + hierarchy + class details (all three created)
+
+**Requirements Coverage**: SWR_CLI_00015, SWR_CLI_00019, SWR_CLI_00020
+
+---
+
+#### SWUT_CLI_00038 (NEW)
+**Title**: --hierarchy flag generates hierarchy output
+
+**Maturity**: draft
+
+**Description**: When `--hierarchy FILE` is specified, the CLI SHALL generate class inheritance hierarchy to FILE.
+
+**Scenarios**:
+- Hierarchy only, markdown format
+- Hierarchy + mapping (both files created)
+- Hierarchy + class details (both created)
+- Hierarchy + mapping + class details (all three created)
+
+**Requirements Coverage**: SWR_CLI_00016, SWR_CLI_00019, SWR_CLI_00020
+
+---
+
+#### SWUT_CLI_00039 (NEW)
+**Title**: --class-details flag generates class details
+
+**Maturity**: draft
+
+**Description**: When `--class-details DIR` is specified, the CLI SHALL generate individual class files in DIR/.
+
+**Scenarios**:
+- Class details only
+- Class details + mapping (both created)
+- Class details + hierarchy (both created)
+- Class details + mapping + hierarchy (all three created)
+
+**Requirements Coverage**: SWR_CLI_00017, SWR_CLI_00020
+
+---
+
+#### SWUT_CLI_00040 (NEW)
+**Title**: Multiple output flags can be combined
+
+**Maturity**: draft
+
+**Description**: When multiple output flags are specified together, all outputs SHALL be generated.
+
+**Scenarios**:
+- --mapping + --hierarchy
+- --mapping + --class-details
+- --hierarchy + --class-details
+- All three flags together
+
+**Requirements Coverage**: SWR_CLI_00020
+
+---
+
+#### SWUT_CLI_00041 (NEW)
+**Title**: Error when no output flags specified
+
+**Maturity**: draft
+
+**Description**: When no output flags are specified, CLI SHALL exit with error message "At least one output flag must be specified: --mapping, --hierarchy, --class-details".
+
+**Requirements Coverage**: SWR_CLI_00018
+
+---
+
+#### SWUT_CLI_00042 (NEW)
+**Title**: Format auto-detection from file extension
+
+**Maturity**: draft
+
+**Description**: Output format SHALL be auto-detected from file extension.
+
+**Scenarios**:
+- .md extension → markdown
+- .markdown extension → markdown
+- .json extension → json
+- Unknown extension → error
+
+**Requirements Coverage**: SWR_CLI_00019
+
+---
+
+#### SWUT_CLI_00043 (NEW)
+**Title**: Path validation for output files/directories
+
+**Maturity**: draft
+
+**Description**: CLI SHALL validate output paths before writing.
+
+**Scenarios**:
+- Parent directory doesn't exist for --mapping → error
+- Parent directory doesn't exist for --hierarchy → error
+- Directory doesn't exist for --class-details → create automatically
+- Same file used for multiple outputs → error
+- Directory path used for --mapping → error
+- File path used for --class-details → error
+
+**Requirements Coverage**: SWR_CLI_00018
+
+---
+
+**DEPRECATED Test Cases**:
+- **SWUT_CLI_00037** (old): Replaced by SWUT_CLI_00037 (new)
+- **SWUT_CLI_00038** (old): Replaced by SWUT_CLI_00038 (new)
+- **SWUT_CLI_00039** (old): Replaced by SWUT_CLI_00039 (new)
+- **SWUT_CLI_00040** (old): Replaced by SWUT_CLI_00040 (new)
+- **SWUT_CLI_00041** (old): Replaced by SWUT_CLI_00041 (new)

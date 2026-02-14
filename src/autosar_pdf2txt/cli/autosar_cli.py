@@ -254,11 +254,12 @@ def main() -> int:
 
             # Generate individual class files
             for pkg in doc.packages:
-                for cls in pkg.classes:
-                    class_filename = f"{pkg.name}_{cls.name}.md"
-                    class_path = Path(args.class_details) / class_filename
-                    with open(class_path, "w", encoding="utf-8") as f:
-                        f.write(MarkdownWriter().write_class(cls))
+                for typ in pkg.types:
+                    if isinstance(typ, AutosarClass):
+                        class_filename = f"{pkg.name}_{typ.name}.md"
+                        class_path = Path(args.class_details) / class_filename
+                        with open(class_path, "w", encoding="utf-8") as f:
+                            f.write(MarkdownWriter().write_class(typ))
             outputs.append(args.class_details)
 
         # Log success

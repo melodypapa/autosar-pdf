@@ -230,13 +230,13 @@ def main() -> int:
             logging.info(f"🏛️  Generating class inheritance hierarchy in {hierarchy_format.upper()} format...")
 
             # Collect all classes for building hierarchy
+            markdown_writer = MarkdownWriter()
             all_classes = []
             for pkg in doc.packages:
-                classes_from_pkg = MappingWriter()._collect_classes_from_package(pkg)
+                classes_from_pkg = markdown_writer._collect_classes_from_package(pkg)
                 all_classes.extend(classes_from_pkg)
 
-            # Use MarkdownWriter for hierarchy generation
-            markdown_writer = MarkdownWriter()
+            # Generate hierarchy content
             hierarchy_content = markdown_writer.write_class_hierarchy(doc.root_classes, all_classes)
 
             # Ensure parent directory exists

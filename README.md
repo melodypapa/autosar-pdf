@@ -127,9 +127,23 @@ autosar-extract input.pdf --hierarchy output.md
 # See examples above for current usage.
 ```
 
-# See examples above for current usage.
-
 **New:**
+```bash
+autosar-extract input.pdf --class-details output/
+```
+
+**Old: Combine mapping + hierarchy**
+```bash
+# The following flags are deprecated in v2.0.0:
+# -o, --generate-mapping, --include-class-hierarchy, --include-class-details
+# Use new CLI flags: --mapping, --hierarchy, --class-details
+# See examples above for current usage.
+```
+```bash
+autosar-extract input.pdf --mapping mapping.md --hierarchy hierarchy.md
+```
+
+**Note**: The `--generate-mapping` flag conflicts with `--include-class-details` and `--include-class-hierarchy`. These options cannot be used together.
 
 ### Python API
 
@@ -275,91 +289,6 @@ autosar-extract \
 autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf -v
 ```
 
-### Example: Generate Class Hierarchy
-
-Create a separate file showing the class inheritance hierarchy:
-
-```bash
-# Extract Software Component Template with class hierarchy
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf -o autosar_model.md --include-class-hierarchy 
-
-# This creates two files:
-# - software_components.md (package hierarchy)
-# - software_components-hierarchy.md (class inheritance tree)
-```
-
-The class hierarchy file shows:
-```markdown
-## Class Hierarchy
-
-* SwComponentPrototype
-  * RequiredSwComponentPrototype
-* SwcInternalBehavior
-  * RunnableEntity
-    * ClientServerOperation
-  * TriggerEntity
-```
-
-### Example: Generate Individual Class Files
-
-Generate separate markdown files for each AUTOSAR class:
-
-```bash
-# Extract and create individual class files
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_ECUConfiguration.pdf \
-  --include-class-details \
-  -o data/autosar_models.md
-
-# This creates:
-# - data/autosar_models.md (consolidated output)
-# - data/autosar_models/classes/<PackageName>/<ClassName>.md (individual files)
-```
-
-### Example: Combined Output
-
-Generate all outputs in a single run:
-
-```bash
-autosar-extract examples/pdf/ -o autosar_complete.json --include-class-hierarchy --include-class-details
-```
-
-Output:
-```
-Parsing: examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf
-Found 15 packages
-Collected 234 classes from 15 packages
-Generated class hierarchy for 45 root classes
-Writing to: autosar_complete.md
-Class hierarchy written to: autosar_complete-hierarchy.md
-Writing class files to: autosar_complete/classes/
-```
-```
-
-**Common auto-corrections** include:
-- Attribute name case corrections (e.g., `Shortname` → `shortName`)
-- Type name corrections (e.g., `SwComponent` → `SwComponentType`)
-### Example: Generate Type-to-Package Mapping
-
-Generate a simple mapping of all types to their package paths:
-
-```bash
-# Generate JSON mapping
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
-  -o mapping.json --generate-mapping
-
-# Generate Markdown table mapping
-autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
-  -o mapping.md --generate-mapping
-```
-
-**JSON Output Format** (`mapping.json`):
-```json
-{
-  "types": [
-    {
-      "name": "SwComponentPrototype",
-      "type": "Class",
-      "package_path": "M2::AUTOSAR::Components"
     },
     {
       "name": "Category",
@@ -377,28 +306,6 @@ autosar-extract examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf \
 
 **Markdown Output Format** (`mapping.md`):
 ```markdown
-# Type to Package Mapping
-
-| Name | Type | Package Path |
-|------|------|--------------|
-| SwComponentPrototype | Class | M2::AUTOSAR::Components |
-| RequiredSwComponentPrototype | Class | M2::AUTOSAR::Components |
-| Category | Enumeration | M2::AUTOSAR::DataTypes |
-| LimitValue | Primitive | M2::AUTOSAR::DataTypes |
-```
-
-**Python API for Mapping Generation**:
-
-```python
-from autosar_pdf2txt import PdfParser, MappingWriter
-
-# Parse PDFs
-parser = PdfParser()
-doc = parser.parse_pdfs(["examples/pdf/AUTOSAR_CP_TPS_SoftwareComponentTemplate.pdf"])
-
-# Generate mapping
-writer = MappingWriter()
-
 # JSON format
 json_mapping = writer.write_mapping(doc.packages, format="json")
 print(json_mapping)

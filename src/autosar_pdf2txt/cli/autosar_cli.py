@@ -251,9 +251,9 @@ def main() -> int:
             # Ensure directory exists
             Path(args.class_details).mkdir(parents=True, exist_ok=True)
 
-            # Generate individual class files
+            # Generate individual class files using base_dir parameter
             markdown_writer = MarkdownWriter()
-            markdown_writer.write_packages_to_files(doc.packages, output_path=Path(args.class_details))
+            markdown_writer.write_packages_to_files(doc.packages, base_dir=Path(args.class_details))
             outputs.append(args.class_details)
 
         # Log success

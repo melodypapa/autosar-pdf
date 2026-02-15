@@ -38,13 +38,19 @@ autosar-extract examples/pdf/ --mapping mapping.md
 # Generate class inheritance hierarchy
 autosar-extract examples/pdf/ --hierarchy hierarchy.md
 
-# Generate individual class files
+# Generate individual class files (default Markdown format)
 autosar-extract examples/pdf/ --class-details classes/
+
+# Generate individual class files in JSON format
+autosar-extract examples/pdf/ --class-details classes/ --json
+
+# Generate individual class files with explicit Markdown format
+autosar-extract examples/pdf/ --class-details classes/ --markdown
 
 # Combine multiple outputs
 autosar-extract examples/pdf/ --mapping data/mapping.md --hierarchy data/hierarchy.md --class-details data/packages/
 
-autosar-extract examples/pdf/ --mapping data/mapping.json --hierarchy data/hierarchy.json --class-details data/packages/
+autosar-extract examples/pdf/ --mapping data/mapping.json --hierarchy data/hierarchy.json --class-details data/packages/ --json
 ```
 
 ### Command-Line Options
@@ -53,10 +59,18 @@ autosar-extract examples/pdf/ --mapping data/mapping.json --hierarchy data/hiera
 - `--mapping FILE` - Generate type-to-package mapping to FILE
 - `--hierarchy FILE` - Generate class inheritance hierarchy to FILE
 - `--class-details DIR` - Generate individual class files to DIR/
+- `--json` - Generate class details in JSON format (requires --class-details)
+- `--markdown` - Generate class details in Markdown format (requires --class-details)
 - `-v, --verbose` - Enable verbose output mode for detailed debug information
 - `--log-file FILE` - Write log messages to specified file
 
 **Note**: At least one output flag (`--mapping`, `--hierarchy`, or `--class-details`) must be specified.
+
+**Class Details Format**:
+- Default: Markdown format (backward compatible)
+- Use `--json` flag for JSON output with structured files
+- Use `--markdown` flag for explicit Markdown output
+- Cannot specify both `--json` and `--markdown`
 
 ### Output Format Auto-Detection
 

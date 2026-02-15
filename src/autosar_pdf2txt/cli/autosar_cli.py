@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from autosar_pdf2txt import PdfParser
-from autosar_pdf2txt.writer import MappingWriter, MarkdownWriter
+from autosar_pdf2txt.writer import MappingWriter, MarkdownWriter, JsonWriter
 from autosar_pdf2txt.models import AutosarClass, AutosarEnumeration, AutosarPrimitive
 
 
@@ -52,6 +52,16 @@ def main() -> int:
         metavar="DIR",
         help="Generate individual class files to DIR/",
     )
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        help="Generate class details in JSON format (requires --class-details)",
+    )
+    output_group.add_argument(
+        "--markdown",
+        action="store_true",
+        help="Generate class details in Markdown format (requires --class-details)",
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -70,6 +80,13 @@ def main() -> int:
     # Validate at least one output flag is specified
     if not any([args.mapping, args.hierarchy, args.class_details]):
         parser.error("At least one output flag must be specified: --mapping, --hierarchy, --class-details")
+
+    # Validate format flags
+    if args.json or args.markdown:
+        if not args.class_details:
+            parser.error("--json and --markdown flags require --class-details to be specified")
+        if args.json and args.markdown:
+            parser.error("Cannot specify both --json and --markdown. Choose one format.")
 
     # Configure logging based on verbose flag
     # SWR_CLI_00005: CLI Verbose Mode
@@ -246,14 +263,22 @@ def main() -> int:
             outputs.append(args.hierarchy)
 
         if args.class_details:
-            logging.info("📝 Generating individual class files...")
+            # Determine format
+            if args.json:
+                format_name = "JSON"
+                json_writer = JsonWriter()
+                json_writer.write_packages_to_files(doc.packages, base_dir=Path(args.class_details))
+            else:
+                # Default to Markdown (either explicitly requested or as default)
+                format_name = "Markdown"
+                markdown_writer = MarkdownWriter()
+                markdown_writer.write_packages_to_files(doc.packages, base_dir=Path(args.class_details))
+
+            logging.info(f"📝 Generating individual class files in {format_name} format...")
 
             # Ensure directory exists
             Path(args.class_details).mkdir(parents=True, exist_ok=True)
 
-            # Generate individual class files
-            markdown_writer = MarkdownWriter()
-            markdown_writer.write_packages_to_files(doc.packages, output_path=Path(args.class_details))
             outputs.append(args.class_details)
 
         # Log success

@@ -339,6 +339,41 @@ autosar-extract input.pdf -o mapping.md --generate-mapping
 
 ---
 
+### SWR_CLI_00021
+**Title**: Class Details JSON Format Option
+
+**Maturity**: draft
+
+**Description**: The CLI shall support a --json flag to generate class details in JSON format when used with --class-details. The JSON format shall use the JsonWriter to create structured JSON files with an index.json and separate files for classes, enumerations, and primitives.
+
+**Requirements**:
+- SWR_CLI_00017: --class-details DIR argument
+- SWR_CLI_00021: Class Details JSON Format Option
+
+**Validation**:
+- The --json flag shall require --class-details to be specified
+- The --json flag shall be mutually exclusive with --markdown flag
+
+---
+
+### SWR_CLI_00022
+**Title**: Class Details Markdown Format Option
+
+**Maturity**: draft
+
+**Description**: The CLI shall support a --markdown flag to explicitly generate class details in Markdown format when used with --class-details. The Markdown format shall use the MarkdownWriter to create individual .md files organized by package hierarchy.
+
+**Requirements**:
+- SWR_CLI_00017: --class-details DIR argument
+- SWR_CLI_00022: Class Details Markdown Format Option
+
+**Validation**:
+- The --markdown flag shall require --class-details to be specified
+- The --markdown flag shall be mutually exclusive with --json flag
+- The --class-details flag without format specification shall default to Markdown format (backward compatibility)
+
+---
+
 **DEPRECATED Requirements**:
 - **SWR_CLI_00008**: Replaced by SWR_CLI_00015, SWR_CLI_00016, SWR_CLI_00017
 - **SWR_CLI_00011**: Replaced by SWR_CLI_00017

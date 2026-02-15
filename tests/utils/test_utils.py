@@ -27,3 +27,19 @@ class TestDetectFormat:
     def test_no_extension_defaults_to_markdown(self) -> None:
         """Test no extension defaults to markdown."""
         assert detect_format("output") == "markdown"
+
+    def test_uppercase_markdown_extension(self) -> None:
+        """Test uppercase .MD extension detects markdown format."""
+        assert detect_format("output.MD") == "markdown"
+
+    def test_uppercase_json_extension(self) -> None:
+        """Test uppercase .JSON extension detects json format."""
+        assert detect_format("output.JSON") == "json"
+
+    def test_mixed_case_markdown_extension(self) -> None:
+        """Test mixed case .Md extension detects markdown format."""
+        assert detect_format("output.Md") == "markdown"
+
+    def test_mixed_case_json_extension(self) -> None:
+        """Test mixed case .Json extension detects json format."""
+        assert detect_format("output.Json") == "json"

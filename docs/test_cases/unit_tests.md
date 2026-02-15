@@ -5953,6 +5953,60 @@ All existing test cases in this document are currently at maturity level **accep
 
 ---
 
+#### SWUT_CLI_00044
+**Title**: Class details JSON format generation
+
+**Maturity**: draft
+
+**Description**: CLI SHALL generate class details in JSON format when --json flag is specified with --class-details.
+
+**Scenarios**:
+- --class-details with --json → generates JSON files with index.json and packages/ structure
+- --class-details with --json → log message shows "JSON format"
+- --class-details with --json → generates .json files, not .md files
+- Verify JSON output structure matches JsonWriter format
+- Verify all packages and types are included in JSON output
+
+**Requirements Coverage**: SWR_CLI_00021
+
+---
+
+#### SWUT_CLI_00045
+**Title**: Class details Markdown format generation (explicit)
+
+**Maturity**: draft
+
+**Description**: CLI SHALL generate class details in Markdown format when --markdown flag is specified with --class-details.
+
+**Scenarios**:
+- --class-details with --markdown → generates Markdown files in package hierarchy
+- --class-details with --markdown → log message shows "Markdown format"
+- --class-details with --markdown → generates .md files
+- Verify Markdown output structure matches MarkdownWriter format
+- Verify all packages and types are included in Markdown output
+
+**Requirements Coverage**: SWR_CLI_00022
+
+---
+
+#### SWUT_CLI_00046
+**Title**: Class details format validation
+
+**Maturity**: draft
+
+**Description**: CLI SHALL validate format flag usage and provide appropriate error messages.
+
+**Scenarios**:
+- --json without --class-details → error: requires --class-details
+- --markdown without --class-details → error: requires --class-details
+- --json and --markdown together → error: cannot specify both formats
+- --class-details without format flags → default to Markdown format (backward compatible)
+- Verify error messages are clear and actionable
+
+**Requirements Coverage**: SWR_CLI_00021, SWR_CLI_00022
+
+---
+
 **DEPRECATED Test Cases**:
 - **SWUT_CLI_00037** (old): Replaced by SWUT_CLI_00037 (new)
 - **SWUT_CLI_00038** (old): Replaced by SWUT_CLI_00038 (new)

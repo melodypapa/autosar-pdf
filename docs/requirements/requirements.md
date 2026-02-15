@@ -83,7 +83,7 @@ The CLI requirements define the command-line interface for the autosar-extract a
 
 **Document**: [requirements_cli.md](requirements_cli.md)
 
-**Requirements**: SWR_CLI_00001 - SWR_CLI_00014
+**Requirements**: SWR_CLI_00001 - SWR_CLI_00022
 
 **Key Areas**:
 - CLI Entry Point
@@ -93,6 +93,7 @@ The CLI requirements define the command-line interface for the autosar-extract a
 - CLI Input Validation
 - CLI Progress Feedback
 - CLI Logging
+- CLI Output Format Options (JSON/Markdown)
 - CLI Error Handling
 - CLI Class File Output
 - CLI Class Files Flag

@@ -530,6 +530,188 @@ class TestAutosarCli:
             format_string = call_args[0][0] if call_args[0] else call_args[1].get('fmt')
             assert "%(asctime)s" in format_string or "%(msecs)" in format_string
 
+    @patch("sys.argv", ["autosar-extract", "test.pdf"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_error_when_no_output_flag_specified(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00017: Test CLI errors when no output flag is specified.
 
+        Requirements:
+            SWR_CLI_00018: At least one output flag required
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path.return_value = mock_path_instance
 
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser"):
+            with patch("builtins.print"):
+                try:
+                    main()
+                    assert False, "Should have raised SystemExit"
+                except SystemExit as e:
+                    # argparse.error() calls sys.exit(2)
+                    assert e.code == 2
 
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--json"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_error_when_json_flag_without_class_details(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00018: Test CLI errors when --json is used without --class-details.
+
+        Requirements:
+            SWR_CLI_00019: Format flags require --class-details
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path.return_value = mock_path_instance
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser"):
+            with patch("builtins.print"):
+                try:
+                    main()
+                    assert False, "Should have raised SystemExit"
+                except SystemExit as e:
+                    # argparse.error() calls sys.exit(2)
+                    assert e.code == 2
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--markdown"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_error_when_markdown_flag_without_class_details(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00019: Test CLI errors when --markdown is used without --class-details.
+
+        Requirements:
+            SWR_CLI_00019: Format flags require --class-details
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path.return_value = mock_path_instance
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser"):
+            with patch("builtins.print"):
+                try:
+                    main()
+                    assert False, "Should have raised SystemExit"
+                except SystemExit as e:
+                    # argparse.error() calls sys.exit(2)
+                    assert e.code == 2
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--json", "--markdown", "--class-details", "classes/"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_error_when_both_json_and_markdown_flags(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00020: Test CLI errors when both --json and --markdown are specified.
+
+        Requirements:
+            SWR_CLI_00019: Format flags require --class-details
+        """
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path.return_value = mock_path_instance
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser"):
+            with patch("builtins.print"):
+                try:
+                    main()
+                    assert False, "Should have raised SystemExit"
+                except SystemExit as e:
+                    # argparse.error() calls sys.exit(2)
+                    assert e.code == 2
+
+    @patch("sys.argv", ["autosar-extract", "/tmp/emptydir/", "--mapping", "/tmp/output.md"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_directory_with_no_pdfs_returns_error(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00023: Test CLI returns error when directory has no PDFs.
+
+        Requirements:
+            SWR_CLI_00003: CLI Directory Input Support
+            SWR_CLI_00006: CLI Input Validation
+        """
+        # Mock for directory path
+        dir_path_instance = MagicMock()
+        dir_path_instance.exists.return_value = True
+        dir_path_instance.is_file.return_value = False
+        dir_path_instance.is_dir.return_value = True
+        dir_path_instance.glob.return_value = []  # No PDFs
+
+        def path_side_effect(path_str):
+            if "emptydir" in path_str:
+                return dir_path_instance
+            return MagicMock()
+
+        mock_path.side_effect = path_side_effect
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser"), \
+             patch("builtins.print"):
+            result = main()
+
+            assert result == 1
+            # Should log warning about no PDFs
+            mock_logging.warning.assert_called()
+            warning_msg = mock_logging.warning.call_args[0][0]
+            assert "No PDF files found in directory" in warning_msg
+            # Should log error about no PDF files to process
+            mock_logging.error.assert_called()
+            error_msg = mock_logging.error.call_args[0][0]
+            assert "No PDF files to process" in error_msg
+
+    @patch("sys.argv", ["autosar-extract", "test.pdf", "--class-details", "classes/", "--json"])
+    @patch("autosar_pdf2txt.cli.autosar_cli.Path")
+    @patch("autosar_pdf2txt.cli.autosar_cli.logging")
+    def test_class_details_json_output_generation(self, mock_logging: MagicMock, mock_path: MagicMock) -> None:
+        """SWUT_CLI_00026: Test CLI generates class details output in JSON format.
+
+        Requirements:
+            SWR_CLI_00017: --class-details DIR argument
+            SWR_CLI_00019: Format auto-detection from file extension
+        """
+
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.is_file.return_value = True
+        type(mock_path_instance).suffix = PropertyMock(return_value=".pdf")
+        mock_path_instance.absolute.return_value = MagicMock()
+
+        # Mock for class-details directory
+        class_dir_instance = MagicMock()
+        class_dir_instance.exists.return_value = False
+        class_dir_instance.mkdir.return_value = None
+
+        def path_side_effect(path_str):
+            if "test.pdf" in path_str:
+                return mock_path_instance
+            elif "classes/" in path_str:
+                return class_dir_instance
+            return MagicMock()
+
+        mock_path.side_effect = path_side_effect
+
+        with patch("autosar_pdf2txt.cli.autosar_cli.PdfParser") as mock_parser, \
+             patch("autosar_pdf2txt.cli.autosar_cli.JsonWriter") as mock_json_writer, \
+             patch("builtins.print"):
+            mock_pkg = MagicMock()
+            mock_pkg.name = "TestPackage"
+            mock_doc = MagicMock(spec=AutosarDoc)
+            mock_doc.packages = [mock_pkg]
+            mock_doc.root_classes = []
+
+            mock_parser.return_value.parse_pdfs.return_value = mock_doc
+            mock_json_writer_instance = MagicMock()
+            mock_json_writer.return_value = mock_json_writer_instance
+            mock_json_writer_instance.write_packages_to_files.return_value = None
+
+            result = main()
+
+            assert result == 0
+            # Verify class details were generated in JSON format
+            mock_logging.info.assert_any_call("📝 Generating individual class files in JSON format...")
+            mock_json_writer_instance.write_packages_to_files.assert_called_once()

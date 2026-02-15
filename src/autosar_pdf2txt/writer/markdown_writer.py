@@ -326,6 +326,61 @@ class MarkdownWriter:
         for subpkg in pkg.subpackages:
             self._write_package_to_files(subpkg, pkg_dir, full_package_path)
 
+    def _pluralize_attribute_name(self, attr_name: str, multiplicity: str) -> str:
+        """Pluralize attribute name if multiplicity is greater than 1.
+
+        Args:
+            attr_name: The attribute name to potentially pluralize.
+            multiplicity: The multiplicity string (e.g., "0..1", "1", "*", "2..*").
+
+        Returns:
+            Pluralized attribute name if multiplicity > 1, otherwise original name.
+        """
+        # Check if multiplicity is greater than 1
+        # Common patterns: "*", "2..*", "2..5", "2", "3", etc.
+        is_multiple = False
+        
+        if multiplicity == "*":
+            is_multiple = True
+        elif multiplicity.endswith("*"):
+            # Pattern like "2..*" means at least 2
+            parts = multiplicity.split("..")
+            if len(parts) == 2:
+                try:
+                    if int(parts[0]) > 1:
+                        is_multiple = True
+                except ValueError:
+                    pass
+        elif multiplicity.isdigit() and int(multiplicity) > 1:
+            is_multiple = True
+        elif ".." in multiplicity:
+            # Pattern like "2..5"
+            parts = multiplicity.split("..")
+            if len(parts) == 2:
+                try:
+                    if int(parts[0]) > 1:
+                        is_multiple = True
+                except ValueError:
+                    pass
+        
+        if not is_multiple:
+            return attr_name
+        
+        # Simple pluralization rules
+        # 1. If ends with 'y', change to 'ies' (e.g., "entry" -> "entries")
+        # 2. If ends with 's', 'x', 'z', 'ch', 'sh', add 'es' (e.g., "box" -> "boxes")
+        # 3. Otherwise add 's'
+        
+        if attr_name.endswith('y'):
+            # Handle 'y' -> 'ies' (but not if ending with 'ay', 'ey', 'oy', 'uy')
+            if not attr_name.endswith(('ay', 'ey', 'oy', 'uy')):
+                return attr_name[:-1] + "ies"
+        
+        if attr_name.endswith(('s', 'x', 'z', 'ch', 'sh')):
+            return attr_name + "es"
+        
+        return attr_name + "s"
+
     def _write_class_to_file(self, cls: AutosarClass, pkg_dir: Path, package_path_str: str) -> None:
         """Write a single class to its own markdown file.
 
@@ -462,8 +517,10 @@ class MarkdownWriter:
             output.write("|----------|------|-------|------|------|\n")
             # Table rows
             for attr_name, attr in cls.attributes.items():
+                # Pluralize attribute name if multiplicity > 1
+                display_name = self._pluralize_attribute_name(attr_name, attr.multiplicity)
                 ref_suffix = " (ref)" if attr.is_ref else ""
-                output.write(f"| {attr_name}{ref_suffix} | {attr.type} | {attr.multiplicity} | {attr.kind.value} | {attr.note} |\n")
+                output.write(f"| {display_name}{ref_suffix} | {attr.type} | {attr.multiplicity} | {attr.kind.value} | {attr.note} |\n")
             output.write("\n")
 
         # Write to file with sanitized filename
